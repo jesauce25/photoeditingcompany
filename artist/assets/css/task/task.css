@@ -1,0 +1,4 @@
+/* Import common table styles */
+@import url("../../components/table/table.css");
+
+/* Task page uses default theme (green) */

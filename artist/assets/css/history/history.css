@@ -1,0 +1,10 @@
+/* Import common table styles */
+@import url("../../components/table/table.css");
+
+/* Apply history theme (purple) */
+body {
+  --theme-color: #6c5ce7;
+}
+
+/* Add history-theme class to the container in your HTML */
+/* Example: <div class="container history-theme"> */

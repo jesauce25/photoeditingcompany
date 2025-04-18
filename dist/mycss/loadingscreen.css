@@ -1,0 +1,32 @@
+.forgot-password-container {
+    text-align: center;
+    margin-top: 15px;
+  }
+
+  #forgotPasswordLink {
+    color: #5b78f6;
+    text-decoration: none;
+    font-size: 14px;
+  }
+
+  #forgotPasswordLink:hover {
+    text-decoration: underline;
+  }
+
+  .black-covers {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  .cover {
+    width: 0.5vw; /* Change from 10vw to 1vw */
+    height: 100%;
+    background: black;
+    transform: translateY(100%);
+  }

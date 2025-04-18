@@ -1,0 +1,79 @@
+/* General Navbar Styling */
+.navbar {
+  background-color: black;
+  padding: 0;
+  width: 100%;
+  position: fixed; /* Changed from absolute to fixed */
+  top: 0;
+  left: 0;
+  z-index: 10; /* High z-index to stay on top */
+  height: 60px; /* Added fixed height */
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  opacity: 0.6;
+}
+
+/* Navbar Container */
+.nav-container {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center; /* Centers children horizontally */
+}
+
+/* Logo */
+.nav-logo {
+  color: white;
+  text-decoration: none;
+}
+
+/* Navigation Links */
+.nav-links {
+  align-items: center;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  justify-content: space-between;
+  padding: 10px 50px;
+  width: 100%;
+  position: relative; /* Needed for snake effect */
+  list-style: none; /* Removes bullets or any symbols */
+}
+
+/* Link Styling */
+.nav-links a {
+  position: relative;
+  color: white;
+  text-decoration: none;
+  font-size: 14px;
+  text-transform: uppercase;
+  mix-blend-mode: difference; /* Ensures text adapts */
+  padding: 10px 15px; /* Ensures spacing for hover effect */
+  transition: color 0.3s ease;
+}
+
+/* Snake Hover Effect */
+.snake-hover {
+  position: absolute;
+  left: 0;
+  bottom: 15px; /* Position the effect below the text */
+  height: 1px; /* Thickness of the underline */
+  background-color: white;
+  width: 0; /* Initially hidden */
+  transition: all 0.3s ease;
+}
+
+.nav-profile-img {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.nav-profile-img:hover {
+  border-color: rgba(255, 255, 255, 0.4);
+  transform: scale(1.05);
+}

@@ -1,0 +1,233 @@
+/* Enhanced UI Styles */
+.card {
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.card:hover {
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.15);
+}
+
+/* Default card header (green theme) */
+.card-header {
+  background: linear-gradient(45deg, #28a745, #1e7e34);
+  color: white;
+  border-radius: 7px 7px 0 0 !important;
+}
+
+/* Purple theme for history */
+.history-theme .card-header {
+  background: linear-gradient(45deg, #6c5ce7, #4834d4);
+}
+
+.card-title {
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.btn {
+  border-radius: 5px;
+  transition: all 0.3s ease;
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.table {
+  margin-bottom: 0;
+}
+
+.table thead th {
+  background: #f8f9fa;
+  border-bottom: 2px solid #dee2e6;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.85rem;
+  letter-spacing: 0.5px;
+  padding: 15px;
+}
+
+.table tbody tr {
+  transition: all 0.3s ease;
+}
+
+/* Default hover (green theme) */
+.table tbody tr:hover {
+  background-color: rgba(40, 167, 69, 0.05);
+  transform: scale(1.001);
+}
+
+/* Purple theme hover for history */
+.history-theme .table tbody tr:hover {
+  background-color: rgba(108, 92, 231, 0.05);
+}
+
+.table td {
+  vertical-align: middle;
+  padding: 12px 15px;
+}
+
+.project-title {
+  font-weight: 600;
+  color: #333;
+}
+
+.project-company {
+  color: #666;
+  font-size: 0.9em;
+}
+
+.project-status {
+  padding: 5px 10px;
+  border-radius: 15px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Status styles for task */
+.status-pending {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+.status-in-progress {
+  background-color: #cce5ff;
+  color: #004085;
+}
+
+.status-qa {
+  background-color: #d1ecf1;
+  color: #0c5460;
+}
+
+.status-completed {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+/* Status styles for history */
+.status-archived {
+  background-color: #e2e3e5;
+  color: #383d41;
+}
+
+.deadline-text {
+  font-size: 0.85rem;
+  color: #666;
+}
+
+/* Task specific */
+.deadline-warning {
+  color: #dc3545;
+}
+
+/* History specific */
+.completion-date {
+  color: #6c5ce7;
+  font-weight: 500;
+}
+
+.action-buttons .btn {
+  margin: 0 2px;
+}
+
+.filter-container {
+  background: #f8f9fa;
+  padding: 15px;
+  border-radius: 5px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.search-box {
+  position: relative;
+}
+
+.search-box input {
+  padding-right: 35px;
+  border-radius: 20px;
+  transition: all 0.3s ease;
+}
+
+.search-box .btn {
+  position: absolute;
+  right: 0;
+  top: 0;
+  border: none;
+  background: transparent;
+  width: 35px;
+  height: 100%;
+  color: #6c757d;
+}
+
+/* Loading animation */
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.8);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+/* Default spinner (green theme) */
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #28a745;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+/* Purple theme spinner for history */
+.history-theme .loading-spinner {
+  border-top: 4px solid #6c5ce7;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* Fix for the left margin/padding issue */
+.content-wrapper {
+  margin-left: 0 !important;
+  padding-left: 0 !important;
+}
+
+/* Ensure the content takes full width */
+.content-wrapper.container-fluid {
+  width: 100% !important;
+  max-width: 100% !important;
+  padding-right: 15px !important;
+  padding-left: 15px !important;
+}
+
+/* Add space for top navigation */
+.main-container {
+  padding-top: 60px;
+  /* Adjust this value based on your nav height */
+}
+
+/* Fix for navigation */
+.main-header {
+  position: fixed;
+  width: 100%;
+  top: 0;
+  z-index: 1030;
+}
