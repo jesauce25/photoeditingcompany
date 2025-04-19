@@ -6,9 +6,24 @@ session_start();
 require_once("includes/db_connection.php");
 require_once("includes/auth.php");
 
+// Debug session status
+error_log("Login.php - Session status: " . (isset($_SESSION['user_logged_in']) ? 'logged in' : 'not logged in'));
+error_log("Login.php - Role in session: " . ($_SESSION['role'] ?? 'not set'));
+
 // Check if the user is already logged in, redirect if so
 if (isLoggedIn()) {
-    redirectBasedOnRole();
+    // Use role from session to determine redirect
+    $role = $_SESSION['role'] ?? '';
+    error_log("User already logged in with role: $role - redirecting appropriately");
+    
+    if ($role === 'admin' || $role === 'Admin' || $role === 'Project Manager') {
+        header("Location: admin/home.php");
+        exit;
+    } else if ($role === 'art' || $role === 'Graphic Artist') {
+        header("Location: artist/home.php");
+        exit;
+    }
+    // If role is not recognized, we'll let them stay on the login page
 }
 
 // Process form submission
@@ -27,7 +42,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         if ($user) {
             // Create user session
             createUserSession($user);
-
+            
+            // Log session and role for debugging
+            error_log("User authenticated successfully - Role: " . $_SESSION['role']);
+            
             // Redirect based on role
             redirectBasedOnRole();
         } else {

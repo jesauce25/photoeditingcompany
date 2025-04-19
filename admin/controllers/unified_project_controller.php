@@ -885,10 +885,37 @@ function getDetailedProjectAssignments($project_id)
         // Calculate if deadline is overdue
         if (isset($row['deadline'])) {
             $deadline = new DateTime($row['deadline']);
-            $today = new DateTime();
-            $row['is_overdue'] = $deadline < $today;
+            $today = new DateTime('today');
+            
+            if ($deadline == $today) {
+                $row['deadline_status'] = 'today';
+                $row['deadline_text'] = 'Deadline Today';
+            } else if ($deadline < $today) {
+                $row['deadline_status'] = 'overdue';
+                $row['deadline_text'] = 'Overdue';
+                
+                // Calculate days overdue
+                $diff = $today->diff($deadline);
+                $days_overdue = $diff->days;
+                $row['days_overdue'] = $days_overdue;
+                $row['deadline_text'] .= ' by ' . $days_overdue . ' day' . ($days_overdue > 1 ? 's' : '');
+            } else {
+                $row['deadline_status'] = 'upcoming';
+                
+                // Calculate days remaining
+                $diff = $today->diff($deadline);
+                $days_remaining = $diff->days;
+                $row['days_remaining'] = $days_remaining;
+                
+                if ($days_remaining <= 3) {
+                    $row['deadline_text'] = 'Due in ' . $days_remaining . ' day' . ($days_remaining > 1 ? 's' : '');
+                } else {
+                    $row['deadline_text'] = '';
+                }
+            }
         } else {
-            $row['is_overdue'] = false;
+            $row['deadline_status'] = '';
+            $row['deadline_text'] = 'No deadline set';
         }
 
         $assignments[] = $row;
@@ -897,7 +924,46 @@ function getDetailedProjectAssignments($project_id)
     return $assignments;
 }
 
-
+/**
+ * Checks if any assignments in a project are overdue and updates status accordingly
+ * @param int $project_id Project ID
+ * @return bool Success status
+ */
+function checkAndUpdateProjectDelayStatus($project_id) 
+{
+    global $conn;
+    
+    // First check if any assignments are overdue
+    $sql = "SELECT COUNT(*) as overdue_count 
+            FROM tbl_project_assignments 
+            WHERE project_id = ? 
+            AND deadline < CURDATE() 
+            AND status_assignee != 'completed'";
+            
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("i", $project_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $row = $result->fetch_assoc();
+    
+    $has_overdue = ($row['overdue_count'] > 0);
+    
+    // Update project status if there are overdue assignments
+    if ($has_overdue) {
+        $updateSql = "UPDATE tbl_projects 
+                     SET status_project = 'delayed', date_updated = NOW() 
+                     WHERE project_id = ? 
+                     AND status_project != 'completed'";
+                     
+        $updateStmt = $conn->prepare($updateSql);
+        $updateStmt->bind_param("i", $project_id);
+        $updateStmt->execute();
+        
+        return true;
+    }
+    
+    return false;
+}
 
 // Run database structure check when file is loaded
 $dbStructure = checkDatabaseStructure();

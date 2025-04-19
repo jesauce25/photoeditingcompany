@@ -1,7 +1,17 @@
 // Add CSS for hover effects and transitions
 document.addEventListener("DOMContentLoaded", function () {
+  // Helper function to safely initialize charts
+  function initializeChart(elementId, config) {
+    const element = document.getElementById(elementId);
+    if (element) {
+      return new Chart(element, config);
+    }
+    console.log(`Chart element with ID "${elementId}" not found.`);
+    return null;
+  }
+
   // Initialize mini charts with enhanced data
-  const miniChart1 = new Chart(document.getElementById("miniChart1"), {
+  const miniChart1Config = {
     type: "line",
     data: {
       labels: ["", "", "", "", "", "", ""],
@@ -40,9 +50,9 @@ document.addEventListener("DOMContentLoaded", function () {
         easing: "easeOutQuart",
       },
     },
-  });
-
-  const miniChart2 = new Chart(document.getElementById("miniChart2"), {
+  };
+  
+  const miniChart2Config = {
     type: "line",
     data: {
       labels: ["", "", "", "", "", "", ""],
@@ -81,9 +91,9 @@ document.addEventListener("DOMContentLoaded", function () {
         easing: "easeOutQuart",
       },
     },
-  });
-
-  const miniChart3 = new Chart(document.getElementById("miniChart3"), {
+  };
+  
+  const miniChart3Config = {
     type: "line",
     data: {
       labels: ["", "", "", "", "", "", ""],
@@ -122,9 +132,9 @@ document.addEventListener("DOMContentLoaded", function () {
         easing: "easeOutQuart",
       },
     },
-  });
-
-  const miniChart4 = new Chart(document.getElementById("miniChart4"), {
+  };
+  
+  const miniChart4Config = {
     type: "line",
     data: {
       labels: ["", "", "", "", "", "", ""],
@@ -163,7 +173,13 @@ document.addEventListener("DOMContentLoaded", function () {
         easing: "easeOutQuart",
       },
     },
-  });
+  };
+
+  // Safely initialize each chart
+  const miniChart1 = initializeChart("miniChart1", miniChart1Config);
+  const miniChart2 = initializeChart("miniChart2", miniChart2Config);
+  const miniChart3 = initializeChart("miniChart3", miniChart3Config);
+  const miniChart4 = initializeChart("miniChart4", miniChart4Config);
 
   // Animate counters with enhanced values
   const counters = document.querySelectorAll(".counter");
@@ -200,6 +216,12 @@ document.addEventListener("DOMContentLoaded", function () {
     requestAnimationFrame(updateCounter);
   });
 
-  // Add the original chart code here if needed
-  // ... existing code ...
+  // Add any other initialization code here
+  
+  try {
+    // This is where the error was happening
+    // If additional charts need to be initialized, use the safe initializeChart function
+  } catch (error) {
+    console.error("An error occurred while initializing charts:", error);
+  }
 });

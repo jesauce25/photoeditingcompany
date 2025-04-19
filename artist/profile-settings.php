@@ -185,6 +185,57 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 break;
 
+            case 'profile_image':
+                // Process profile image upload
+                if (isset($_FILES['profile_image']) && $_FILES['profile_image']['error'] === UPLOAD_ERR_OK) {
+                    $file = $_FILES['profile_image'];
+                    
+                    // Validate file
+                    $allowed_types = ['image/jpeg', 'image/png', 'image/gif'];
+                    $max_size = 5 * 1024 * 1024; // 5MB
+                    
+                    if (!in_array($file['type'], $allowed_types)) {
+                        throw new Exception("Only JPEG, PNG and GIF images are allowed");
+                    }
+                    
+                    if ($file['size'] > $max_size) {
+                        throw new Exception("File size must be less than 5MB");
+                    }
+                    
+                    // Create directory if it doesn't exist
+                    $upload_dir = "../uploads/profiles/";
+                    if (!is_dir($upload_dir)) {
+                        mkdir($upload_dir, 0777, true);
+                    }
+                    
+                    // Generate a unique filename
+                    $file_ext = pathinfo($file['name'], PATHINFO_EXTENSION);
+                    $new_filename = 'profile_' . $user_id . '_' . time() . '.' . $file_ext;
+                    
+                    // Move the file
+                    if (move_uploaded_file($file['tmp_name'], $upload_dir . $new_filename)) {
+                        // Update database
+                        $update_query = "UPDATE tbl_users SET profile_img = ? WHERE user_id = ?";
+                        $update_stmt = $conn->prepare($update_query);
+                        $update_stmt->bind_param("si", $new_filename, $user_id);
+                        
+                        if ($update_stmt->execute()) {
+                            $alert_type = 'success';
+                            $alert_message = 'Profile image updated successfully';
+                            
+                            // Update local data
+                            $user_data['profile_img'] = $new_filename;
+                        } else {
+                            throw new Exception("Failed to update profile image in database: " . $conn->error);
+                        }
+                    } else {
+                        throw new Exception("Failed to upload image");
+                    }
+                } else {
+                    throw new Exception("No image was uploaded or there was an error");
+                }
+                break;
+
             default:
                 throw new Exception("Invalid form submission");
         }
@@ -213,15 +264,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div class="text-center position-relative">
                     <?php
                     $profile_img = $user_data['profile_img'] ?? '';
-                    $img_src = !empty($profile_img) && file_exists("../profiles/" . $profile_img)
-                        ? "../profiles/" . $profile_img
+                    $img_src = !empty($profile_img) 
+                        ? (file_exists("../uploads/profiles/" . $profile_img) 
+                            ? "../uploads/profiles/" . $profile_img 
+                            : "https://images.pexels.com/photos/614810/pexels-photo-614810.jpeg?auto=compress&cs=tinysrgb&w=600")
                         : "https://images.pexels.com/photos/614810/pexels-photo-614810.jpeg?auto=compress&cs=tinysrgb&w=600";
                     ?>
                     <img src="<?php echo $img_src; ?>" alt="Profile" class="profile-img floating" />
-                    <button type="button" class="btn btn-sm btn-primary position-absolute"
-                        style="bottom: 0; right: 35%; border-radius: 50%; width: 32px; height: 32px; padding: 0;">
-                        <i class="fas fa-camera"></i>
-                    </button>
+                    <form method="post" enctype="multipart/form-data" id="profileImageForm">
+                        <input type="hidden" name="form_type" value="profile_image">
+                        <input type="file" id="profile_image" name="profile_image" accept="image/*" style="display: none;">
+                        <button type="button" id="uploadProfileBtn" class="btn btn-sm btn-primary position-absolute"
+                            style="bottom: 0; right: 35%; border-radius: 50%; width: 32px; height: 32px; padding: 0;">
+                            <i class="fas fa-camera"></i>
+                        </button>
+                    </form>
                 </div>
                 <h3 class="profile-username text-center">
                     <?php
@@ -413,6 +470,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             });
         });
     });
+
+    document.addEventListener('DOMContentLoaded', function() {
+        // Profile image upload handling
+        const uploadBtn = document.getElementById('uploadProfileBtn');
+        const fileInput = document.getElementById('profile_image');
+        const profileForm = document.getElementById('profileImageForm');
+        
+        if (uploadBtn && fileInput) {
+            uploadBtn.addEventListener('click', function() {
+                fileInput.click();
+            });
+            
+            fileInput.addEventListener('change', function() {
+                if (fileInput.files.length > 0) {
+                    // Show loading indicator or disable button
+                    uploadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                    uploadBtn.disabled = true;
+                    
+                    // Submit the form
+                    profileForm.submit();
+                }
+            });
+        }
+    });
 </script>
 
 <?php include("includes/footer.php"); ?>
+</body>
+</html>

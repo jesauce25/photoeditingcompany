@@ -33,6 +33,10 @@ if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQ
         case 'get_project_stats':
             $project_id = $_POST['project_id'] ?? 0;
             if ($project_id > 0) {
+                // Check if project has overdue assignments first
+                checkAndUpdateProjectDelayStatus($project_id);
+                
+                // Then get the latest stats
                 $stats = getProjectStats($project_id);
                 echo json_encode(['status' => 'success', 'data' => $stats]);
             } else {
@@ -179,34 +183,53 @@ if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQ
                 exit;
             }
 
-            $success = true;
             $conn->begin_transaction();
 
             try {
-                // Update all selected images
+                // First get the assignee's name
+                $assigneeSql = "SELECT u.first_name 
+                               FROM tbl_project_assignments pa
+                               JOIN tbl_users u ON pa.user_id = u.user_id
+                               WHERE pa.assignment_id = ?";
+                $assigneeStmt = $conn->prepare($assigneeSql);
+                $assigneeStmt->bind_param("i", $assignment_id);
+                $assigneeStmt->execute();
+                $assigneeResult = $assigneeStmt->get_result();
+                $assignee = $assigneeResult->fetch_assoc();
+                
+                // Set the status to the assignee's first name or "assigned" if name not found
+                $statusImage = isset($assignee['first_name']) ? $assignee['first_name'] : 'assigned';
+                
+                // Update the images
                 $updateSql = "UPDATE tbl_project_images 
-                            SET assignment_id = ?, status_image = 'assigned' 
-                            WHERE image_id = ? AND project_id = ?";
+                             SET assignment_id = ?, status_image = ? 
+                             WHERE image_id = ? AND project_id = ?";
                 $updateStmt = $conn->prepare($updateSql);
 
                 foreach ($image_ids as $image_id) {
-                    $updateStmt->bind_param("iii", $assignment_id, $image_id, $project_id);
-                    if (!$updateStmt->execute()) {
-                        throw new Exception("Error updating image assignment: " . $updateStmt->error);
-                    }
+                    $updateStmt->bind_param("isii", $assignment_id, $statusImage, $image_id, $project_id);
+                    $updateStmt->execute();
                 }
 
-                // Update the assignment image count
-                updateAssignmentImageCounts($project_id);
+                // Update assignment image counts
+                $updateCountsSql = "UPDATE tbl_project_assignments 
+                                   SET assigned_images = (
+                                       SELECT COUNT(*) 
+                                       FROM tbl_project_images 
+                                       WHERE assignment_id = ? AND project_id = ?
+                                   ) 
+                                   WHERE assignment_id = ? AND project_id = ?";
+                $updateCountsStmt = $conn->prepare($updateCountsSql);
+                $updateCountsStmt->bind_param("iiii", $assignment_id, $project_id, $assignment_id, $project_id);
+                $updateCountsStmt->execute();
 
-                // Commit transaction
                 $conn->commit();
-
+                
                 echo json_encode([
                     'status' => 'success',
-                    'message' => count($image_ids) . ' images assigned successfully'
+                    'message' => count($image_ids) . ' images assigned successfully',
+                    'assignee_name' => $statusImage
                 ]);
-
             } catch (Exception $e) {
                 $conn->rollback();
                 echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
@@ -272,6 +295,18 @@ if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQ
                 exit;
             }
 
+            // Get the assignee's first name
+            $getAssigneeSql = "SELECT u.first_name 
+                             FROM tbl_project_assignments pa
+                             JOIN tbl_users u ON pa.user_id = u.user_id
+                             WHERE pa.assignment_id = ?";
+            $getAssigneeStmt = $conn->prepare($getAssigneeSql);
+            $getAssigneeStmt->bind_param("i", $assignment_id);
+            $getAssigneeStmt->execute();
+            $getAssigneeResult = $getAssigneeStmt->get_result();
+            $assigneeData = $getAssigneeResult->fetch_assoc();
+            $assigneeFirstName = $assigneeData ? $assigneeData['first_name'] : '';
+
             // Update the assignment status
             $updateSql = "UPDATE tbl_project_assignments 
                         SET status_assignee = ?, last_updated = NOW() 
@@ -280,7 +315,12 @@ if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQ
             $updateStmt->bind_param("si", $status, $assignment_id);
 
             if ($updateStmt->execute()) {
-                echo json_encode(['status' => 'success', 'message' => 'Status updated successfully']);
+                echo json_encode([
+                    'status' => 'success', 
+                    'message' => 'Status updated successfully',
+                    'assignee_first_name' => $assigneeFirstName,
+                    'display_text' => ($status === 'in_progress') ? $assigneeFirstName : ucfirst(str_replace('_', ' ', $status))
+                ]);
             } else {
                 echo json_encode(['status' => 'error', 'message' => 'Error updating status: ' . $updateStmt->error]);
             }
@@ -569,10 +609,10 @@ if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQ
 
             // Get images assigned to this assignment
             $sql = "SELECT i.image_id, i.image_path, i.status_image, i.file_type, i.upload_date,
-                          a.first_name, a.last_name
+                          u.first_name, u.last_name
                    FROM tbl_project_images i
                    LEFT JOIN tbl_project_assignments pa ON i.assignment_id = pa.assignment_id
-                   LEFT JOIN tbl_users a ON pa.user_id = a.user_id
+                   LEFT JOIN tbl_users u ON pa.user_id = u.user_id
                    WHERE i.project_id = ? AND i.assignment_id = ?
                    ORDER BY i.upload_date DESC";
 
@@ -583,12 +623,17 @@ if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQ
 
             $images = [];
             while ($row = $result->fetch_assoc()) {
+                // Ensure image path is complete for display
+                if (!empty($row['image_path'])) {
+                    $image_url = '../uploads/projects/' . $project_id . '/' . $row['image_path'];
+                    $row['image_url'] = $image_url;
+                }
                 $images[] = $row;
             }
 
-            // Get assignment details for context
-            $assignmentSql = "SELECT pa.assignment_id, pa.role_task, pa.status_assignee, pa.deadline,
-                                    u.first_name, u.last_name, CONCAT(u.first_name, ' ', u.last_name) as full_name
+            // Get assignment details for context with a detailed query
+            $assignmentSql = "SELECT pa.assignment_id, pa.role_task, pa.status_assignee, pa.deadline, pa.assigned_images,
+                                   u.first_name, u.last_name, CONCAT(u.first_name, ' ', u.last_name) as full_name
                              FROM tbl_project_assignments pa
                              JOIN tbl_users u ON pa.user_id = u.user_id
                              WHERE pa.assignment_id = ? AND pa.project_id = ?";
@@ -598,6 +643,23 @@ if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQ
             $assignmentStmt->execute();
             $assignmentResult = $assignmentStmt->get_result();
             $assignment = $assignmentResult->fetch_assoc();
+
+            // Add deadline status
+            if ($assignment) {
+                $deadline = new DateTime($assignment['deadline']);
+                $today = new DateTime('today');
+                
+                if ($deadline == $today) {
+                    $assignment['deadline_status'] = 'today';
+                    $assignment['deadline_text'] = 'Deadline Today';
+                } else if ($deadline < $today) {
+                    $assignment['deadline_status'] = 'overdue';
+                    $assignment['deadline_text'] = 'Overdue';
+                } else {
+                    $assignment['deadline_status'] = 'upcoming';
+                    $assignment['deadline_text'] = '';
+                }
+            }
 
             echo json_encode([
                 'status' => 'success',

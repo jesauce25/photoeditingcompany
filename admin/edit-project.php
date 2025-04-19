@@ -219,15 +219,15 @@ $projectProgress = getProjectProgressStats($project_id);
                                                 }
                                             }
 
-                                            // Display team members with badges
-                                            foreach ($team as $member):
-                                                $badge_class = $member['is_overdue'] ? 'badge-danger' : 'badge-primary';
-                                                ?>
+                                                    // Display team members with badges
+                                                    foreach ($team as $member):
+                                                        $badge_class = $member['is_overdue'] ? 'badge-danger' : 'badge-primary';
+                                                        ?>
                                                         <span class="badge <?php echo $badge_class; ?> mr-1 mb-1 p-2">
                                                             <i class="fas fa-user-circle mr-1"></i>
                                                             <?php echo htmlspecialchars($member['name']); ?>
                                                         </span>
-                                            <?php endforeach; ?>
+                                                    <?php endforeach; ?>
                                         </div>
                                     </div>
                         <?php endif; ?>
@@ -595,13 +595,14 @@ $projectProgress = getProjectProgressStats($project_id);
                                                                                 </div>
                                                                             </td>
                                                                             <td>
-                                                                                <select class="form-control form-control-sm status-select"
+                                                                                <select class="form-control form-control-sm assignment-status-select"
                                                                                     data-assignment-id="<?php echo $assignment['assignment_id']; ?>">
-                                                                                    <option value="pending" <?php echo ($assignment['status_assignee'] == 'pending') ? 'selected' : ''; ?>>Pending</option>
-                                                                                    <option value="in_progress" <?php echo ($assignment['status_assignee'] == 'in_progress') ? 'selected' : ''; ?>>In Progress</option>
-                                                                                    <option value="review" <?php echo ($assignment['status_assignee'] == 'review') ? 'selected' : ''; ?>>Review</option>
-                                                                                    <option value="completed" <?php echo ($assignment['status_assignee'] == 'completed') ? 'selected' : ''; ?>>Completed</option>
-                                                                                    <option value="delayed" <?php echo ($assignment['status_assignee'] == 'delayed') ? 'selected' : ''; ?>>Delayed</option>
+                                                                                    <option value="pending" <?php echo ($assignment['status'] == 'pending') ? 'selected' : ''; ?>>Pending</option>
+                                                                                    <option value="in_progress" <?php echo ($assignment['status'] == 'in_progress') ? 'selected' : ''; ?>>
+                                                                                        <?php echo isset($assignment['first_name']) ? $assignment['first_name'] : 'In Progress'; ?>
+                                                                                    </option>
+                                                                                    <option value="completed" <?php echo ($assignment['status'] == 'completed') ? 'selected' : ''; ?>>Completed</option>
+                                                                                    <option value="review" <?php echo ($assignment['status'] == 'review') ? 'selected' : ''; ?>>Review</option>
                                                                                 </select>
                                                                             </td>
                                                                             <td>
@@ -609,10 +610,12 @@ $projectProgress = getProjectProgressStats($project_id);
                                                                                     class="form-control form-control-sm deadline-input"
                                                                                     data-assignment-id="<?php echo $assignment['assignment_id']; ?>"
                                                                                     value="<?php echo $assignment['deadline']; ?>">
-                                                                                <?php if (isset($assignment['is_today']) && $assignment['is_today']): ?>
-                                                                                            <span class="badge badge-warning mt-1 w-100">Deadline Today</span>
-                                                                                <?php elseif (isset($assignment['is_overdue']) && $assignment['is_overdue']): ?>
-                                                                                            <span class="badge badge-danger mt-1 w-100">Overdue</span>
+                                                                                <?php if (isset($assignment['deadline_status']) && $assignment['deadline_status'] === 'today'): ?>
+                                                                                            <span class="badge badge-warning mt-1 w-100"><?php echo $assignment['deadline_text']; ?></span>
+                                                                                <?php elseif (isset($assignment['deadline_status']) && $assignment['deadline_status'] === 'overdue'): ?>
+                                                                                            <span class="badge badge-danger mt-1 w-100"><?php echo $assignment['deadline_text']; ?></span>
+                                                                                <?php elseif (isset($assignment['deadline_status']) && $assignment['deadline_status'] === 'upcoming' && !empty($assignment['deadline_text'])): ?>
+                                                                                            <span class="badge badge-info mt-1 w-100"><?php echo $assignment['deadline_text']; ?></span>
                                                                                 <?php endif; ?>
                                                                             </td>
                                                                             <td>
@@ -974,7 +977,8 @@ $projectProgress = getProjectProgressStats($project_id);
         $('.status-select').change(function () {
             const assignmentId = $(this).data('assignment-id');
             const newStatus = $(this).val();
-
+            const selectElement = $(this);
+            
             logging.interaction('Status change', { assignmentId, newStatus });
 
             // AJAX call to update assignment status
@@ -991,6 +995,60 @@ $projectProgress = getProjectProgressStats($project_id);
                         const data = JSON.parse(response);
                         if (data.status === 'success') {
                             logging.info('Status updated successfully');
+                            
+                            // Update the option text for in_progress to show assignee's first name
+                            if (newStatus === 'in_progress') {
+                                const inProgressOption = selectElement.find('option[value="in_progress"]');
+                                inProgressOption.text(data.assignee_first_name || 'In Progress');
+                            }
+                            
+                            // Show success notification
+                            alert('Status updated successfully');
+                        } else {
+                            logging.error('Failed to update status', data.message);
+                            alert('Error: ' + data.message);
+                        }
+                    } catch (e) {
+                        logging.error('Error parsing JSON response', { error: e, response });
+                        alert("An error occurred while processing the response.");
+                    }
+                },
+                error: function (xhr, status, error) {
+                    logging.error('AJAX Error', { status, error });
+                    alert('An error occurred while updating status: ' + error);
+                }
+            });
+        });
+
+        // Handle assignment status change for assignment-status-select class
+        $('.assignment-status-select').change(function () {
+            const assignmentId = $(this).data('assignment-id');
+            const newStatus = $(this).val();
+            const selectElement = $(this);
+
+            logging.interaction('Status change (assignment-status-select)', { assignmentId, newStatus });
+
+            // AJAX call to update assignment status
+            $.ajax({
+                url: 'controllers/edit_project_ajax.php',
+                type: 'POST',
+                data: {
+                    action: 'update_assignment_status',
+                    assignment_id: assignmentId,
+                    status: newStatus
+                },
+                success: function (response) {
+                    try {
+                        const data = JSON.parse(response);
+                        if (data.status === 'success') {
+                            logging.info('Status updated successfully');
+                            
+                            // Update the option text for in_progress to show assignee's first name
+                            if (newStatus === 'in_progress') {
+                                const inProgressOption = selectElement.find('option[value="in_progress"]');
+                                inProgressOption.text(data.assignee_first_name || 'In Progress');
+                            }
+                            
                             // Show success notification
                             alert('Status updated successfully');
                         } else {

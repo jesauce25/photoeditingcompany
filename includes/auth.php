@@ -210,19 +210,14 @@ function redirectBasedOnRole()
     error_log("Redirecting user: $username with role: $role");
 
     // Redirect based on role
-    if ($role === 'Admin') {
-        // Admin (superadmin) role - can register users
-        error_log("Redirecting to admin/home.php for Admin role");
+    if ($role === 'admin' || $role === 'Admin' || $role === 'Project Manager') {
+        // Admin role or Project Manager - goes to admin panel
+        error_log("Redirecting to admin/home.php for admin role");
         header("Location: admin/home.php");
         exit;
-    } else if ($role === 'Project Manager') {
-        // Project Manager goes to admin panel but cannot register users
-        error_log("Redirecting to admin/home.php for Project Manager role");
-        header("Location: admin/home.php");
-        exit;
-    } else if ($role === 'Graphic Artist') {
+    } else if ($role === 'art' || $role === 'Graphic Artist') {
         // Graphic Artist goes to artist panel
-        error_log("Redirecting to artist/home.php for Graphic Artist role");
+        error_log("Redirecting to artist/home.php for artist role");
         header("Location: artist/home.php");
         exit;
     } else {

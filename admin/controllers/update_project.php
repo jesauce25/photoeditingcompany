@@ -205,20 +205,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $hasAssignmentColumn = true;
             }
 
-            // Reset all image assignments first
-            debug_log("Resetting all image assignments for project", $project_id);
-            $resetImagesSql = "UPDATE tbl_project_images SET assignment_id = NULL WHERE project_id = ?";
-            $resetImagesStmt = $conn->prepare($resetImagesSql);
-            if (!$resetImagesStmt) {
-                throw new Exception("Prepare reset images statement error: " . $conn->error);
-            }
-
-            $resetImagesStmt->bind_param("i", $project_id);
-
-            if (!$resetImagesStmt->execute()) {
-                throw new Exception("Error resetting image assignments: " . $resetImagesStmt->error);
-            }
-
             // Now update with new assignments
             debug_log("Processing image assignments");
             foreach ($imageAssignments as $assignment) {
@@ -708,8 +694,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $insertCompanyStmt->close();
         if (isset($updateCompanyStmt))
             $updateCompanyStmt->close();
-        if (isset($resetImagesStmt))
-            $resetImagesStmt->close();
         if (isset($updateImageStmt))
             $updateImageStmt->close();
         if (isset($userStmt))

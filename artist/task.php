@@ -1,44 +1,75 @@
 <?php
-include("includes/header.php");
+// Start session if not already started
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+// Log session details for debugging
+error_log("Task.php - Session status: " . (isset($_SESSION['user_logged_in']) ? 'logged in' : 'not logged in'));
+error_log("Task.php - User ID: " . ($_SESSION['user_id'] ?? 'not set'));
+error_log("Task.php - Role: " . ($_SESSION['role'] ?? 'not set'));
+
+// Include necessary files
 require_once '../includes/db_connection.php';
+require_once 'includes/auth_check.php';
 
 // Get the current user's ID from session
 $user_id = $_SESSION['user_id'] ?? 0;
+
+// Ensure we have a valid user ID
+if (!$user_id) {
+    error_log("Error: No valid user ID in session, redirecting to login");
+    header("Location: ../login.php");
+    exit;
+}
 
 // Initialize empty array for tasks
 $tasks = [];
 
 try {
-  // Fetch tasks assigned to the current user
-  $query = "SELECT t.*, p.project_title, p.company_name, p.deadline as project_deadline, 
-              p.date_arrived, p.priority, p.status_project, p.total_images
-              FROM `db_projectms`.`tasks` t
-              JOIN `db_projectms`.`projects` p ON t.project_id = p.project_id
-              WHERE t.user_id = ? AND t.status != 'deleted'
-              ORDER BY p.deadline ASC";
+    // Log query for debugging
+    error_log("Task.php - Querying tasks for user ID: $user_id");
 
-  $stmt = $conn->prepare($query);
+    // Fetch tasks assigned to the current user
+    $query = "SELECT pa.*, p.project_title, c.company_name, p.deadline as project_deadline, 
+              p.date_arrived, p.priority, p.status_project, p.total_images,
+              COUNT(pi.image_id) as assigned_image_count
+              FROM tbl_project_assignments pa
+              JOIN tbl_projects p ON pa.project_id = p.project_id
+              LEFT JOIN tbl_companies c ON p.company_id = c.company_id
+              LEFT JOIN tbl_project_images pi ON pi.assignment_id = pa.assignment_id
+              WHERE pa.user_id = ? AND pa.status_assignee != 'deleted'
+              GROUP BY pa.assignment_id
+              ORDER BY pa.deadline ASC";
 
-  if (!$stmt) {
-    throw new Exception("Query preparation failed: " . $conn->error);
-  }
+    $stmt = $conn->prepare($query);
 
-  $stmt->bind_param("i", $user_id);
+    if (!$stmt) {
+        throw new Exception("Query preparation failed: " . $conn->error);
+    }
 
-  if (!$stmt->execute()) {
-    throw new Exception("Query execution failed: " . $stmt->error);
-  }
+    $stmt->bind_param("i", $user_id);
 
-  $result = $stmt->get_result();
-  $tasks = $result->fetch_all(MYSQLI_ASSOC);
+    if (!$stmt->execute()) {
+        throw new Exception("Query execution failed: " . $stmt->error);
+    }
+
+    $result = $stmt->get_result();
+    $tasks = $result->fetch_all(MYSQLI_ASSOC);
+    
+    error_log("Task.php - Found " . count($tasks) . " tasks for user ID: $user_id");
 
 } catch (Exception $e) {
-  // Log the error
-  error_log("Error in task.php: " . $e->getMessage());
+    // Log the error
+    error_log("Error in artist/task.php: " . $e->getMessage());
+    error_log("SQL Error: " . ($conn->error ?? 'None'));
 
-  // Create a friendly error message for display
-  $error_message = "There was an error loading your tasks. Please contact support.";
+    // Create a friendly error message for display
+    $error_message = "There was an error loading your tasks. Please contact support.";
 }
+
+// Include header after processing to avoid redirect issues
+include("includes/header.php");
 ?>
 
 <div class="main-container">
@@ -174,7 +205,7 @@ try {
                     <?php else: ?>
                       <?php foreach ($tasks as $task): ?>
                         <tr>
-                          <td class="d-none"><?php echo $task['task_id']; ?></td>
+                          <td class="d-none"><?php echo $task['assignment_id']; ?></td>
                           <td>
                             <div class="project-title"><?php echo htmlspecialchars($task['project_title']); ?></div>
                             <div class="project-company">
@@ -272,18 +303,18 @@ try {
                           </td>
                           <td>
                             <div class="action-buttons text-center">
-                              <a href="view-task.php?id=<?php echo $task['task_id']; ?>" class="btn btn-info btn-sm"
+                              <a href="view-task.php?id=<?php echo $task['assignment_id']; ?>" class="btn btn-info btn-sm"
                                 title="View Task">
                                 <i class="fas fa-eye"></i>
                               </a>
                               <?php if ($task['status_project'] == 'in_progress'): ?>
                                 <button type="button" class="btn btn-success btn-sm mark-done-btn"
-                                  data-id="<?php echo $task['task_id']; ?>" data-status="in_progress" title="Mark as Done">
+                                  data-id="<?php echo $task['assignment_id']; ?>" data-status="in_progress" title="Mark as Done">
                                   <i class="fas fa-check"></i>
                                 </button>
                               <?php elseif ($task['status_project'] == 'pending'): ?>
                                 <button type="button" class="btn btn-primary btn-sm start-task-btn"
-                                  data-id="<?php echo $task['task_id']; ?>" data-status="pending" title="Start Task">
+                                  data-id="<?php echo $task['assignment_id']; ?>" data-status="pending" title="Start Task">
                                   <i class="fas fa-play"></i>
                                 </button>
                               <?php endif; ?>
