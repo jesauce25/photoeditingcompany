@@ -346,11 +346,11 @@ $projectProgress = getProjectProgressStats($project_id);
                                     <div class="form-group">
                                         <label for="projectName">Project Name</label>
                                         <input type="text" class="form-control" id="projectName" name="projectName"
-                                            value="<?php echo htmlspecialchars($project['project_title']); ?>">
+                                            value="<?php echo htmlspecialchars($project['project_title']); ?>" onchange="updateProjectField('projectName', this.value)">
                                     </div>
                                     <div class="form-group">
                                         <label for="company">Company</label>
-                                        <select class="form-control" id="company" name="company" required>
+                                        <select class="form-control" id="company" name="company" required onchange="updateProjectField('company', this.value)">
                                             <option value="">-- Select Company --</option>
                                             <?php foreach ($companies as $company): ?>
                                                         <option value="<?php echo htmlspecialchars($company['company_name']); ?>"
@@ -363,7 +363,7 @@ $projectProgress = getProjectProgressStats($project_id);
                                     <div class="form-group">
                                         <label for="description">Description</label>
                                         <textarea class="form-control" id="description" name="description"
-                                            rows="4"><?php echo htmlspecialchars($project['description']); ?></textarea>
+                                            rows="4" onchange="updateProjectField('description', this.value)"><?php echo htmlspecialchars($project['description']); ?></textarea>
                                     </div>
                                 </div>
                             </div>
@@ -383,7 +383,7 @@ $projectProgress = getProjectProgressStats($project_id);
                                     </div>
                                     <div class="form-group">
                                         <label for="priority">Priority</label>
-                                        <select class="form-control" id="priority" name="priority" required>
+                                        <select class="form-control" id="priority" name="priority" required onchange="updateProjectField('priority', this.value)">
                                             <option value="High" <?php echo ($project['priority'] == 'High') ? 'selected' : ''; ?>>High</option>
                                             <option value="Medium" <?php echo ($project['priority'] == 'Medium') ? 'selected' : ''; ?>>Medium</option>
                                             <option value="Low" <?php echo ($project['priority'] == 'Low') ? 'selected' : ''; ?>>Low</option>
@@ -392,12 +392,12 @@ $projectProgress = getProjectProgressStats($project_id);
                                     <div class="form-group">
                                         <label for="dateArrived">Start Date</label>
                                         <input type="date" class="form-control" id="dateArrived" name="dateArrived"
-                                            value="<?php echo $project['date_arrived']; ?>" required>
+                                            value="<?php echo $project['date_arrived']; ?>" required onchange="updateProjectField('dateArrived', this.value)">
                                     </div>
                                     <div class="form-group">
                                         <label for="deadline">Deadline</label>
                                         <input type="date" class="form-control" id="deadline" name="deadline"
-                                            value="<?php echo $project['deadline']; ?>" required>
+                                            value="<?php echo $project['deadline']; ?>" required onchange="updateProjectField('deadline', this.value)">
                                     </div>
                                 </div>
                             </div>
@@ -424,7 +424,7 @@ $projectProgress = getProjectProgressStats($project_id);
                                 </div>
                                 <div class="card-body">
                                     <!-- Batch Actions (initially hidden) -->
-                                    <div class="row mb-3" id="batchActions" style="display: none;">
+                                    <div class="row mb-3" id="batchActions">
                                         <div class="col-12">
                                             <button type="button" class="btn btn-primary" id="assignSelected"
                                                 data-toggle="modal" data-target="#addAssignmentModal">
@@ -512,122 +512,126 @@ $projectProgress = getProjectProgressStats($project_id);
                         </div>
                     </div>
 
-                    <!-- Team Assignments Section -->
-                    <div class="row mb-4">
+                    <!-- TEAM ASSIGNMENTS Section -->
+                    <div class="row mt-4">
                         <div class="col-12">
                             <div class="card">
-                                <div
-                                    class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                                    <h3 class="card-title">
-                                        <i class="fas fa-users mr-2"></i>
-                                        Team Assignments
-                                    </h3>
-                                    <div class="ml-auto">
-                                        <button type="button" class="btn btn-sm btn-light shadow-sm float-right"
-                                            data-toggle="modal" data-target="#addAssignmentModal">
-                                            <i class="fas fa-plus mr-1"></i> Add New Assignment
-                                        </button>
-                                    </div>
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <h5 class="mb-0">Team Assignments</h5>
+                                    <button type="button" class="btn btn-sm btn-outline-primary" data-toggle="modal" data-target="#addTeamMemberModal">
+                                        <i class="fas fa-plus"></i> Add Team Member
+                                    </button>
                                 </div>
                                 <div class="card-body">
                                     <div class="table-responsive">
-                                        <table class="table table-bordered table-hover">
-                                            <thead class="thead-light">
+                                        <table class="table table-hover">
+                                            <thead>
                                                 <tr>
-                                                    <th style="width: 20%">Team Member</th>
-                                                    <th style="width: 15%">Role</th>
-                                                    <th style="width: 20%">Assigned Images</th>
-                                                    <th style="width: 15%">Status</th>
-                                                    <th style="width: 15%">Deadline</th>
-                                                    <th style="width: 15%">Actions</th>
+                                                    <th>Team Member</th>
+                                                    <th>Role</th>
+                                                    <th>Assigned Images</th>
+                                                    <th>Status</th>
+                                                    <th>Deadline</th>
+                                                    <th>Actions</th>
                                                 </tr>
                                             </thead>
-                                            <tbody id="assignmentsTable">
-                                                <?php if (empty($assignments)): ?>
-                                                            <tr>
-                                                                <td colspan="6" class="text-center">No team members assigned yet.
-                                                                </td>
-                                                            </tr>
-                                                <?php else: ?>
-                                                            <?php foreach ($assignments as $assignment): ?>
-                                                                        <tr data-assignment-id="<?php echo $assignment['assignment_id']; ?>">
-                                                                            <td>
-                                                                                <div class="d-flex align-items-center">
-                                                                                    <i class="fas fa-user-circle text-primary mr-2"></i>
-                                                                                    <select class="form-control form-control-sm assignee-select"
-                                                                                        data-assignment-id="<?php echo $assignment['assignment_id']; ?>"
-                                                                                        data-original-value="<?php echo $assignment['user_id']; ?>">
-                                                                                        <?php foreach ($graphicArtists as $artist): ?>
-                                                                                                    <option value="<?php echo $artist['user_id']; ?>" <?php echo ($assignment['user_id'] == $artist['user_id']) ? 'selected' : ''; ?>>
-                                                                                                        <?php echo htmlspecialchars($artist['full_name']); ?>
-                                                                                                    </option>
-                                                                                        <?php endforeach; ?>
-                                                                                    </select>
-                                                                                </div>
-                                                                            </td>
-                                                                            <td>
-                                                                                <select class="form-control form-control-sm role-select"
-                                                                                    data-assignment-id="<?php echo $assignment['assignment_id']; ?>"
-                                                                                    data-original-value="<?php echo htmlspecialchars($assignment['role_task']); ?>">
-                                                                                    <option value="Clipping path" <?php echo ($assignment['role_task'] == 'Clipping path') ? 'selected' : ''; ?>>Clipping path</option>
-                                                                                    <option value="Color Correction" <?php echo ($assignment['role_task'] == 'Color Correction') ? 'selected' : ''; ?>>Color Correction</option>
-                                                                                    <option value="Retouch" <?php echo ($assignment['role_task'] == 'Retouch') ? 'selected' : ''; ?>>Retouch</option>
-                                                                                    <option value="Final" <?php echo ($assignment['role_task'] == 'Final') ? 'selected' : ''; ?>>Final</option>
-                                                                                </select>
-                                                                            </td>
-                                                                            <td>
-                                                                                <div class="d-flex align-items-center">
-                                                                                    <span class="badge badge-info badge-pill mr-2">
-                                                                                        <?php echo isset($assignment['assigned_image_count']) ? $assignment['assigned_image_count'] : 0; ?>
-                                                                                    </span>
-                                                                                    <button type="button"
-                                                                                        class="btn btn-sm btn-outline-primary view-assigned-images"
-                                                                                        data-assignment-id="<?php echo $assignment['assignment_id']; ?>"
-                                                                                        data-toggle="tooltip" title="View assigned images">
-                                                                                        <i class="fas fa-images"></i> View
-                                                                                    </button>
-                                                                                    <button type="button"
-                                                                                        class="btn btn-sm btn-outline-success ml-1 add-more-images"
-                                                                                        data-assignment-id="<?php echo $assignment['assignment_id']; ?>"
-                                                                                        data-toggle="tooltip" title="Add more images">
-                                                                                        <i class="fas fa-plus"></i>
-                                                                                    </button>
-                                                                                </div>
-                                                                            </td>
-                                                                            <td>
-                                                                                <select class="form-control form-control-sm assignment-status-select"
-                                                                                    data-assignment-id="<?php echo $assignment['assignment_id']; ?>">
-                                                                                    <option value="pending" <?php echo ($assignment['status'] == 'pending') ? 'selected' : ''; ?>>Pending</option>
-                                                                                    <option value="in_progress" <?php echo ($assignment['status'] == 'in_progress') ? 'selected' : ''; ?>>
-                                                                                        <?php echo isset($assignment['first_name']) ? $assignment['first_name'] : 'In Progress'; ?>
-                                                                                    </option>
-                                                                                    <option value="completed" <?php echo ($assignment['status'] == 'completed') ? 'selected' : ''; ?>>Completed</option>
-                                                                                    <option value="review" <?php echo ($assignment['status'] == 'review') ? 'selected' : ''; ?>>Review</option>
-                                                                                </select>
-                                                                            </td>
-                                                                            <td>
-                                                                                <input type="date"
-                                                                                    class="form-control form-control-sm deadline-input"
-                                                                                    data-assignment-id="<?php echo $assignment['assignment_id']; ?>"
-                                                                                    value="<?php echo $assignment['deadline']; ?>">
-                                                                                <?php if (isset($assignment['deadline_status']) && $assignment['deadline_status'] === 'today'): ?>
-                                                                                            <span class="badge badge-warning mt-1 w-100"><?php echo $assignment['deadline_text']; ?></span>
-                                                                                <?php elseif (isset($assignment['deadline_status']) && $assignment['deadline_status'] === 'overdue'): ?>
-                                                                                            <span class="badge badge-danger mt-1 w-100"><?php echo $assignment['deadline_text']; ?></span>
-                                                                                <?php elseif (isset($assignment['deadline_status']) && $assignment['deadline_status'] === 'upcoming' && !empty($assignment['deadline_text'])): ?>
-                                                                                            <span class="badge badge-info mt-1 w-100"><?php echo $assignment['deadline_text']; ?></span>
-                                                                                <?php endif; ?>
-                                                                            </td>
-                                                                            <td>
-                                                                                <button type="button"
-                                                                                    class="btn btn-sm btn-danger delete-assignment"
-                                                                                    data-assignment-id="<?php echo $assignment['assignment_id']; ?>"
-                                                                                    data-toggle="tooltip" title="Delete assignment">
-                                                                                    <i class="fas fa-trash"></i>
-                                                                                </button>
-                                                                            </td>
-                                                                        </tr>
-                                                            <?php endforeach; ?>
+                                            <tbody>
+                                                <?php if (count($assignments) > 0) : ?>
+                                                    <?php foreach ($assignments as $assignment) : ?>
+                                                        <tr data-assignment-id="<?php echo $assignment['assignment_id']; ?>">
+                                                            <td>
+                                                                <select class="form-control assignee-select" data-assignment-id="<?php echo $assignment['assignment_id']; ?>">
+                                                                    <option value="">Select User</option>
+                                                                    <?php foreach ($graphicArtists as $artist) : ?>
+                                                                        <option value="<?php echo $artist['user_id']; ?>" <?php echo ($artist['user_id'] == $assignment['user_id']) ? 'selected' : ''; ?>>
+                                                                            <?php echo $artist['full_name']; ?>
+                                                                        </option>
+                                                                    <?php endforeach; ?>
+                                                                </select>
+                                                            </td>
+                                                            <td>
+                                                                <select class="form-control role-select" data-assignment-id="<?php echo $assignment['assignment_id']; ?>">
+                                                                    <option value="">Select Role</option>
+                                                                    <option value="Clipping Path" <?php echo ($assignment['role_task'] == 'Clipping Path') ? 'selected' : ''; ?>>Clipping Path</option>
+                                                                    <option value="Color Correction" <?php echo ($assignment['role_task'] == 'Color Correction') ? 'selected' : ''; ?>>Color Correction</option>
+                                                                    <option value="Retouch" <?php echo ($assignment['role_task'] == 'Retouch') ? 'selected' : ''; ?>>Retouch</option>
+                                                                    <option value="Final" <?php echo ($assignment['role_task'] == 'Final') ? 'selected' : ''; ?>>Final</option>
+                                                                </select>
+                                                            </td>
+                                                            <td>
+                                                                <?php echo $assignment['assigned_images']; ?> Images
+                                                                <?php if ($assignment['assigned_images'] > 0) : ?>
+                                                                    <div class="btn-group ml-2">
+                                                                        <button class="btn btn-sm btn-outline-primary view-assigned-images" 
+                                                                            data-assignment-id="<?php echo $assignment['assignment_id']; ?>" 
+                                                                            title="View Assigned Images">
+                                                                            <i class="fas fa-eye"></i>
+                                                                        </button>
+                                                                        <button class="btn btn-sm btn-outline-success add-more-images" 
+                                                                            data-assignment-id="<?php echo $assignment['assignment_id']; ?>" 
+                                                                            title="Add More Images">
+                                                                            <i class="fas fa-plus"></i>
+                                                                        </button>
+                                                                        <button class="btn btn-sm btn-outline-danger remove-assigned-images" 
+                                                                            data-assignment-id="<?php echo $assignment['assignment_id']; ?>" 
+                                                                            title="Remove Assigned Images">
+                                                                            <i class="fas fa-trash-alt"></i>
+                                                                        </button>
+                                                                    </div>
+                                                                <?php else: ?>
+                                                                    <button class="btn btn-sm btn-outline-success add-more-images ml-2" 
+                                                                        data-assignment-id="<?php echo $assignment['assignment_id']; ?>" 
+                                                                        title="Add Images">
+                                                                        <i class="fas fa-plus"></i>
+                                                                    </button>
+                                                                <?php endif; ?>
+                                                            </td>
+                                                            <td>
+                                                                <select class="form-control assignment-status-select" data-assignment-id="<?php echo $assignment['assignment_id']; ?>">
+                                                                    <option value="pending" <?php echo ($assignment['status_assignee'] == 'pending') ? 'selected' : ''; ?>>Pending</option>
+                                                                    <option value="in_progress" <?php echo ($assignment['status_assignee'] == 'in_progress') ? 'selected' : ''; ?>>In Progress (<?php echo $assignment['first_name']; ?>)</option>
+                                                                    <option value="review" <?php echo ($assignment['status_assignee'] == 'review') ? 'selected' : ''; ?>>In Review</option>
+                                                                    <option value="completed" <?php echo ($assignment['status_assignee'] == 'completed') ? 'selected' : ''; ?>>Completed</option>
+                                                                    <option value="delayed" <?php echo ($assignment['status_assignee'] == 'delayed') ? 'selected' : ''; ?>>Delayed</option>
+                                                                </select>
+                                                            </td>
+                                                            <td>
+                                                                <?php 
+                                                                $deadline_date = new DateTime($assignment['deadline']);
+                                                                $today = new DateTime('today');
+                                                                $deadline_status = '';
+                                                                $badge_class = '';
+                                                                
+                                                                if ($deadline_date == $today) {
+                                                                    $deadline_status = 'Today';
+                                                                    $badge_class = 'badge-warning';
+                                                                } else if ($deadline_date < $today) {
+                                                                    $deadline_status = 'Overdue';
+                                                                    $badge_class = 'badge-danger';
+                                                                }
+                                                                ?>
+                                                                <div class="deadline-container">
+                                                                    <input type="date" class="form-control deadline-input" 
+                                                                        value="<?php echo $assignment['deadline']; ?>" 
+                                                                        data-assignment-id="<?php echo $assignment['assignment_id']; ?>">
+                                                                    <?php if (!empty($deadline_status)): ?>
+                                                                        <span class="badge <?php echo $badge_class; ?> ml-2">
+                                                                            <?php echo $deadline_status; ?>
+                                                                        </span>
+                                                                    <?php endif; ?>
+                                                                </div>
+                                                            </td>
+                                                            <td>
+                                                                <button class="btn btn-sm btn-danger delete-assignment" data-assignment-id="<?php echo $assignment['assignment_id']; ?>">
+                                                                    <i class="fas fa-trash"></i>
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    <?php endforeach; ?>
+                                                <?php else : ?>
+                                                    <tr>
+                                                        <td colspan="6" class="text-center">No team members assigned yet.</td>
+                                                    </tr>
                                                 <?php endif; ?>
                                             </tbody>
                                         </table>
@@ -640,10 +644,7 @@ $projectProgress = getProjectProgressStats($project_id);
                     <!-- Submit Button -->
                     <div class="row mb-4">
                         <div class="col-12">
-                            <button type="submit" class="btn btn-primary btn-lg">
-                                <i class="fas fa-save mr-2"></i> Save Project
-                            </button>
-                            <a href="project-list.php" class="btn btn-secondary btn-lg ml-2">
+                            <a href="project-list.php" class="btn btn-secondary btn-lg">
                                 <i class="fas fa-arrow-left mr-2"></i> Back to List
                             </a>
                         </div>
@@ -714,7 +715,7 @@ $projectProgress = getProjectProgressStats($project_id);
                         <label for="roleSelect">Role/Task</label>
                         <select class="form-control" id="roleSelect" name="role" required>
                             <option value="">-- Select Role --</option>
-                            <option value="Clipping path">Clipping path</option>
+                            <option value="Clipping Path">Clipping Path</option>
                             <option value="Color Correction">Color Correction</option>
                             <option value="Retouch">Retouch</option>
                             <option value="Final">Final</option>
@@ -723,9 +724,7 @@ $projectProgress = getProjectProgressStats($project_id);
                     <div class="form-group">
                         <label for="assignmentDeadline">Deadline</label>
                         <input type="date" class="form-control" id="assignmentDeadline" name="deadline"
-                            min="<?php echo date('Y-m-d'); ?>"
                             value="<?php echo date('Y-m-d', strtotime('+7 days')); ?>" required>
-                        <small class="form-text text-muted">Select a deadline no earlier than today</small>
                     </div>
                 </form>
             </div>
@@ -812,6 +811,25 @@ $projectProgress = getProjectProgressStats($project_id);
         });
     }
 
+    // Image selection via container click
+    $(document).on('click', '.image-container', function (e) {
+        // Don't trigger selection if clicking on delete button
+        if ($(e.target).closest('.delete-image').length) {
+            return;
+        }
+
+        $(this).toggleClass('selected');
+        updateBatchActions();
+
+        // Log the selection
+        const imageId = $(this).data('image-id');
+        const isSelected = $(this).hasClass('selected');
+        logging.interaction('Image selection changed', {
+            imageId: imageId,
+            selected: isSelected
+        });
+    });
+
     $(document).ready(function () {
         // Log page load
         logging.info(`Edit project page loaded for project ID: ${projectId}`);
@@ -821,25 +839,6 @@ $projectProgress = getProjectProgressStats($project_id);
             headers: {
                 'X-Requested-With': 'XMLHttpRequest'
             }
-        });
-
-        // Image selection via container click
-        $(document).on('click', '.image-container', function (e) {
-            // Don't trigger selection if clicking on delete button
-            if ($(e.target).closest('.delete-image').length) {
-                return;
-            }
-
-            $(this).toggleClass('selected');
-            updateBatchActions();
-
-            // Log the selection
-            const imageId = $(this).data('image-id');
-            const isSelected = $(this).hasClass('selected');
-            logging.interaction('Image selection changed', {
-                imageId: imageId,
-                selected: isSelected
-            });
         });
 
         // Function to update batch actions visibility and selected count
@@ -969,53 +968,6 @@ $projectProgress = getProjectProgressStats($project_id);
                 error: function (xhr, status, error) {
                     logging.error('AJAX Error', { status, error });
                     alert('An error occurred while unassigning images: ' + error);
-                }
-            });
-        });
-
-        // Handle assignment status change
-        $('.status-select').change(function () {
-            const assignmentId = $(this).data('assignment-id');
-            const newStatus = $(this).val();
-            const selectElement = $(this);
-            
-            logging.interaction('Status change', { assignmentId, newStatus });
-
-            // AJAX call to update assignment status
-            $.ajax({
-                url: 'controllers/edit_project_ajax.php',
-                type: 'POST',
-                data: {
-                    action: 'update_assignment_status',
-                    assignment_id: assignmentId,
-                    status: newStatus
-                },
-                success: function (response) {
-                    try {
-                        const data = JSON.parse(response);
-                        if (data.status === 'success') {
-                            logging.info('Status updated successfully');
-                            
-                            // Update the option text for in_progress to show assignee's first name
-                            if (newStatus === 'in_progress') {
-                                const inProgressOption = selectElement.find('option[value="in_progress"]');
-                                inProgressOption.text(data.assignee_first_name || 'In Progress');
-                            }
-                            
-                            // Show success notification
-                            alert('Status updated successfully');
-                        } else {
-                            logging.error('Failed to update status', data.message);
-                            alert('Error: ' + data.message);
-                        }
-                    } catch (e) {
-                        logging.error('Error parsing JSON response', { error: e, response });
-                        alert("An error occurred while processing the response.");
-                    }
-                },
-                error: function (xhr, status, error) {
-                    logging.error('AJAX Error', { status, error });
-                    alert('An error occurred while updating status: ' + error);
                 }
             });
         });
@@ -1452,56 +1404,66 @@ $projectProgress = getProjectProgressStats($project_id);
             });
         });
 
-        // View assigned images
+        // Handle view assigned images
         $('.view-assigned-images').click(function () {
             const assignmentId = $(this).data('assignment-id');
+            
             logging.interaction('Viewing assigned images', { assignmentId });
-
+            
             // AJAX call to get assigned images
             $.ajax({
                 url: 'controllers/edit_project_ajax.php',
                 type: 'POST',
                 data: {
                     action: 'get_assigned_images',
-                    assignment_id: assignmentId,
-                    project_id: projectId
+                    project_id: projectId,
+                    assignment_id: assignmentId
                 },
                 success: function (response) {
                     try {
                         const data = JSON.parse(response);
+                        
                         if (data.status === 'success') {
                             logging.info('Retrieved assigned images', { count: data.images.length });
-
-                            // Create modal to display assigned images
+                            
                             let imagesHtml = '';
+                            
                             if (data.images.length > 0) {
                                 imagesHtml = '<div class="row">';
+                                
                                 data.images.forEach(image => {
+                                    // Extract filename from path
                                     const fileName = image.image_path.split('/').pop();
-                                    const statusBadge = image.status_image === 'completed' ?
-                                        '<span class="badge badge-success mt-1">Completed</span>' :
-                                        '<span class="badge badge-primary mt-1">Assigned</span>';
-
+                                    
                                     imagesHtml += `
                                         <div class="col-md-4 mb-3">
-                                            <div class="card">
-                                                <img src="../../uploads/project_images/${image.image_path}" 
+                                            <div class="card h-100">
+                                                <img src="${image.image_url}" 
                                                      class="card-img-top" 
                                                      alt="Image" 
-                                                     onerror="this.src='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIAAAABOCAYAAADo6LyvAAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAADsQAAA7EB9YPtSQAAABl0RVh0U29mdHdhcmUAd3d3Lmlua3NjYXBlLm9yZ5vuPBoAAAL9SURBVHic7dxNSFRRGMbx/51xGh2dpIjCIKIIWkQQEkkoQS0KghbRI7Ro6UJatYqCQCVaFC2iaNUqCFpEqzZRkoWFVEYQFYCbiCisqJlP43jus5jMLpwFOu9zzpzpPD/4L2bmnvO+L3PvmTuQIYQQQgghhBBCCCGEEEIIIYQQQgghhBBCCCGEEEIIIYQQQgghhBBCCCGEEEIIIYQQQqyVP9uWq1VzL6veAAAAAElFTkSuQmCC'">
+                                                     style="height: 150px; object-fit: contain;"
+                                                     onerror="this.src='../../dist/img/image-placeholder.png'">
                                                 <div class="card-body p-2">
                                                     <small class="text-truncate d-block" title="${fileName}">${fileName}</small>
-                                                    ${statusBadge}
+                                                    <div class="d-flex justify-content-between align-items-center mt-2">
+                                                        <span class="badge badge-info">${image.status_image}</span>
+                                                        <button class="btn btn-sm btn-danger unassign-image" 
+                                                                data-image-id="${image.image_id}" 
+                                                                data-assignment-id="${assignmentId}">
+                                                            <i class="fas fa-times"></i> Remove
+                                                        </button>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
                                     `;
                                 });
+                                
                                 imagesHtml += '</div>';
                             } else {
                                 imagesHtml = '<div class="alert alert-info">No images assigned to this team member.</div>';
                             }
-
+                            
                             // Create and show modal
                             const modalHtml = `
                                 <div class="modal fade" id="viewAssignedImagesModal" tabindex="-1" role="dialog">
@@ -1526,13 +1488,109 @@ $projectProgress = getProjectProgressStats($project_id);
                                     </div>
                                 </div>
                             `;
-
-                            // Add modal to body
+                            
+                            // Add modal to body and show it
                             $('body').append(modalHtml);
                             $('#viewAssignedImagesModal').modal('show');
-
+                            
+                            // Handle unassign image click
+                            $('.unassign-image').click(function() {
+                                const imageId = $(this).data('image-id');
+                                const card = $(this).closest('.col-md-4');
+                                
+                                if (!confirm('Are you sure you want to remove this image from the assignment?')) {
+                                    return;
+                                }
+                                
+                                logging.interaction('Unassigning single image', { imageId, assignmentId });
+                                
+                                // AJAX call to unassign the image
+                                $.ajax({
+                                    url: 'controllers/edit_project_ajax.php',
+                                    type: 'POST',
+                                    data: {
+                                        action: 'unassign_images',
+                                        project_id: projectId,
+                                        image_ids: JSON.stringify([imageId])
+                                    },
+                                    success: function(unassignResponse) {
+                                        try {
+                                            const unassignData = JSON.parse(unassignResponse);
+                                            
+                                            if (unassignData.status === 'success') {
+                                                logging.info('Image unassigned successfully');
+                                                
+                                                // Remove image card from display
+                                                card.fadeOut(300, function() {
+                                                    $(this).remove();
+                                                    
+                                                    // Update count in modal title
+                                                    const currentCount = $('.modal-title').text().match(/\d+/);
+                                                    if (currentCount) {
+                                                        const newCount = parseInt(currentCount[0]) - 1;
+                                                        $('.modal-title').text($('.modal-title').text().replace(`(${currentCount[0]})`, `(${newCount})`));
+                                                        
+                                                        // If no images left, show message
+                                                        if (newCount === 0) {
+                                                            $('.modal-body .row').html('<div class="alert alert-info w-100">No images assigned to this team member.</div>');
+                                                        }
+                                                    }
+                                                    
+                                                    // Update count in assignment table
+                                                    const assignmentRow = $(`tr[data-assignment-id="${assignmentId}"]`);
+                                                    const countCell = assignmentRow.find('td:nth-child(3)');
+                                                    const currentAssignedCount = parseInt(countCell.text());
+                                                    if (!isNaN(currentAssignedCount)) {
+                                                        const newAssignedCount = currentAssignedCount - 1;
+                                                        countCell.html(`${newAssignedCount} Images`);
+                                                        
+                                                        // If all images are unassigned, update UI
+                                                        if (newAssignedCount === 0) {
+                                                            location.reload(); // Simplest way to update UI completely
+                                                        } else {
+                                                            // Add the action buttons back if they're gone
+                                                            if (countCell.find('.btn-group').length === 0) {
+                                                                countCell.append(`
+                                                                    <div class="btn-group ml-2">
+                                                                        <button class="btn btn-sm btn-outline-primary view-assigned-images" 
+                                                                            data-assignment-id="${assignmentId}" 
+                                                                            title="View Assigned Images">
+                                                                            <i class="fas fa-eye"></i>
+                                                                        </button>
+                                                                        <button class="btn btn-sm btn-outline-success add-more-images" 
+                                                                            data-assignment-id="${assignmentId}" 
+                                                                            title="Add More Images">
+                                                                            <i class="fas fa-plus"></i>
+                                                                        </button>
+                                                                        <button class="btn btn-sm btn-outline-danger remove-assigned-images" 
+                                                                            data-assignment-id="${assignmentId}" 
+                                                                            title="Remove Assigned Images">
+                                                                            <i class="fas fa-trash-alt"></i>
+                                                                        </button>
+                                                                    </div>
+                                                                `);
+                                                            }
+                                                        }
+                                                    }
+                                                });
+                                            } else {
+                                                logging.error('Failed to unassign image', unassignData.message);
+                                                alert('Error: ' + unassignData.message);
+                                            }
+                                        } catch (e) {
+                                            logging.error('Error parsing JSON response', { error: e, unassignResponse });
+                                            alert("An error occurred while processing the response.");
+                                        }
+                                    },
+                                    error: function(xhr, status, error) {
+                                        logging.error('AJAX Error while unassigning image', { status, error });
+                                        alert('An error occurred while unassigning the image: ' + error);
+                                    }
+                                });
+                            });
+                            
                             // Remove modal from DOM when hidden
-                            $('#viewAssignedImagesModal').on('hidden.bs.modal', function () {
+                            $('#viewAssignedImagesModal').on('hidden.bs.modal', function() {
                                 $(this).remove();
                             });
                         } else {
@@ -1544,18 +1602,18 @@ $projectProgress = getProjectProgressStats($project_id);
                         alert("An error occurred while processing the response.");
                     }
                 },
-                error: function (xhr, status, error) {
+                error: function(xhr, status, error) {
                     logging.error('AJAX Error', { status, error });
                     alert('An error occurred while retrieving assigned images: ' + error);
                 }
             });
         });
 
-        // Add more images to assignment
-        $('.add-more-images').click(function () {
+        // Handle add more images
+        $('.add-more-images').click(function() {
             const assignmentId = $(this).data('assignment-id');
             logging.interaction('Adding more images to assignment', { assignmentId });
-
+            
             // AJAX call to get available images
             $.ajax({
                 url: 'controllers/edit_project_ajax.php',
@@ -1564,29 +1622,33 @@ $projectProgress = getProjectProgressStats($project_id);
                     action: 'get_available_images',
                     project_id: projectId
                 },
-                success: function (response) {
+                success: function(response) {
                     try {
                         const data = JSON.parse(response);
+                        
                         if (data.status === 'success') {
                             logging.info('Retrieved available images', { count: data.images.length });
-
+                            
                             if (data.images.length === 0) {
                                 alert('No available images to assign. Please upload more images first.');
                                 return;
                             }
-
+                            
                             // Create modal to display available images for selection
                             let imagesHtml = '<div class="row">';
+                            
                             data.images.forEach(image => {
                                 const fileName = image.image_path.split('/').pop();
-
+                                const imageUrl = `../uploads/projects/${projectId}/${image.image_path}`;
+                                
                                 imagesHtml += `
                                     <div class="col-md-4 mb-3">
                                         <div class="card selectable-image" data-image-id="${image.image_id}">
-                                            <img src="../../uploads/project_images/${image.image_path}" 
+                                            <img src="${imageUrl}" 
                                                  class="card-img-top" 
                                                  alt="Image" 
-                                                 onerror="this.src='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIAAAABOCAYAAADo6LyvAAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAADsQAAA7EB9YPtSQAAABl0RVh0U29mdHdhcmUAd3d3Lmlua3NjYXBlLm9yZ5vuPBoAAAL9SURBVHic7dxNSFRRGMbx/51xGh2dpIjCIKIIWkQQEkkoQS0KghbRI7Ro6UJatYqCQCVaFC2iaNUqCFpEqzZRkoWFVEYQFYCbiCisqJlP43jus5jMLpwFOu9zzpzpPD/4L2bmnvO+L3PvmTuQIYQQQgghhBBCCCGEEEIIIYQQQgghhBBCCCGEEEIIIYQQQgghhBBCCCGEEEIIIYQQQqyVP9uWq1VzL6veAAAAAElFTkSuQmCC'">
+                                                 style="height: 150px; object-fit: contain;"
+                                                 onerror="this.src='../../dist/img/image-placeholder.png'">
                                             <div class="card-body p-2">
                                                 <small class="text-truncate d-block" title="${fileName}">${fileName}</small>
                                                 <div class="image-select-checkbox mt-2 text-center">
@@ -1598,8 +1660,9 @@ $projectProgress = getProjectProgressStats($project_id);
                                     </div>
                                 `;
                             });
+                            
                             imagesHtml += '</div>';
-
+                            
                             // Create and show modal
                             const modalHtml = `
                                 <div class="modal fade" id="addMoreImagesModal" tabindex="-1" role="dialog">
@@ -1626,36 +1689,37 @@ $projectProgress = getProjectProgressStats($project_id);
                                     </div>
                                 </div>
                             `;
-
+                            
                             // Add modal to body
                             $('body').append(modalHtml);
                             $('#addMoreImagesModal').modal('show');
-
+                            
                             // Handle click on selectable image
-                            $('.selectable-image').click(function (e) {
+                            $('.selectable-image').click(function(e) {
                                 if (!$(e.target).hasClass('image-select') && !$(e.target).hasClass('form-check-label')) {
                                     const checkbox = $(this).find('.image-select');
                                     checkbox.prop('checked', !checkbox.prop('checked'));
                                 }
                             });
-
+                            
                             // Handle confirmation
-                            $('#confirmAddImages').click(function () {
+                            $('#confirmAddImages').click(function() {
                                 const selectedImageIds = [];
-                                $('#addMoreImagesModal .image-select:checked').each(function () {
+                                
+                                $('#addMoreImagesModal .image-select:checked').each(function() {
                                     selectedImageIds.push($(this).val());
                                 });
-
+                                
                                 if (selectedImageIds.length === 0) {
                                     alert('Please select at least one image to add.');
                                     return;
                                 }
-
+                                
                                 logging.interaction('Confirming add images to assignment', {
                                     assignmentId,
                                     imageCount: selectedImageIds.length
                                 });
-
+                                
                                 // AJAX call to assign selected images
                                 $.ajax({
                                     url: 'controllers/edit_project_ajax.php',
@@ -1666,13 +1730,14 @@ $projectProgress = getProjectProgressStats($project_id);
                                         project_id: projectId,
                                         image_ids: JSON.stringify(selectedImageIds)
                                     },
-                                    success: function (response) {
+                                    success: function(response) {
                                         try {
                                             const data = JSON.parse(response);
+                                            
                                             if (data.status === 'success') {
                                                 logging.info('Images added to assignment successfully');
                                                 $('#addMoreImagesModal').modal('hide');
-
+                                                
                                                 // Reload page to show updated assignments
                                                 location.reload();
                                             } else {
@@ -1684,15 +1749,15 @@ $projectProgress = getProjectProgressStats($project_id);
                                             alert("An error occurred while processing the response.");
                                         }
                                     },
-                                    error: function (xhr, status, error) {
+                                    error: function(xhr, status, error) {
                                         logging.error('AJAX Error', { status, error });
                                         alert('An error occurred while adding images to assignment: ' + error);
                                     }
                                 });
                             });
-
+                            
                             // Remove modal from DOM when hidden
-                            $('#addMoreImagesModal').on('hidden.bs.modal', function () {
+                            $('#addMoreImagesModal').on('hidden.bs.modal', function() {
                                 $(this).remove();
                             });
                         } else {
@@ -1704,7 +1769,7 @@ $projectProgress = getProjectProgressStats($project_id);
                         alert("An error occurred while processing the response.");
                     }
                 },
-                error: function (xhr, status, error) {
+                error: function(xhr, status, error) {
                     logging.error('AJAX Error', { status, error });
                     alert('An error occurred while retrieving available images: ' + error);
                 }
@@ -1728,6 +1793,281 @@ $projectProgress = getProjectProgressStats($project_id);
             $('#assignSelected').data('clicked', false);
             $('#addAssignmentModalLabel').text('Add New Assignment');
         });
+
+        // Handle deadline change
+        $('.deadline-input').change(function() {
+            const assignmentId = $(this).data('assignment-id');
+            const newDeadline = $(this).val();
+            const inputElement = $(this);
+            
+            logging.interaction('Deadline change', { assignmentId, newDeadline });
+            
+            // AJAX call to update assignment deadline
+            $.ajax({
+                url: 'controllers/edit_project_ajax.php',
+                type: 'POST',
+                data: {
+                    action: 'update_assignment_deadline',
+                    assignment_id: assignmentId,
+                    deadline: newDeadline
+                },
+                success: function(response) {
+                    try {
+                        const data = JSON.parse(response);
+                        if (data.status === 'success') {
+                            logging.info('Deadline updated successfully');
+                            
+                            // Update the deadline status badge
+                            const badgeContainer = inputElement.siblings('.badge');
+                            
+                            // Check if we need to add/update/remove deadline badge
+                            if (data.deadline_status) {
+                                let badgeClass = '';
+                                let badgeText = '';
+                                
+                                if (data.deadline_status === 'today') {
+                                    badgeClass = 'badge-warning';
+                                    badgeText = 'Deadline Today';
+                                } else if (data.deadline_status === 'overdue') {
+                                    badgeClass = 'badge-danger';
+                                    badgeText = 'Overdue';
+                                }
+                                
+                                // If badge exists, update it, otherwise create it
+                                if (badgeContainer.length) {
+                                    badgeContainer.attr('class', 'badge ' + badgeClass + ' mt-1 w-100')
+                                                  .text(badgeText);
+                                } else if (badgeText) {
+                                    inputElement.after('<span class="badge ' + badgeClass + ' mt-1 w-100">' + badgeText + '</span>');
+                                }
+                            } else {
+                                // Remove badge if no special status
+                                badgeContainer.remove();
+                            }
+                            
+                            // Show subtle indication of success
+                            inputElement.addClass('border-success').delay(1000).queue(function(next) {
+                                $(this).removeClass('border-success');
+                                next();
+                            });
+                        } else {
+                            logging.error('Failed to update deadline', data.message);
+                            alert('Error: ' + data.message);
+                        }
+                    } catch (e) {
+                        logging.error('Error parsing JSON response', { error: e, response });
+                        alert("An error occurred while processing the response.");
+                    }
+                },
+                error: function(xhr, status, error) {
+                    logging.error('AJAX Error', { status, error });
+                    alert('An error occurred while updating deadline: ' + error);
+                }
+            });
+        });
+        
+        // Handle assignee change
+        $('.assignee-select').change(function() {
+            const assignmentId = $(this).data('assignment-id');
+            const userId = $(this).val();
+            const selectElement = $(this);
+            
+            logging.interaction('Assignee change', { assignmentId, userId });
+            
+            // AJAX call to update assignment assignee
+            $.ajax({
+                url: 'controllers/edit_project_ajax.php',
+                type: 'POST',
+                data: {
+                    action: 'update_assignment_assignee',
+                    assignment_id: assignmentId,
+                    user_id: userId
+                },
+                success: function(response) {
+                    try {
+                        const data = JSON.parse(response);
+                        if (data.status === 'success') {
+                            logging.info('Assignee updated successfully');
+                            
+                            // Update in_progress option text if needed
+                            const statusSelect = $('select.assignment-status-select[data-assignment-id="' + assignmentId + '"]');
+                            const inProgressOption = statusSelect.find('option[value="in_progress"]');
+                            if (inProgressOption.length && data.first_name) {
+                                inProgressOption.text('In Progress (' + data.first_name + ')');
+                            }
+                            
+                            // Show subtle indication of success
+                            selectElement.addClass('border-success').delay(1000).queue(function(next) {
+                                $(this).removeClass('border-success');
+                                next();
+                            });
+                        } else {
+                            logging.error('Failed to update assignee', data.message);
+                            alert('Error: ' + data.message);
+                        }
+                    } catch (e) {
+                        logging.error('Error parsing JSON response', { error: e, response });
+                        alert("An error occurred while processing the response.");
+                    }
+                },
+                error: function(xhr, status, error) {
+                    logging.error('AJAX Error', { status, error });
+                    alert('An error occurred while updating assignee: ' + error);
+                }
+            });
+        });
+        
+        // Handle role change
+        $('.role-select').change(function() {
+            const assignmentId = $(this).data('assignment-id');
+            const roleTask = $(this).val();
+            const selectElement = $(this);
+            
+            logging.interaction('Role change', { assignmentId, roleTask });
+            
+            // AJAX call to update assignment role
+            $.ajax({
+                url: 'controllers/edit_project_ajax.php',
+                type: 'POST',
+                data: {
+                    action: 'update_assignment_role',
+                    assignment_id: assignmentId,
+                    role_task: roleTask
+                },
+                success: function(response) {
+                    try {
+                        const data = JSON.parse(response);
+                        if (data.status === 'success') {
+                            logging.info('Role updated successfully');
+                            
+                            // Show subtle indication of success
+                            selectElement.addClass('border-success').delay(1000).queue(function(next) {
+                                $(this).removeClass('border-success');
+                                next();
+                            });
+                        } else {
+                            logging.error('Failed to update role', data.message);
+                            alert('Error: ' + data.message);
+                        }
+                    } catch (e) {
+                        logging.error('Error parsing JSON response', { error: e, response });
+                        alert("An error occurred while processing the response.");
+                    }
+                },
+                error: function(xhr, status, error) {
+                    logging.error('AJAX Error', { status, error });
+                    alert('An error occurred while updating role: ' + error);
+                }
+            });
+        });
+
+        // Handle removing assigned images
+        $('.remove-assigned-images').on('click', function() {
+            if (!confirm('Are you sure you want to remove all assigned images from this team member?')) {
+                return;
+            }
+            
+            var assignmentId = $(this).data('assignment-id');
+            var button = $(this);
+            
+            console.log('Removing assigned images for assignment ID:', assignmentId);
+            
+            $.ajax({
+                url: 'controllers/edit_project_ajax.php',
+                type: 'POST',
+                data: {
+                    action: 'remove_assigned_images',
+                    assignment_id: assignmentId
+                },
+                success: function(response) {
+                    var data = JSON.parse(response);
+                    console.log('Server response:', data);
+                    
+                    if (data.status === 'success') {
+                        // Update the assigned images count
+                        button.closest('td').html('0 Images');
+                        toastr.success(data.message);
+                    } else {
+                        toastr.error(data.message);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error:', error);
+                    toastr.error('An error occurred while removing assigned images');
+                }
+            });
+        });
+
+        // Function to update project fields via AJAX
+        function updateProjectField(fieldName, fieldValue) {
+            logging.interaction('Updating project field', { field: fieldName, value: fieldValue });
+            
+            // Show a loading indicator or toast notification
+            const toastHtml = `
+                <div class="toast position-fixed bg-info text-white" style="top: 20px; right: 20px; z-index: 9999;" data-delay="2000">
+                    <div class="toast-body d-flex align-items-center">
+                        <i class="fas fa-spinner fa-spin mr-2"></i> Saving changes...
+                    </div>
+                </div>
+            `;
+            
+            // Append toast if it doesn't exist
+            if ($('#saveToast').length === 0) {
+                $('body').append('<div id="saveToast"></div>');
+            }
+            
+            $('#saveToast').html(toastHtml);
+            $('.toast').toast('show');
+            
+            // Make AJAX request
+            $.ajax({
+                url: 'controllers/edit_project_ajax.php',
+                type: 'POST',
+                data: {
+                    action: 'update_project_field',
+                    project_id: projectId,
+                    field_name: fieldName,
+                    field_value: fieldValue
+                },
+                success: function(response) {
+                    try {
+                        const data = JSON.parse(response);
+                        
+                        if (data.status === 'success') {
+                            // Update toast to show success
+                            $('.toast').removeClass('bg-info').addClass('bg-success');
+                            $('.toast .toast-body').html('<i class="fas fa-check-circle mr-2"></i> Saved successfully');
+                            
+                            // Hide toast after delay
+                            setTimeout(() => {
+                                $('.toast').toast('hide');
+                            }, 2000);
+                            
+                            logging.info('Field updated successfully', { field: fieldName });
+                        } else {
+                            // Update toast to show error
+                            $('.toast').removeClass('bg-info').addClass('bg-danger');
+                            $('.toast .toast-body').html(`<i class="fas fa-exclamation-circle mr-2"></i> ${data.message}`);
+                            
+                            logging.error('Failed to update field', { field: fieldName, error: data.message });
+                        }
+                    } catch (e) {
+                        // Update toast to show error
+                        $('.toast').removeClass('bg-info').addClass('bg-danger');
+                        $('.toast .toast-body').html('<i class="fas fa-exclamation-circle mr-2"></i> Error processing response');
+                        
+                        logging.error('Error parsing JSON response', { error: e, response });
+                    }
+                },
+                error: function(xhr, status, error) {
+                    // Update toast to show error
+                    $('.toast').removeClass('bg-info').addClass('bg-danger');
+                    $('.toast .toast-body').html('<i class="fas fa-exclamation-circle mr-2"></i> Network error');
+                    
+                    logging.error('AJAX Error', { status, error });
+                }
+            });
+        }
     });
 </script>
 

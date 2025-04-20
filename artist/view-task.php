@@ -83,7 +83,7 @@ try {
     
     while ($image = $imagesResult->fetch_assoc()) {
         // Add the full path for display
-        $image['image_url'] = '../uploads/projects/' . $task['project_id'] . '/' . $image['image_path'];
+        $image['image_url'] = '../uploads/projects/' . ($task['project_id'] ?? '') . '/' . $image['image_path'];
         $images[] = $image;
     }
     
@@ -179,26 +179,26 @@ function getPriorityClass($priority) {
                                     <div class="form-group">
                                         <label>Project Name</label>
                                         <p class="form-control-static">
-                                            <?php echo htmlspecialchars($task['project_title'] ?? ''); ?>
+                                            <?php echo htmlspecialchars($task['project_title'] ?? 'Untitled Project'); ?>
                                         </p>
                                     </div>
                                     <div class="form-group">
                                         <label>Company</label>
                                         <p class="form-control-static">
-                                            <?php echo htmlspecialchars($task['company_name'] ?? ''); ?>
+                                            <?php echo htmlspecialchars($task['company_name'] ?? 'No Company'); ?>
                                         </p>
                                     </div>
                                     <div class="form-group">
                                         <label>Description</label>
                                         <p class="form-control-static">
-                                            <?php echo nl2br(htmlspecialchars($task['description'] ?? '')); ?>
+                                            <?php echo nl2br(htmlspecialchars($task['description'] ?? 'No description')); ?>
                                         </p>
                                     </div>
                                     <div class="form-group">
                                         <label>Role</label>
                                         <p class="form-control-static">
                                             <span class="badge badge-info p-2">
-                                                <?php echo htmlspecialchars($task['role_task'] ?? ''); ?>
+                                                <?php echo htmlspecialchars($task['role_task'] ?? 'Not Assigned'); ?>
                                             </span>
                                         </p>
                                     </div>
@@ -216,11 +216,11 @@ function getPriorityClass($priority) {
                                     <div class="form-group">
                                         <label>Task Status</label>
                                         <p class="form-control-static">
-                                            <span class="badge badge-<?php echo getStatusClass($task['status_assignee']); ?> p-2">
+                                            <span class="badge badge-<?php echo getStatusClass($task['status_assignee'] ?? 'Unknown'); ?> p-2">
                                                 <?php 
                                                 $statusText = ucfirst(str_replace('_', ' ', $task['status_assignee'] ?? 'Unknown'));
                                                 $statusIcon = '';
-                                                switch($task['status_assignee']) {
+                                                switch($task['status_assignee'] ?? 'Unknown') {
                                                     case 'in_progress':
                                                         $statusIcon = '<i class="fas fa-spinner fa-spin mr-1"></i>';
                                                         break;
@@ -245,7 +245,7 @@ function getPriorityClass($priority) {
                                     <div class="form-group">
                                         <label>Priority</label>
                                         <p class="form-control-static">
-                                            <span class="badge badge-<?php echo getPriorityClass($task['priority']); ?> p-2">
+                                            <span class="badge badge-<?php echo getPriorityClass($task['priority'] ?? 'Not set'); ?> p-2">
                                                 <?php echo ucfirst($task['priority'] ?? 'Not set'); ?>
                                             </span>
                                         </p>
@@ -369,14 +369,14 @@ function getPriorityClass($priority) {
                                     <div class="row">
                                         <div class="col-md-6">
                                             <div class="task-action-buttons">
-                                                <?php if ($task['status_assignee'] == 'pending'): ?>
+                                                <?php if (($task['status_assignee'] ?? '') == 'pending'): ?>
                                                     <button type="button" class="btn btn-primary start-task-btn" 
-                                                           data-id="<?php echo $task['assignment_id']; ?>">
+                                                           data-id="<?php echo $task['assignment_id'] ?? ''; ?>">
                                                         <i class="fas fa-play mr-2"></i> Start Task
                                                     </button>
-                                                <?php elseif ($task['status_assignee'] == 'in_progress'): ?>
+                                                <?php elseif (($task['status_assignee'] ?? '') == 'in_progress'): ?>
                                                     <button type="button" class="btn btn-success complete-task-btn" 
-                                                           data-id="<?php echo $task['assignment_id']; ?>">
+                                                           data-id="<?php echo $task['assignment_id'] ?? ''; ?>">
                                                         <i class="fas fa-check mr-2"></i> Mark as Completed
                                                     </button>
                                                 <?php endif; ?>
@@ -390,13 +390,13 @@ function getPriorityClass($priority) {
                                             <div class="form-group">
                                                 <label for="statusUpdate">Update Status</label>
                                                 <select class="form-control" id="statusUpdate" 
-                                                        data-id="<?php echo $task['assignment_id']; ?>">
+                                                        data-id="<?php echo $task['assignment_id'] ?? ''; ?>">
                                                     <option value="">-- Select Status --</option>
-                                                    <option value="pending" <?php echo $task['status_assignee'] == 'pending' ? 'selected' : ''; ?>>Pending</option>
-                                                    <option value="in_progress" <?php echo $task['status_assignee'] == 'in_progress' ? 'selected' : ''; ?>>In Progress</option>
-                                                    <option value="review" <?php echo $task['status_assignee'] == 'review' ? 'selected' : ''; ?>>In Review</option>
-                                                    <option value="completed" <?php echo $task['status_assignee'] == 'completed' ? 'selected' : ''; ?>>Completed</option>
-                                                    <option value="delayed" <?php echo $task['status_assignee'] == 'delayed' ? 'selected' : ''; ?>>Delayed</option>
+                                                    <option value="pending" <?php echo ($task['status_assignee'] ?? '') == 'pending' ? 'selected' : ''; ?>>Pending</option>
+                                                    <option value="in_progress" <?php echo ($task['status_assignee'] ?? '') == 'in_progress' ? 'selected' : ''; ?>>In Progress</option>
+                                                    <option value="review" <?php echo ($task['status_assignee'] ?? '') == 'review' ? 'selected' : ''; ?>>In Review</option>
+                                                    <option value="completed" <?php echo ($task['status_assignee'] ?? '') == 'completed' ? 'selected' : ''; ?>>Completed</option>
+                                                    <option value="delayed" <?php echo ($task['status_assignee'] ?? '') == 'delayed' ? 'selected' : ''; ?>>Delayed</option>
                                                 </select>
                                             </div>
                                         </div>

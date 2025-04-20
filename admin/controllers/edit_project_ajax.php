@@ -669,6 +669,290 @@ if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQ
             ]);
             break;
 
+        case 'update_assignment_deadline':
+            $assignment_id = intval($_POST['assignment_id'] ?? 0);
+            $deadline = $_POST['deadline'] ?? '';
+
+            if ($assignment_id <= 0 || empty($deadline)) {
+                echo json_encode(['status' => 'error', 'message' => 'Missing required fields']);
+                exit;
+            }
+
+            // Update the assignment deadline
+            $updateSql = "UPDATE tbl_project_assignments 
+                        SET deadline = ?, last_updated = NOW() 
+                        WHERE assignment_id = ?";
+            $updateStmt = $conn->prepare($updateSql);
+            $updateStmt->bind_param("si", $deadline, $assignment_id);
+
+            if ($updateStmt->execute()) {
+                // Calculate deadline status for response
+                $deadline_date = new DateTime($deadline);
+                $today = new DateTime('today');
+                $deadline_status = '';
+                
+                if ($deadline_date == $today) {
+                    $deadline_status = 'today';
+                } else if ($deadline_date < $today) {
+                    $deadline_status = 'overdue';
+                }
+                
+                echo json_encode([
+                    'status' => 'success', 
+                    'message' => 'Deadline updated successfully',
+                    'deadline_status' => $deadline_status
+                ]);
+            } else {
+                echo json_encode(['status' => 'error', 'message' => 'Error updating deadline: ' . $updateStmt->error]);
+            }
+            break;
+
+        case 'update_assignment_assignee':
+            $assignment_id = intval($_POST['assignment_id'] ?? 0);
+            $user_id = intval($_POST['user_id'] ?? 0);
+
+            if ($assignment_id <= 0 || $user_id <= 0) {
+                echo json_encode(['status' => 'error', 'message' => 'Missing required fields']);
+                exit;
+            }
+
+            // Get new user details
+            $userSql = "SELECT first_name, last_name FROM tbl_users WHERE user_id = ?";
+            $userStmt = $conn->prepare($userSql);
+            $userStmt->bind_param("i", $user_id);
+            $userStmt->execute();
+            $userResult = $userStmt->get_result();
+            $user = $userResult->fetch_assoc();
+
+            if (!$user) {
+                echo json_encode(['status' => 'error', 'message' => 'User not found']);
+                exit;
+            }
+
+            // Update the assignment user
+            $updateSql = "UPDATE tbl_project_assignments 
+                        SET user_id = ?, last_updated = NOW() 
+                        WHERE assignment_id = ?";
+            $updateStmt = $conn->prepare($updateSql);
+            $updateStmt->bind_param("ii", $user_id, $assignment_id);
+
+            if ($updateStmt->execute()) {
+                echo json_encode([
+                    'status' => 'success', 
+                    'message' => 'Assignee updated successfully',
+                    'first_name' => $user['first_name'],
+                    'last_name' => $user['last_name']
+                ]);
+            } else {
+                echo json_encode(['status' => 'error', 'message' => 'Error updating assignee: ' . $updateStmt->error]);
+            }
+            break;
+
+        case 'update_assignment_role':
+            if (!isset($_POST['assignment_id']) || !isset($_POST['role_task'])) {
+                echo json_encode(['status' => 'error', 'message' => 'Missing required fields']);
+                exit;
+            }
+
+            $assignmentId = intval($_POST['assignment_id']);
+            $roleTask = $_POST['role_task'];
+
+            // Update the role task in the database
+            $updateRoleQuery = "UPDATE tbl_project_assignments SET role_task = ? WHERE assignment_id = ?";
+            $stmt = $conn->prepare($updateRoleQuery);
+            $stmt->bind_param('si', $roleTask, $assignmentId);
+            
+            if ($stmt->execute()) {
+                echo json_encode(['status' => 'success', 'message' => 'Role updated successfully']);
+            } else {
+                echo json_encode(['status' => 'error', 'message' => 'Failed to update role: ' . $conn->error]);
+            }
+            break;
+
+        case 'remove_assigned_images':
+            if (!isset($_POST['assignment_id'])) {
+                echo json_encode(['status' => 'error', 'message' => 'Missing assignment ID']);
+                exit;
+            }
+
+            $assignmentId = intval($_POST['assignment_id']);
+
+            // Start transaction
+            $conn->begin_transaction();
+            
+            try {
+                // Get the project ID and user ID from the assignment
+                $getAssignmentQuery = "SELECT project_id, user_id FROM tbl_project_assignments WHERE assignment_id = ?";
+                $stmt = $conn->prepare($getAssignmentQuery);
+                $stmt->bind_param('i', $assignmentId);
+                $stmt->execute();
+                $assignmentResult = $stmt->get_result();
+                
+                if ($assignmentResult->num_rows === 0) {
+                    throw new Exception('Assignment not found');
+                }
+                
+                $assignmentData = $assignmentResult->fetch_assoc();
+                $projectId = $assignmentData['project_id'];
+                $userId = $assignmentData['user_id'];
+                
+                // Unassign all images for this assignment (update their assigned_to field to NULL)
+                $unassignImagesQuery = "UPDATE tbl_project_images 
+                                       SET assigned_to = NULL 
+                                       WHERE project_id = ? AND assigned_to = ?";
+                $stmt = $conn->prepare($unassignImagesQuery);
+                $stmt->bind_param('ii', $projectId, $userId);
+                
+                if (!$stmt->execute()) {
+                    throw new Exception('Failed to unassign images: ' . $conn->error);
+                }
+                
+                // Update the assignment's assigned_images count to 0
+                $updateAssignmentQuery = "UPDATE tbl_project_assignments 
+                                         SET assigned_images = 0 
+                                         WHERE assignment_id = ?";
+                $stmt = $conn->prepare($updateAssignmentQuery);
+                $stmt->bind_param('i', $assignmentId);
+                
+                if (!$stmt->execute()) {
+                    throw new Exception('Failed to update assignment count: ' . $conn->error);
+                }
+                
+                // Commit transaction
+                $conn->commit();
+                
+                echo json_encode([
+                    'status' => 'success', 
+                    'message' => 'All images have been unassigned successfully'
+                ]);
+                
+            } catch (Exception $e) {
+                // Rollback transaction on error
+                $conn->rollback();
+                echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+            }
+            break;
+
+        case 'update_project_field':
+            $project_id = intval($_POST['project_id'] ?? 0);
+            $field_name = $_POST['field_name'] ?? '';
+            $field_value = $_POST['field_value'] ?? '';
+            
+            if ($project_id <= 0 || empty($field_name)) {
+                echo json_encode(['status' => 'error', 'message' => 'Missing required fields']);
+                exit;
+            }
+            
+            logAjaxRequest('update_project_field', [
+                'project_id' => $project_id,
+                'field_name' => $field_name,
+                'field_value' => $field_value
+            ]);
+            
+            try {
+                // Map field names from the form to database columns
+                $field_mapping = [
+                    'projectName' => 'project_title',
+                    'description' => 'description',
+                    'company' => 'company_id', // Special case - will need to get/insert company ID
+                    'priority' => 'priority',
+                    'dateArrived' => 'date_arrived',
+                    'deadline' => 'deadline',
+                    'status_project' => 'status_project'
+                ];
+                
+                // Check if the field name is valid
+                if (!isset($field_mapping[$field_name]) && $field_name !== 'company') {
+                    throw new Exception("Invalid field name: $field_name");
+                }
+                
+                // Begin transaction
+                $conn->begin_transaction();
+                
+                // Special handling for company field
+                if ($field_name === 'company') {
+                    // Get or create company ID
+                    $company_id = 0;
+                    $company_name = $field_value;
+                    
+                    // First check if company exists
+                    $companySql = "SELECT company_id FROM tbl_companies WHERE company_name = ?";
+                    $companyStmt = $conn->prepare($companySql);
+                    if (!$companyStmt) {
+                        throw new Exception("Error preparing company statement: " . $conn->error);
+                    }
+                    
+                    $companyStmt->bind_param("s", $company_name);
+                    $companyStmt->execute();
+                    $companyResult = $companyStmt->get_result();
+                    
+                    if ($companyResult->num_rows > 0) {
+                        // Company exists
+                        $companyRow = $companyResult->fetch_assoc();
+                        $company_id = $companyRow['company_id'];
+                    } else {
+                        // Create new company
+                        $insertCompanySql = "INSERT INTO tbl_companies (company_name) VALUES (?)";
+                        $insertCompanyStmt = $conn->prepare($insertCompanySql);
+                        if (!$insertCompanyStmt) {
+                            throw new Exception("Error preparing insert company statement: " . $conn->error);
+                        }
+                        
+                        $insertCompanyStmt->bind_param("s", $company_name);
+                        if (!$insertCompanyStmt->execute()) {
+                            throw new Exception("Error inserting company: " . $insertCompanyStmt->error);
+                        }
+                        
+                        $company_id = $conn->insert_id;
+                    }
+                    
+                    // Now update the project with company ID
+                    $updateSql = "UPDATE tbl_projects SET company_id = ?, date_updated = NOW() WHERE project_id = ?";
+                    $updateStmt = $conn->prepare($updateSql);
+                    if (!$updateStmt) {
+                        throw new Exception("Error preparing update statement: " . $conn->error);
+                    }
+                    
+                    $updateStmt->bind_param("ii", $company_id, $project_id);
+                } else {
+                    // For other fields, do a direct update
+                    $db_field = $field_mapping[$field_name];
+                    
+                    $updateSql = "UPDATE tbl_projects SET $db_field = ?, date_updated = NOW() WHERE project_id = ?";
+                    $updateStmt = $conn->prepare($updateSql);
+                    if (!$updateStmt) {
+                        throw new Exception("Error preparing update statement: " . $conn->error);
+                    }
+                    
+                    $updateStmt->bind_param("si", $field_value, $project_id);
+                }
+                
+                if (!$updateStmt->execute()) {
+                    throw new Exception("Error updating project: " . $updateStmt->error);
+                }
+                
+                // Commit transaction
+                $conn->commit();
+                
+                echo json_encode([
+                    'status' => 'success',
+                    'message' => 'Project updated successfully'
+                ]);
+            } catch (Exception $e) {
+                // Roll back transaction on error
+                if ($conn->inTransaction()) {
+                    $conn->rollback();
+                }
+                
+                echo json_encode([
+                    'status' => 'error',
+                    'message' => $e->getMessage()
+                ]);
+                
+                error_log("Error updating project field: " . $e->getMessage());
+            }
+            break;
+
         default:
             echo json_encode(['status' => 'error', 'message' => 'Invalid action']);
             break;
