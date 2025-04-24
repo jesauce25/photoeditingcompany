@@ -393,6 +393,53 @@ $projectProgress = getProjectProgressStats($project_id);
     }
 </style>
 
+<!-- Custom styles for the image cards -->
+<style>
+    /* Image Container Styles */
+    .image-container {
+        position: relative;
+        transition: all 0.2s ease;
+        cursor: pointer;
+        border: 2px solid transparent;
+    }
+
+    .image-container:hover {
+        box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.15) !important;
+    }
+
+    .image-container.selected {
+        border-color: #007bff;
+        background-color: rgba(0, 123, 255, 0.05);
+    }
+
+    /* Selection Indicator */
+    .image-selection-indicator {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 20px;
+        height: 20px;
+        background-color: #007bff;
+        border-radius: 50%;
+        color: white;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 2;
+        transform: translate(-30%, -30%);
+    }
+
+    .image-container.selected .image-selection-indicator {
+        display: flex;
+    }
+
+    /* Badge styling */
+    .badge {
+        font-size: 85%;
+        font-weight: 500;
+    }
+</style>
+
 <div class="wrapper">
     <?php include("includes/nav.php"); ?>
 
@@ -644,66 +691,80 @@ $projectProgress = getProjectProgressStats($project_id);
 
                                                 // Get file name for display
                                                 $fileName = pathinfo($image['image_path'], PATHINFO_BASENAME);
-                                                ?>
-                                                <div class="col-md-2 col-sm-3 col-4 mb-2">
-                                                    <div class="image-container"
-                                                        data-image-id="<?php echo $image['image_id']; ?>">
-                                                        <div class="card h-100">
-                                                            <div class="image-selection-indicator">
-                                                                <i class="fas fa-check-circle"></i>
-                                                            </div>
-                                                            <?php
-                                                            $imagePath = '../../uploads/project_images/' . $image['image_path'];
-                                                            $imageExists = @getimagesize($imagePath) ? true : false;
 
-                                                            if ($imageExists) {
-                                                                // Display actual image if it exists
-                                                                echo '<img src="' . $imagePath . '" class="card-img-top" alt="Project Image">';
-                                                            } else {
-                                                                // Display a placeholder with nice styling if image doesn't exist
-                                                                echo '<div class="card-img-top d-flex align-items-center justify-content-center bg-light" style="height: 120px;">';
-                                                                echo '<i class="fas fa-file-image text-primary" style="font-size: 2rem;"></i>';
-                                                                echo '</div>';
-                                                            }
-                                                            ?>
-                                                            <div class="card-body p-2">
-                                                                <?php if (!empty($image['image_role']) || !empty($image['estimated_time'])): ?>
-                                                                    <div class="image-details mb-1">
+                                                // Format estimated time
+                                                $estimatedTimeDisplay = '';
+                                                if (!empty($image['estimated_time'])) {
+                                                    $time = intval($image['estimated_time']);
+                                                    if ($time >= 60) {
+                                                        $hours = floor($time / 60);
+                                                        $minutes = $time % 60;
+                                                        $estimatedTimeDisplay = $hours . 'hr' . ($minutes > 0 ? ' ' . $minutes . 'min' : '');
+                                                    } else {
+                                                        $estimatedTimeDisplay = $time . ' min';
+                                                    }
+                                                }
+                                                ?>
+                                                <div class="col-md-6 col-lg-4 mb-2">
+                                                    <div class="image-container card shadow-sm"
+                                                        data-image-id="<?php echo $image['image_id']; ?>">
+                                                        <div class="card-body p-2">
+                                                            <div class="d-flex align-items-center">
+                                                                <!-- Small thumbnail -->
+                                                                <div class="image-selection-indicator">
+                                                                    <i class="fas fa-check-circle"></i>
+                                                                </div>
+                                                                <div class="mr-3"
+                                                                    style="width: 50px; height: 50px; overflow: hidden; flex-shrink: 0;">
+                                                                    <?php
+                                                                    $imagePath = '../../uploads/project_images/' . $image['image_path'];
+                                                                    $imageExists = @getimagesize($imagePath) ? true : false;
+
+                                                                    if ($imageExists) {
+                                                                        echo '<img src="' . $imagePath . '" class="img-fluid" alt="Thumbnail">';
+                                                                    } else {
+                                                                        echo '<div class="d-flex align-items-center justify-content-center bg-light h-100">';
+                                                                        echo '<i class="fas fa-file-image text-primary"></i>';
+                                                                        echo '</div>';
+                                                                    }
+                                                                    ?>
+                                                                </div>
+
+                                                                <!-- Image details -->
+                                                                <div class="flex-grow-1">
+                                                                    <h6 class="mb-0 text-truncate"
+                                                                        title="<?php echo $fileName; ?>">
+                                                                        <?php echo $fileName; ?>
+                                                                    </h6>
+                                                                    <div class="d-flex flex-wrap mt-1">
+                                                                        <!-- Assignee badge -->
+                                                                        <span
+                                                                            class="badge <?php echo $statusClass; ?> mr-1 mb-1">
+                                                                            <i class="fas fa-user mr-1"></i>
+                                                                            <?php echo $statusText; ?>
+                                                                        </span>
+
+                                                                        <!-- Role badge -->
                                                                         <?php if (!empty($image['image_role'])): ?>
-                                                                            <span class="badge badge-info mr-1">
+                                                                            <span class="badge badge-info mr-1 mb-1">
+                                                                                <i class="fas fa-tasks mr-1"></i>
                                                                                 <?php echo htmlspecialchars($image['image_role']); ?>
                                                                             </span>
                                                                         <?php endif; ?>
 
-                                                                        <?php if (!empty($image['estimated_time'])): ?>
-                                                                            <span class="badge badge-secondary">
+                                                                        <!-- Estimated time badge -->
+                                                                        <?php if (!empty($estimatedTimeDisplay)): ?>
+                                                                            <span class="badge badge-secondary mb-1">
                                                                                 <i class="far fa-clock mr-1"></i>
-                                                                                <?php
-                                                                                $time = intval($image['estimated_time']);
-                                                                                if ($time >= 60) {
-                                                                                    $hours = floor($time / 60);
-                                                                                    $minutes = $time % 60;
-                                                                                    echo $hours . 'hr' . ($minutes > 0 ? ' ' . $minutes . 'min' : '');
-                                                                                } else {
-                                                                                    echo $time . ' min';
-                                                                                }
-                                                                                ?>
+                                                                                <?php echo $estimatedTimeDisplay; ?>
                                                                             </span>
                                                                         <?php endif; ?>
                                                                     </div>
-                                                                <?php endif; ?>
+                                                                </div>
 
-                                                                <small class="text-truncate d-block"
-                                                                    title="<?php echo $fileName; ?>">
-                                                                    <?php echo $fileName; ?>
-                                                                </small>
-
-                                                                <div
-                                                                    class="d-flex justify-content-between align-items-center mt-1">
-                                                                    <span class="badge <?php echo $statusClass; ?>">
-                                                                        <?php echo $statusText; ?>
-                                                                    </span>
-                                                                    <button class="btn btn-xs btn-danger delete-image"
+                                                                <!-- Delete button -->
+                                                                <div class="ml-auto">
+                                                                    <button class="btn btn-sm btn-danger delete-image"
                                                                         data-id="<?php echo $image['image_id']; ?>">
                                                                         <i class="fas fa-trash"></i>
                                                                     </button>
@@ -2036,8 +2097,16 @@ $projectProgress = getProjectProgressStats($project_id);
                                             <div class="modal-body">
                                                 ${imagesHtml}
                                             </div>
-                                            <div class="modal-footer">
-                                                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                                            <div class="modal-footer d-flex justify-content-between">
+                                                <div>
+                                                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                                                </div>
+                                                <div>
+                                                    ${statusEditable ?
+                                    `<button type="button" class="btn btn-success save-all-image-details" data-assignment-id="${assignmentId}">
+                                                        <i class="fas fa-save mr-1"></i> Save All Changes
+                                                    </button>` : ''}
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -2048,41 +2117,131 @@ $projectProgress = getProjectProgressStats($project_id);
                             $('body').append(modalHtml);
                             $('#viewAssignedImagesModal').modal('show');
 
-                            // Handle save image details click
-                            $('.save-image-details').click(function () {
-                                const imageId = $(this).data('image-id');
-                                const row = $(`tr[data-image-id="${imageId}"]`);
-                                const estimatedHours = row.find('.estimated-hours-input').val();
-                                const estimatedMinutes = row.find('.estimated-minutes-input').val();
-                                const imageRole = row.find('.image-role-select').val();
+                            // Now let's handle the new single save button for all image details
+                            $('.save-all-image-details').click(function () {
+                                const assignmentId = $(this).data('assignment-id');
+                                const rows = $('#assigned-images-table tr[data-image-id]');
+                                const updates = [];
 
-                                $.ajax({
-                                    url: 'controllers/edit_project_ajax.php',
-                                    type: 'POST',
-                                    data: {
-                                        action: 'update_image_details',
+                                // Collect all changes from each row
+                                rows.each(function () {
+                                    const imageId = $(this).data('image-id');
+                                    const row = $(this);
+                                    const estimatedHours = row.find('.estimated-hours-input').val();
+                                    const estimatedMinutes = row.find('.estimated-minutes-input').val();
+                                    const imageRole = row.find('.image-role-select').val();
+
+                                    updates.push({
                                         image_id: imageId,
                                         estimated_hours: estimatedHours,
                                         estimated_minutes: estimatedMinutes,
                                         image_role: imageRole
-                                    },
-                                    success: function (updateResponse) {
-                                        try {
-                                            const updateData = JSON.parse(updateResponse);
-                                            if (updateData.status === 'success') {
-                                                showToast('success', 'Image details updated successfully');
-                                            } else {
-                                                showToast('error', updateData.message || 'Failed to update image details');
-                                            }
-                                        } catch (e) {
-                                            console.error('Error parsing update response:', e);
-                                            showToast('error', 'Error updating image details');
-                                        }
-                                    },
-                                    error: function () {
-                                        showToast('error', 'Server error while updating image details');
-                                    }
+                                    });
                                 });
+
+                                // Show loading state
+                                const saveBtn = $(this);
+                                saveBtn.prop('disabled', true)
+                                    .html('<i class="fas fa-spinner fa-spin mr-1"></i> Saving...');
+
+                                // Track progress
+                                let completed = 0;
+                                let errors = 0;
+
+                                // Function to check if all updates are done
+                                function checkCompletion() {
+                                    if (completed + errors === updates.length) {
+                                        saveBtn.prop('disabled', false)
+                                            .html('<i class="fas fa-save mr-1"></i> Save All Changes');
+
+                                        if (errors === 0) {
+                                            toastr.success('All changes saved successfully');
+                                        } else {
+                                            toastr.error(`${errors} updates failed. ${completed} updates succeeded.`);
+                                        }
+                                    }
+                                }
+
+                                // Process each update
+                                updates.forEach(update => {
+                                    $.ajax({
+                                        url: 'controllers/edit_project_ajax.php',
+                                        type: 'POST',
+                                        data: {
+                                            action: 'update_image_details',
+                                            image_id: update.image_id,
+                                            estimated_hours: update.estimated_hours,
+                                            estimated_minutes: update.estimated_minutes,
+                                            image_role: update.image_role
+                                        },
+                                        success: function (response) {
+                                            try {
+                                                const data = JSON.parse(response);
+                                                if (data.status === 'success') {
+                                                    completed++;
+                                                    // Highlight the row to indicate success
+                                                    $(`tr[data-image-id="${update.image_id}"]`).addClass('table-success');
+                                                    setTimeout(() => {
+                                                        $(`tr[data-image-id="${update.image_id}"]`).removeClass('table-success');
+                                                    }, 2000);
+                                                } else {
+                                                    errors++;
+                                                    console.error('Error updating image details:', data.message);
+                                                }
+                                            } catch (e) {
+                                                errors++;
+                                                console.error('Error parsing update response:', e);
+                                            }
+                                            checkCompletion();
+                                        },
+                                        error: function () {
+                                            errors++;
+                                            console.error('Server error while updating image details');
+                                            checkCompletion();
+                                        }
+                                    });
+                                });
+                            });
+
+                            // Handle remove image from assignment
+                            $(document).on('click', '.remove-image-from-assignment', function () {
+                                const imageId = $(this).data('image-id');
+                                const row = $(`tr[data-image-id="${imageId}"]`);
+
+                                if (confirm('Are you sure you want to remove this image from the assignment?')) {
+                                    $.ajax({
+                                        url: 'controllers/edit_project_ajax.php',
+                                        type: 'POST',
+                                        data: {
+                                            action: 'unassign_images',
+                                            project_id: projectId,
+                                            image_ids: JSON.stringify([imageId])
+                                        },
+                                        success: function (response) {
+                                            try {
+                                                const data = JSON.parse(response);
+                                                if (data.status === 'success') {
+                                                    toastr.success('Image removed from assignment');
+                                                    // Remove the row from the table
+                                                    row.fadeOut(300, function () {
+                                                        $(this).remove();
+                                                        // Update the count in the modal title
+                                                        const currentCount = parseInt($('.modal-title').text().match(/\d+/)[0]) - 1;
+                                                        $('.modal-title').html(`<i class="fas fa-images mr-2"></i> Assigned Images (${currentCount})`);
+                                                    });
+                                                } else {
+                                                    toastr.error(data.message || 'Failed to remove image');
+                                                }
+                                            } catch (e) {
+                                                console.error('Error parsing response:', e);
+                                                toastr.error('Error removing image');
+                                            }
+                                        },
+                                        error: function () {
+                                            toastr.error('Server error while removing image');
+                                        }
+                                    });
+                                }
                             });
 
                             // Remove modal when hidden
@@ -2525,10 +2684,18 @@ $projectProgress = getProjectProgressStats($project_id);
                     console.log('Server response:', data);
 
                     if (data.status === 'success') {
-                        // Update the assigned images count without removing the buttons
-                        // Find the cell that contains the image count and update only that text
-                        var imageCountElement = button.closest('tr').find('td:nth-child(3)');
-                        imageCountElement.text('0 Images');
+                        // Find the cell with the image count and update only that text
+                        // without affecting the buttons
+                        var row = button.closest('tr');
+                        var imagesCell = row.find('td:contains("Images")');
+
+                        // Only update the text content, not the HTML
+                        if (imagesCell.length > 0) {
+                            var cellHtml = imagesCell.html();
+                            // Replace just the number before "Images" with 0
+                            var newHtml = cellHtml.replace(/\d+\s+Images/, "0 Images");
+                            imagesCell.html(newHtml);
+                        }
 
                         toastr.success(data.message);
                     } else {

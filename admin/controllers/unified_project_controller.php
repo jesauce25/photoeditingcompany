@@ -147,14 +147,21 @@ function getAllProjects($search = '', $filters = [])
 {
     global $conn;
 
+    // Update the query to exclude:
+    // 1. Projects with status 'delayed'
+    // 2. Projects with any assignee marked as 'delayed'
+    // 3. Projects with any assignee having a deadline in the past
     $sql = "SELECT DISTINCT p.*, c.company_name, COUNT(pi.image_id) as image_count
             FROM tbl_projects p
             LEFT JOIN tbl_companies c ON p.company_id = c.company_id
             LEFT JOIN tbl_project_images pi ON p.project_id = pi.project_id
-            LEFT JOIN tbl_project_assignments pa ON p.project_id = pa.project_id
             WHERE p.status_project != 'delayed'
-            AND (pa.status_assignee != 'delayed' OR pa.status_assignee IS NULL)
-            AND (pa.deadline >= CURDATE() OR pa.deadline IS NULL)";
+            AND NOT EXISTS (
+                SELECT 1 
+                FROM tbl_project_assignments pa 
+                WHERE pa.project_id = p.project_id 
+                AND (pa.status_assignee = 'delayed' OR pa.deadline < CURDATE())
+            )";
 
     // Add search condition if provided
     if (!empty($search)) {
@@ -603,22 +610,35 @@ function getProjectStats($project_id)
     $assignedRow = $assignedResult->fetch_assoc();
     $assigned = $assignedRow['assigned'] ?? 0;
 
-    // Get completed assignees (not images) for issue #2 fix
-    $completedSql = "SELECT COUNT(*) as completed FROM tbl_project_assignments WHERE project_id = ? AND status_assignee = 'completed'";
-    $completedStmt = $conn->prepare($completedSql);
-    $completedStmt->bind_param("i", $project_id);
-    $completedStmt->execute();
-    $completedResult = $completedStmt->get_result();
-    $completedRow = $completedResult->fetch_assoc();
-    $completed = $completedRow['completed'] ?? 0;
+    // Get completed images (with status_image = 'completed')
+    $completedImagesSql = "SELECT COUNT(*) as completed FROM tbl_project_images WHERE project_id = ? AND status_image = 'completed'";
+    $completedImagesStmt = $conn->prepare($completedImagesSql);
+    $completedImagesStmt->bind_param("i", $project_id);
+    $completedImagesStmt->execute();
+    $completedImagesResult = $completedImagesStmt->get_result();
+    $completedImagesRow = $completedImagesResult->fetch_assoc();
+    $completedImages = $completedImagesRow['completed'] ?? 0;
 
-    // Calculate percentage completion
-    $percentComplete = ($total > 0) ? round(($completed / $total) * 100) : 0;
+    // Get completed assignees count (for the UI display)
+    $completedAssigneesSql = "SELECT COUNT(*) as completed FROM tbl_project_assignments WHERE project_id = ? AND status_assignee = 'completed'";
+    $completedAssigneesStmt = $conn->prepare($completedAssigneesSql);
+    $completedAssigneesStmt->bind_param("i", $project_id);
+    $completedAssigneesStmt->execute();
+    $completedAssigneesResult = $completedAssigneesStmt->get_result();
+    $completedAssigneesRow = $completedAssigneesResult->fetch_assoc();
+    $completedAssignees = $completedAssigneesRow['completed'] ?? 0;
+
+    // Calculate percentage completion based on completed images vs total images
+    $percentComplete = ($total > 0) ? round(($completedImages / $total) * 100) : 0;
+
+    error_log("Project Stats: total=$total, assigned=$assigned, completedImages=$completedImages, " .
+        "completedAssignees=$completedAssignees, percentComplete=$percentComplete");
 
     return [
         'total' => $total,
         'assigned' => $assigned,
-        'completed' => $completed,
+        'completed' => $completedAssignees, // Keep the UI display consistent with completedAssignees
+        'completed_images' => $completedImages, // Add new field for completed images
         'unassigned' => $total - $assigned,
         'percent_complete' => $percentComplete
     ];
