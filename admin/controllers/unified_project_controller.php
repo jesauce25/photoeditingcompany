@@ -629,10 +629,6 @@ function getProjectStats($project_id)
     $completedAssignees = $completedAssigneesRow['completed'] ?? 0;
 
     // Calculate percentage completion based on completed images vs total images
-    $percentComplete = ($total > 0) ? round(($completedImages / $total) * 100) : 0;
-
-    error_log("Project Stats: total=$total, assigned=$assigned, completedImages=$completedImages, " .
-        "completedAssignees=$completedAssignees, percentComplete=$percentComplete");
 
     return [
         'total' => $total,
@@ -640,7 +636,6 @@ function getProjectStats($project_id)
         'completed' => $completedAssignees, // Keep the UI display consistent with completedAssignees
         'completed_images' => $completedImages, // Add new field for completed images
         'unassigned' => $total - $assigned,
-        'percent_complete' => $percentComplete
     ];
 }
 

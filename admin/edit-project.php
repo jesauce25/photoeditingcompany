@@ -357,11 +357,6 @@ $projectProgress = getProjectProgressStats($project_id);
         opacity: 1;
     }
 
-    .card-img-top {
-        height: 120px;
-        object-fit: cover;
-    }
-
     /* New styles for improved image cards */
     .image-card-body {
         display: flex;
@@ -542,14 +537,7 @@ $projectProgress = getProjectProgressStats($project_id);
                                         </div>
                                     </div>
                                 </div>
-                                <div class="progress">
-                                    <div class="progress-bar bg-success" role="progressbar"
-                                        style="width: <?php echo $projectProgress['percent_complete']; ?>%"
-                                        aria-valuenow="<?php echo $projectProgress['percent_complete']; ?>"
-                                        aria-valuemin="0" aria-valuemax="100">
-                                        <?php echo $projectProgress['percent_complete']; ?>% Complete
-                                    </div>
-                                </div>
+
                             </div>
                         </div>
                     </div>
@@ -638,7 +626,9 @@ $projectProgress = getProjectProgressStats($project_id);
                         <div class="col-12">
                             <div class="card">
                                 <div class="card-header d-flex justify-content-between align-items-center">
-                                    <h5 class="mb-0">Project Images</h5>
+                                    <h5 class="mb-0">Project Images (Total:
+                                        <?php echo count($images); ?>)
+                                    </h5>
                                     <div>
                                         <button type="button" class="btn btn-sm btn-outline-danger mr-2"
                                             id="removeAllImages">
@@ -713,21 +703,6 @@ $projectProgress = getProjectProgressStats($project_id);
                                                                 <!-- Small thumbnail -->
                                                                 <div class="image-selection-indicator">
                                                                     <i class="fas fa-check-circle"></i>
-                                                                </div>
-                                                                <div class="mr-3"
-                                                                    style="width: 50px; height: 50px; overflow: hidden; flex-shrink: 0;">
-                                                                    <?php
-                                                                    $imagePath = '../../uploads/project_images/' . $image['image_path'];
-                                                                    $imageExists = @getimagesize($imagePath) ? true : false;
-
-                                                                    if ($imageExists) {
-                                                                        echo '<img src="' . $imagePath . '" class="img-fluid" alt="Thumbnail">';
-                                                                    } else {
-                                                                        echo '<div class="d-flex align-items-center justify-content-center bg-light h-100">';
-                                                                        echo '<i class="fas fa-file-image text-primary"></i>';
-                                                                        echo '</div>';
-                                                                    }
-                                                                    ?>
                                                                 </div>
 
                                                                 <!-- Image details -->
@@ -860,12 +835,6 @@ $projectProgress = getProjectProgressStats($project_id);
                                                                             data-assignment-id="<?php echo $assignment['assignment_id']; ?>"
                                                                             title="Add More Images" <?php echo $assignment['status_assignee'] != 'pending' ? 'disabled' : ''; ?>>
                                                                             <i class="fas fa-plus"></i>
-                                                                        </button>
-                                                                        <button type="button"
-                                                                            class="btn btn-sm btn-outline-danger remove-assigned-images"
-                                                                            data-assignment-id="<?php echo $assignment['assignment_id']; ?>"
-                                                                            title="Remove Assigned Images" <?php echo $assignment['status_assignee'] != 'pending' ? 'disabled' : ''; ?>>
-                                                                            <i class="fas fa-trash-alt"></i>
                                                                         </button>
                                                                     </div>
                                                                     <?php if ($assignment['status_assignee'] != 'pending'): ?>
@@ -1779,7 +1748,7 @@ $projectProgress = getProjectProgressStats($project_id);
                     const preview = `
                         <div class="col-md-3 mb-3">
                             <div class="card">
-                                <img src="${e.target.result}" class="card-img-top" alt="Preview">
+                                <img src="${e.target.result}" alt="Preview">
                                 <div class="card-body p-2">
                                     <small>${file.name}</small>
                                 </div>
@@ -2052,9 +2021,9 @@ $projectProgress = getProjectProgressStats($project_id);
                                             </td>
                                             <td>
                                                 ${statusEditable ? `
-                                                <button type="button" class="btn btn-sm btn-primary save-image-details" 
+                                                <button type="button" class="btn btn-sm btn-danger remove-image-from-assignment" 
                                                         data-image-id="${image.image_id}">
-                                                    <i class="fas fa-save"></i> Save
+                                                    <i class="fas fa-trash"></i> Remove
                                                 </button>` :
                                             `<span class="badge badge-info">Locked</span>`}
                                             </td>
@@ -2103,9 +2072,12 @@ $projectProgress = getProjectProgressStats($project_id);
                                                 </div>
                                                 <div>
                                                     ${statusEditable ?
-                                    `<button type="button" class="btn btn-success save-all-image-details" data-assignment-id="${assignmentId}">
+                                    `<button type="button" class="btn btn-danger remove-all-assigned-images mr-2" data-assignment-id="${assignmentId}">
+                                                        <i class="fas fa-trash mr-1"></i> Remove All Images
+                                                    </button>
+                                                    <button type="button" class="btn btn-success save-all-image-details" data-assignment-id="${assignmentId}">
                                                         <i class="fas fa-save mr-1"></i> Save All Changes
-                                                    </button>` : ''}
+                                            </button>` : ''}
                                                 </div>
                                             </div>
                                         </div>
@@ -2239,6 +2211,79 @@ $projectProgress = getProjectProgressStats($project_id);
                                         },
                                         error: function () {
                                             toastr.error('Server error while removing image');
+                                        }
+                                    });
+                                }
+                            });
+
+                            // Handle remove all assigned images
+                            $(document).on('click', '.remove-all-assigned-images', function () {
+                                const assignmentId = $(this).data('assignment-id');
+
+                                // Log this action
+                                console.log('Removing all images from assignment', { assignmentId });
+
+                                if (confirm('Are you sure you want to remove ALL images from this assignment? This action cannot be undone.')) {
+                                    // Get all image IDs from the table
+                                    const imageIds = [];
+                                    $('#assigned-images-table tr[data-image-id]').each(function () {
+                                        imageIds.push($(this).data('image-id'));
+                                    });
+
+                                    if (imageIds.length === 0) {
+                                        toastr.info('No images to remove');
+                                        return;
+                                    }
+
+                                    // Show loading state
+                                    const btn = $(this);
+                                    btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i> Removing...');
+
+                                    $.ajax({
+                                        url: 'controllers/edit_project_ajax.php',
+                                        type: 'POST',
+                                        data: {
+                                            action: 'unassign_images',
+                                            project_id: projectId,
+                                            image_ids: JSON.stringify(imageIds)
+                                        },
+                                        success: function (response) {
+                                            try {
+                                                const data = JSON.parse(response);
+                                                if (data.status === 'success') {
+                                                    toastr.success('All images removed from assignment');
+
+                                                    // Close the modal after successful removal
+                                                    $('#viewAssignedImagesModal').modal('hide');
+
+                                                    // Find the assignment row and update only the image count text
+                                                    const assignmentRow = $(`tr[data-assignment-id="${assignmentId}"]`);
+                                                    const imageCell = assignmentRow.find('td:nth-child(3)'); // The "Assigned Images" cell
+
+                                                    // Only update the text part, not the buttons
+                                                    if (imageCell.length > 0) {
+                                                        // Keep the HTML structure but just update the text part
+                                                        const cellHtml = imageCell.html();
+                                                        // Replace just the number before "Images" with 0
+                                                        const newHtml = cellHtml.replace(/\d+\s+Images/, "0 Images");
+                                                        imageCell.html(newHtml);
+
+                                                        // Log this action
+                                                        console.log('Updated image count display to 0', { assignmentId });
+                                                    }
+                                                } else {
+                                                    toastr.error(data.message || 'Failed to remove images');
+                                                    btn.prop('disabled', false).html('<i class="fas fa-trash mr-1"></i> Remove All Images');
+                                                }
+                                            } catch (e) {
+                                                console.error('Error parsing response:', e);
+                                                toastr.error('Error removing images');
+                                                btn.prop('disabled', false).html('<i class="fas fa-trash mr-1"></i> Remove All Images');
+                                            }
+                                        },
+                                        error: function () {
+                                            toastr.error('Server error while removing images');
+                                            btn.prop('disabled', false).html('<i class="fas fa-trash mr-1"></i> Remove All Images');
                                         }
                                     });
                                 }
@@ -2850,31 +2895,42 @@ $projectProgress = getProjectProgressStats($project_id);
             const newStatus = $(this).data('status');
             const currentStatus = $(`input.current-status[data-assignment-id="${assignmentId}"]`).val();
 
-            // Get the index of the current and new status
-            const timelineSteps = ['pending', 'in_progress', 'finish', 'qa', 'approved', 'completed'];
-            const currentIndex = timelineSteps.indexOf(currentStatus);
-            const newIndex = timelineSteps.indexOf(newStatus);
+            // Log the attempted status change
+            console.log('Status timeline click', {
+                assignmentId,
+                currentStatus,
+                attemptedNewStatus: newStatus
+            });
 
-            // Only allow moving to the next step or going backwards
-            if (newIndex > currentIndex + 1) {
-                toastr.warning('You can only advance one step at a time in the workflow');
-                return;
-            }
-
-            // Update the assignment status
-            updateAssignmentStatus(assignmentId, newStatus);
+            // Admin can't change status, only approve when status is 'finish'
+            toastr.warning('Admin cannot change task status directly. Only the assigned artist can update status progress.');
+            return false;
         });
 
         // Handle approve task button click
         $(document).on('click', '.approve-task-btn', function () {
             const assignmentId = $(this).data('assignment-id');
+            const currentStatus = $(`input.current-status[data-assignment-id="${assignmentId}"]`).val();
 
-            // Update to 'completed' status
-            updateAssignmentStatus(assignmentId, 'completed');
+            // Only allow approval when status is 'finish'
+            if (currentStatus !== 'finish') {
+                toastr.error('This task can only be approved when it is in "Finish" status.');
+                console.log('Approve button clicked but status not eligible', {
+                    assignmentId,
+                    currentStatus
+                });
+                return;
+            }
+
+            console.log('Admin approving task', { assignmentId, currentStatus });
+
+            // Update to 'approved' status (not directly to completed)
+            updateAssignmentStatus(assignmentId, 'approved');
         });
 
         // Function to update assignment status
         function updateAssignmentStatus(assignmentId, newStatus) {
+
             $.ajax({
                 url: 'controllers/edit_project_ajax.php',
                 type: 'POST',

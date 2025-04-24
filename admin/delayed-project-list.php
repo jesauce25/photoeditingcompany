@@ -161,7 +161,16 @@ unset($_SESSION['success_message']);
                                             </tr>
                                         <?php else: ?>
                                             <?php foreach ($projects as $project): ?>
-                                                <tr>
+                                                <?php
+                                                // Check if project deadline is passed
+                                                $project_deadline = new DateTime($project['deadline']);
+                                                $today = new DateTime();
+                                                $is_project_overdue = $project_deadline < $today;
+
+                                                // Add project-overdue class if deadline is passed
+                                                $row_class = $is_project_overdue ? 'project-overdue' : '';
+                                                ?>
+                                                <tr class="<?php echo $row_class; ?>">
                                                     <td class="d-none"><?php echo $project['project_id']; ?></td>
                                                     <td>
                                                         <div class="project-title">
@@ -269,7 +278,23 @@ unset($_SESSION['success_message']);
 
                                                             foreach ($displayedAssignees as $assignee) {
                                                                 $initials = substr($assignee['first_name'], 0, 1) . substr($assignee['last_name'], 0, 1);
-                                                                echo '<div class="assignee-item">';
+
+                                                                // Check if this assignee has an overdue task
+                                                                $is_assignee_overdue = false;
+                                                                if (isset($assignee['deadline'])) {
+                                                                    $assignee_deadline = new DateTime($assignee['deadline']);
+                                                                    $is_assignee_overdue = $assignee_deadline < $today;
+
+                                                                    // Add server-side logging for overdue assignee
+                                                                    if ($is_assignee_overdue) {
+                                                                        error_log("Overdue assignee detected: {$assignee['first_name']} {$assignee['last_name']} for project {$project['project_title']} (ID: {$project['project_id']})");
+                                                                    }
+                                                                }
+
+                                                                // Add overdue class if needed
+                                                                $assignee_class = $is_assignee_overdue ? 'assignee-overdue' : '';
+
+                                                                echo '<div class="assignee-item ' . $assignee_class . '">';
                                                                 echo '<div class="assignee-avatar">' . strtoupper($initials) . '</div>';
                                                                 echo '<span>' . htmlspecialchars($assignee['first_name']) . '</span>';
                                                                 echo '</div>';
@@ -367,6 +392,50 @@ unset($_SESSION['success_message']);
 
 <script>
     $(document).ready(function () {
+        // Logging functions
+        const logging = {
+            debug: function (message, data = null) {
+                console.debug(`[DEBUG] ${message}`, data || '');
+            },
+            info: function (message, data = null) {
+                console.info(`[INFO] ${message}`, data || '');
+            },
+            warning: function (message, data = null) {
+                console.warn(`[WARNING] ${message}`, data || '');
+            },
+            error: function (message, data = null) {
+                console.error(`[ERROR] ${message}`, data || '');
+            },
+            interaction: function (action, data = null) {
+                console.log(`[USER ACTION] ${action}`, data || '');
+            },
+            ajax: function (method, url, data = null) {
+                console.log(`[AJAX REQUEST] ${method} ${url}`, data || '');
+            },
+            ajaxSuccess: function (method, url, response = null) {
+                console.log(`[AJAX SUCCESS] ${method} ${url}`, response || '');
+            },
+            ajaxError: function (method, url, error = null) {
+                console.error(`[AJAX ERROR] ${method} ${url}`, error || '');
+            }
+        };
+
+        // Log page load and scan for overdue items
+        logging.info('Delayed Project List page loaded');
+
+        // Log overdue projects and assignees on page load
+        $('.project-overdue').each(function () {
+            const projectId = $(this).find('td:first').text();
+            const projectTitle = $(this).find('.project-title').text().trim();
+            logging.warning('Overdue project detected', { projectId, projectTitle });
+        });
+
+        $('.assignee-overdue').each(function () {
+            const assigneeName = $(this).text().trim();
+            const projectTitle = $(this).closest('tr').find('.project-title').text().trim();
+            logging.warning('Overdue assignee detected', { assignee: assigneeName, project: projectTitle });
+        });
+
         // Initialize DataTable with enhanced features
         var table = $('#delayedProjectTable').DataTable({
             "responsive": true,
@@ -410,40 +479,49 @@ unset($_SESSION['success_message']);
 
         // Custom export buttons
         $('.export-excel').on('click', function () {
+            logging.interaction('Export to Excel clicked');
             $('.loading-overlay').fadeIn();
             setTimeout(function () {
                 table.button('.buttons-excel').trigger();
                 $('.loading-overlay').fadeOut();
+                logging.info('Excel export completed');
             }, 500);
         });
 
         $('.export-pdf').on('click', function () {
+            logging.interaction('Export to PDF clicked');
             $('.loading-overlay').fadeIn();
             setTimeout(function () {
                 table.button('.buttons-pdf').trigger();
                 $('.loading-overlay').fadeOut();
+                logging.info('PDF export completed');
             }, 500);
         });
 
         $('.export-print').on('click', function () {
+            logging.interaction('Print clicked');
             $('.loading-overlay').fadeIn();
             setTimeout(function () {
                 table.button('.buttons-print').trigger();
                 $('.loading-overlay').fadeOut();
+                logging.info('Print completed');
             }, 500);
         });
 
         // Filter functionality
         $('#applyFilter').click(function () {
+            logging.interaction('Apply filter button clicked');
             applyFilters();
         });
 
         $('#searchButton').click(function () {
+            logging.interaction('Search button clicked');
             applyFilters();
         });
 
         $('#searchInput').keypress(function (e) {
             if (e.which == 13) {
+                logging.interaction('Search input: Enter key pressed');
                 applyFilters();
             }
         });
@@ -453,6 +531,12 @@ unset($_SESSION['success_message']);
             var company = $('#companySelect').val();
             var priority = $('#prioritySelect').val();
             var search = $('#searchInput').val();
+
+            logging.info('Applying filters', {
+                company: company,
+                priority: priority,
+                search: search
+            });
 
             var url = 'delayed-project-list.php?';
             var params = [];
@@ -661,6 +745,35 @@ unset($_SESSION['success_message']);
 
         100% {
             transform: rotate(360deg);
+        }
+    }
+
+    /* Custom styles for overdue indicators */
+    .project-overdue {
+        background-color: rgba(255, 0, 0, 0.1) !important;
+    }
+
+    /* Overdue assignee (strong red background) */
+    .assignee-overdue {
+        background-color: rgba(255, 0, 0, 0.7) !important;
+        color: white !important;
+        padding: 3px 5px;
+        border-radius: 3px;
+    }
+
+    /* When printing, ensure colors are visible */
+    @media print {
+        .project-overdue {
+            background-color: #ffcccc !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .assignee-overdue {
+            background-color: #ff0000 !important;
+            color: white !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
         }
     }
 </style>
