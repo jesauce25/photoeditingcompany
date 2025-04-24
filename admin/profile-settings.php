@@ -8,11 +8,13 @@ $user_id = $_SESSION['user_id'] ?? 0;
 // Initialize user data array
 $user = [
     'first_name' => '',
+    'mid_name' => '',
     'last_name' => '',
-    'email' => '',
-    'phone' => '',
-    'role' => '',
-    'bio' => '',
+    'email_address' => '',
+    'contact_num' => '',
+    'birth_date' => '',
+    'address' => '',
+    'username' => '',
     'profile_img' => ''
 ];
 
@@ -23,16 +25,16 @@ if ($user_id > 0) {
               FROM tbl_users u
               LEFT JOIN tbl_accounts a ON u.user_id = a.user_id
               WHERE u.user_id = ?";
-    
+
     $stmt = $conn->prepare($query);
     if ($stmt) {
         $stmt->bind_param("i", $user_id);
         $stmt->execute();
         $result = $stmt->get_result();
-        
+
         if ($result->num_rows > 0) {
             $user = $result->fetch_assoc();
-            
+
             // Log that we found user data
             error_log("User data fetched for user ID: $user_id");
         } else {
@@ -46,37 +48,58 @@ if ($user_id > 0) {
 // Handle profile form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['updateProfile'])) {
     $first_name = $_POST['firstName'] ?? '';
+    $mid_name = $_POST['middleName'] ?? '';
     $last_name = $_POST['lastName'] ?? '';
     $email = $_POST['email'] ?? '';
-    $phone = $_POST['phone'] ?? '';
-    $department = $_POST['department'] ?? '';
-    $bio = $_POST['bio'] ?? '';
-    
+    $contact_num = $_POST['contactNumber'] ?? '';
+    $birth_date = $_POST['birthDate'] ?? '';
+    $address = $_POST['address'] ?? '';
+
+    // Check if file was uploaded
+    $profile_img = $user['profile_img']; // Default to current profile image
+
+    if (isset($_FILES['profileImage']) && $_FILES['profileImage']['size'] > 0) {
+        $target_dir = "../profiles/";
+        // Create directory if it doesn't exist
+        if (!file_exists($target_dir)) {
+            mkdir($target_dir, 0755, true);
+        }
+
+        $file_extension = pathinfo($_FILES['profileImage']['name'], PATHINFO_EXTENSION);
+        $profile_img_filename = 'profile_' . uniqid() . '.' . $file_extension;
+        $target_file = $target_dir . $profile_img_filename;
+
+        if (move_uploaded_file($_FILES['profileImage']['tmp_name'], $target_file)) {
+            $profile_img = $profile_img_filename;
+        } else {
+            $_SESSION['error_message'] = "Error uploading profile image";
+        }
+    }
+
     // Update user data in database
     $updateQuery = "UPDATE tbl_users SET 
                     first_name = ?,
+                    mid_name = ?,
                     last_name = ?,
-                    email = ?,
-                    contact_num = ?
+                    email_address = ?,
+                    contact_num = ?,
+                    birth_date = ?,
+                    address = ?,
+                    profile_img = ?
                     WHERE user_id = ?";
-                    
+
     $updateStmt = $conn->prepare($updateQuery);
     if ($updateStmt) {
-        $updateStmt->bind_param("ssssi", $first_name, $last_name, $email, $phone, $user_id);
+        $updateStmt->bind_param("ssssssssi", $first_name, $mid_name, $last_name, $email, $contact_num, $birth_date, $address, $profile_img, $user_id);
         if ($updateStmt->execute()) {
-            // Update account bio if it exists
-            $bioQuery = "UPDATE tbl_accounts SET bio = ? WHERE user_id = ?";
-            $bioStmt = $conn->prepare($bioQuery);
-            if ($bioStmt) {
-                $bioStmt->bind_param("si", $bio, $user_id);
-                $bioStmt->execute();
-            }
-            
             // Set success message
             $_SESSION['success_message'] = "Profile updated successfully!";
-            
+
+            // Use ob_start to prevent headers already sent issue
+            ob_start();
             // Refresh user data
             header("Location: profile-settings.php");
+            ob_end_flush();
             exit;
         } else {
             $_SESSION['error_message'] = "Error updating profile: " . $updateStmt->error;
@@ -86,12 +109,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['updateProfile'])) {
     }
 }
 
-// Handle password change
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['changePassword'])) {
+// Handle security form submission
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['updateSecurity'])) {
+    $username = $_POST['username'] ?? '';
     $current_password = $_POST['currentPassword'] ?? '';
     $new_password = $_POST['newPassword'] ?? '';
     $confirm_password = $_POST['confirmPassword'] ?? '';
-    
+
     // Validate passwords
     if ($new_password !== $confirm_password) {
         $_SESSION['error_message'] = "New passwords do not match.";
@@ -103,30 +127,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['changePassword'])) {
             $passwordStmt->bind_param("i", $user_id);
             $passwordStmt->execute();
             $passwordResult = $passwordStmt->get_result();
-            
+
             if ($passwordResult->num_rows > 0) {
                 $passwordRow = $passwordResult->fetch_assoc();
                 $stored_hash = $passwordRow['password'];
-                
+
                 // Verify current password
-                if (password_verify($current_password, $stored_hash)) {
+                if (password_verify($current_password, $stored_hash) || $current_password === $stored_hash) {
                     // Hash new password
                     $new_hash = password_hash($new_password, PASSWORD_DEFAULT);
-                    
-                    // Update password in database
-                    $updatePasswordQuery = "UPDATE tbl_accounts SET password = ? WHERE user_id = ?";
-                    $updatePasswordStmt = $conn->prepare($updatePasswordQuery);
-                    
-                    if ($updatePasswordStmt) {
-                        $updatePasswordStmt->bind_param("si", $new_hash, $user_id);
-                        
-                        if ($updatePasswordStmt->execute()) {
-                            $_SESSION['success_message'] = "Password updated successfully!";
+
+                    // Update username and password in database
+                    $updateSecurityQuery = "UPDATE tbl_accounts SET 
+                                           username = ?,
+                                           password = ? 
+                                           WHERE user_id = ?";
+                    $updateSecurityStmt = $conn->prepare($updateSecurityQuery);
+
+                    if ($updateSecurityStmt) {
+                        $updateSecurityStmt->bind_param("ssi", $username, $new_hash, $user_id);
+
+                        if ($updateSecurityStmt->execute()) {
+                            $_SESSION['success_message'] = "Security information updated successfully!";
                         } else {
-                            $_SESSION['error_message'] = "Error updating password: " . $updatePasswordStmt->error;
+                            $_SESSION['error_message'] = "Error updating security information: " . $updateSecurityStmt->error;
                         }
                     } else {
-                        $_SESSION['error_message'] = "Error preparing password update: " . $conn->error;
+                        $_SESSION['error_message'] = "Error preparing security update: " . $conn->error;
                     }
                 } else {
                     $_SESSION['error_message'] = "Current password is incorrect.";
@@ -138,9 +165,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['changePassword'])) {
             $_SESSION['error_message'] = "Error preparing password query: " . $conn->error;
         }
     }
-    
+
+    // Use ob_start to prevent headers already sent issue
+    ob_start();
     // Redirect to refresh the page
     header("Location: profile-settings.php");
+    ob_end_flush();
     exit;
 }
 
@@ -153,18 +183,20 @@ if (!empty($user['profile_img'])) {
         '../uploads/profile_images/' . $user['profile_img'],
         '../profiles/' . $user['profile_img']
     ];
-    
+
     foreach ($possible_locations as $location) {
         if (file_exists($location)) {
             $profile_img_path = $location;
             break;
         }
     }
-    
+
     // Direct path check
-    if (strpos($user['profile_img'], '/') === 0 || 
+    if (
+        strpos($user['profile_img'], '/') === 0 ||
         strpos($user['profile_img'], 'assets/') === 0 ||
-        strpos($user['profile_img'], 'uploads/') === 0) {
+        strpos($user['profile_img'], 'uploads/') === 0
+    ) {
         $direct_path = '../' . ltrim($user['profile_img'], '/');
         if (file_exists($direct_path)) {
             $profile_img_path = $direct_path;
@@ -199,58 +231,52 @@ if (!empty($user['profile_img'])) {
             <div class="container-fluid">
                 <!-- Display messages -->
                 <?php if (isset($_SESSION['success_message'])): ?>
-                <div class="alert alert-success alert-dismissible fade show" role="alert">
-                    <i class="fas fa-check-circle mr-2"></i> <?php echo $_SESSION['success_message']; ?>
-                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-                <?php unset($_SESSION['success_message']); ?>
+                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                        <i class="fas fa-check-circle mr-2"></i> <?php echo $_SESSION['success_message']; ?>
+                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <?php unset($_SESSION['success_message']); ?>
                 <?php endif; ?>
 
                 <?php if (isset($_SESSION['error_message'])): ?>
-                <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                    <i class="fas fa-exclamation-circle mr-2"></i> <?php echo $_SESSION['error_message']; ?>
-                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-                <?php unset($_SESSION['error_message']); ?>
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <i class="fas fa-exclamation-circle mr-2"></i> <?php echo $_SESSION['error_message']; ?>
+                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <?php unset($_SESSION['error_message']); ?>
                 <?php endif; ?>
 
                 <div class="row">
-                    <!-- Profile Information -->
-                    <div class="col-md-4">
-                        <!-- Profile Card -->
+                    <div class="col-md-3">
+                        <!-- Profile Image -->
                         <div class="card card-primary card-outline">
                             <div class="card-body box-profile">
-                                <div class="text-center position-relative">
+                                <div class="text-center">
                                     <img class="profile-user-img img-fluid img-circle"
                                         src="<?php echo $profile_img_path; ?>" alt="User profile picture">
-                                    <button type="button" class="btn btn-sm btn-primary position-absolute"
-                                        style="bottom: 0; right: 35%; border-radius: 50%; width: 32px; height: 32px; padding: 0;"
-                                        data-toggle="modal" data-target="#changeProfilePicModal">
-                                        <i class="fas fa-camera"></i>
-                                    </button>
                                 </div>
+
                                 <h3 class="profile-username text-center">
                                     <?php echo htmlspecialchars($user['first_name'] . ' ' . $user['last_name']); ?>
                                 </h3>
-                                <p class="text-muted text-center">
-                                    <?php echo htmlspecialchars($user['role'] ?? 'User'); ?>
+
+                                <p class="text-muted text-center"><?php echo htmlspecialchars($user['role'] ?? ''); ?>
                                 </p>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Settings Tabs -->
-                    <div class="col-md-8">
+                    <div class="col-md-9">
                         <div class="card">
                             <div class="card-header p-2">
                                 <ul class="nav nav-pills">
                                     <li class="nav-item">
                                         <a class="nav-link active" href="#settings" data-toggle="tab">
-                                            <i class="fas fa-cog mr-1"></i> Settings
+                                            <i class="fas fa-user-edit mr-1"></i> Profile
                                         </a>
                                     </li>
                                     <li class="nav-item">
@@ -260,52 +286,75 @@ if (!empty($user['profile_img'])) {
                                     </li>
                                 </ul>
                             </div>
+
                             <div class="card-body">
                                 <div class="tab-content">
-                                    <!-- Settings Tab -->
+                                    <!-- Profile Tab -->
                                     <div class="active tab-pane" id="settings">
-                                        <form class="form-horizontal" method="post" action="">
+                                        <form class="form-horizontal" method="post" action=""
+                                            enctype="multipart/form-data">
                                             <div class="form-group row">
-                                                <label class="col-sm-2 col-form-label">Full Name</label>
-                                                <div class="col-sm-5">
-                                                    <input type="text" class="form-control" name="firstName" placeholder="First Name"
+                                                <label class="col-sm-2 col-form-label">Profile Image</label>
+                                                <div class="col-sm-10">
+                                                    <input type="file" class="form-control" name="profileImage"
+                                                        accept="image/*">
+                                                    <small class="form-text text-muted">Upload a new profile image (JPG,
+                                                        PNG, or GIF)</small>
+                                                </div>
+                                            </div>
+                                            <div class="form-group row">
+                                                <label class="col-sm-2 col-form-label">First Name</label>
+                                                <div class="col-sm-10">
+                                                    <input type="text" class="form-control" name="firstName"
+                                                        placeholder="First Name"
                                                         value="<?php echo htmlspecialchars($user['first_name'] ?? ''); ?>">
                                                 </div>
-                                                <div class="col-sm-5">
-                                                    <input type="text" class="form-control" name="lastName" placeholder="Last Name"
+                                            </div>
+                                            <div class="form-group row">
+                                                <label class="col-sm-2 col-form-label">Middle Name</label>
+                                                <div class="col-sm-10">
+                                                    <input type="text" class="form-control" name="middleName"
+                                                        placeholder="Middle Name"
+                                                        value="<?php echo htmlspecialchars($user['mid_name'] ?? ''); ?>">
+                                                </div>
+                                            </div>
+                                            <div class="form-group row">
+                                                <label class="col-sm-2 col-form-label">Last Name</label>
+                                                <div class="col-sm-10">
+                                                    <input type="text" class="form-control" name="lastName"
+                                                        placeholder="Last Name"
                                                         value="<?php echo htmlspecialchars($user['last_name'] ?? ''); ?>">
+                                                </div>
+                                            </div>
+                                            <div class="form-group row">
+                                                <label class="col-sm-2 col-form-label">Birth Date</label>
+                                                <div class="col-sm-10">
+                                                    <input type="date" class="form-control" name="birthDate"
+                                                        value="<?php echo htmlspecialchars($user['birth_date'] ?? ''); ?>">
+                                                </div>
+                                            </div>
+                                            <div class="form-group row">
+                                                <label class="col-sm-2 col-form-label">Address</label>
+                                                <div class="col-sm-10">
+                                                    <input type="text" class="form-control" name="address"
+                                                        placeholder="Complete Address"
+                                                        value="<?php echo htmlspecialchars($user['address'] ?? ''); ?>">
+                                                </div>
+                                            </div>
+                                            <div class="form-group row">
+                                                <label class="col-sm-2 col-form-label">Contact Number</label>
+                                                <div class="col-sm-10">
+                                                    <input type="text" class="form-control" name="contactNumber"
+                                                        placeholder="Contact Number"
+                                                        value="<?php echo htmlspecialchars($user['contact_num'] ?? ''); ?>">
                                                 </div>
                                             </div>
                                             <div class="form-group row">
                                                 <label class="col-sm-2 col-form-label">Email</label>
                                                 <div class="col-sm-10">
                                                     <input type="email" class="form-control" name="email"
-                                                        placeholder="Email" 
-                                                        value="<?php echo htmlspecialchars($user['email'] ?? ''); ?>">
-                                                </div>
-                                            </div>
-                                            <div class="form-group row">
-                                                <label class="col-sm-2 col-form-label">Phone</label>
-                                                <div class="col-sm-10">
-                                                    <input type="tel" class="form-control" name="phone" 
-                                                        placeholder="Phone number"
-                                                        value="<?php echo htmlspecialchars($user['contact_num'] ?? ''); ?>">
-                                                </div>
-                                            </div>
-                                            <div class="form-group row">
-                                                <label class="col-sm-2 col-form-label">Department</label>
-                                                <div class="col-sm-10">
-                                                    <input type="text" class="form-control" name="department"
-                                                        placeholder="Department" 
-                                                        value="<?php echo htmlspecialchars($user['department'] ?? ''); ?>" readonly>
-                                                    <small class="text-muted">Department is set by administrators</small>
-                                                </div>
-                                            </div>
-                                            <div class="form-group row">
-                                                <label class="col-sm-2 col-form-label">Bio</label>
-                                                <div class="col-sm-10">
-                                                    <textarea class="form-control" name="bio" rows="3"
-                                                        placeholder="Tell something about yourself"><?php echo htmlspecialchars($user['bio'] ?? ''); ?></textarea>
+                                                        placeholder="Email"
+                                                        value="<?php echo htmlspecialchars($user['email_address'] ?? ''); ?>">
                                                 </div>
                                             </div>
                                             <div class="form-group row">
@@ -322,23 +371,29 @@ if (!empty($user['profile_img'])) {
                                     <div class="tab-pane" id="security">
                                         <form method="post" action="">
                                             <div class="form-group">
+                                                <label>Username</label>
+                                                <input type="text" class="form-control" name="username"
+                                                    placeholder="Username"
+                                                    value="<?php echo htmlspecialchars($user['username'] ?? ''); ?>">
+                                            </div>
+                                            <div class="form-group">
                                                 <label>Current Password</label>
                                                 <input type="password" class="form-control" name="currentPassword"
-                                                    placeholder="Enter current password" required>
+                                                    placeholder="Current Password" required>
                                             </div>
                                             <div class="form-group">
                                                 <label>New Password</label>
                                                 <input type="password" class="form-control" name="newPassword"
-                                                    placeholder="Enter new password" required>
+                                                    placeholder="New Password" required>
                                             </div>
                                             <div class="form-group">
                                                 <label>Confirm New Password</label>
                                                 <input type="password" class="form-control" name="confirmPassword"
-                                                    placeholder="Confirm new password" required>
+                                                    placeholder="Confirm New Password" required>
                                             </div>
                                             <div class="form-group">
-                                                <button type="submit" name="changePassword" class="btn btn-primary">
-                                                    <i class="fas fa-key mr-1"></i> Change Password
+                                                <button type="submit" name="updateSecurity" class="btn btn-primary">
+                                                    <i class="fas fa-key mr-1"></i> Update Security Information
                                                 </button>
                                             </div>
                                         </form>
@@ -351,59 +406,6 @@ if (!empty($user['profile_img'])) {
             </div>
         </section>
     </div>
+
+    <?php include("includes/footer.php"); ?>
 </div>
-
-<!-- Change Profile Picture Modal -->
-<div class="modal fade" id="changeProfilePicModal" tabindex="-1" role="dialog" aria-labelledby="changeProfilePicModalLabel" aria-hidden="true">
-    <div class="modal-dialog" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="changeProfilePicModalLabel">Change Profile Picture</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <div class="modal-body">
-                <form id="profilePicForm" action="controllers/update_profile_pic.php" method="post" enctype="multipart/form-data">
-                    <div class="form-group">
-                        <label for="profileImage">Select Image</label>
-                        <div class="custom-file">
-                            <input type="file" class="custom-file-input" id="profileImage" name="profileImage" accept="image/*" required>
-                            <label class="custom-file-label" for="profileImage">Choose file</label>
-                        </div>
-                        <small class="form-text text-muted">Maximum file size: 2MB. Supported formats: JPG, JPEG, PNG.</small>
-                    </div>
-                    <div id="imagePreview" class="mt-3 text-center" style="display: none;">
-                        <img src="" alt="Preview" class="img-fluid rounded-circle" style="max-width: 150px; max-height: 150px;">
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                <button type="submit" form="profilePicForm" class="btn btn-primary">Upload</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<script>
-// Preview profile image before upload
-$(document).ready(function() {
-    $('#profileImage').change(function() {
-        const file = this.files[0];
-        if (file) {
-            const reader = new FileReader();
-            
-            reader.onload = function(e) {
-                $('#imagePreview').show();
-                $('#imagePreview img').attr('src', e.target.result);
-                $('.custom-file-label').text(file.name);
-            }
-            
-            reader.readAsDataURL(file);
-        }
-    });
-});
-</script>
-
-<?php include("includes/footer.php"); ?>

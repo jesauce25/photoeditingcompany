@@ -603,8 +603,8 @@ function getProjectStats($project_id)
     $assignedRow = $assignedResult->fetch_assoc();
     $assigned = $assignedRow['assigned'] ?? 0;
 
-    // Get completed images
-    $completedSql = "SELECT COUNT(*) as completed FROM tbl_project_images WHERE project_id = ? AND status_image = 'completed'";
+    // Get completed assignees (not images) for issue #2 fix
+    $completedSql = "SELECT COUNT(*) as completed FROM tbl_project_assignments WHERE project_id = ? AND status_assignee = 'completed'";
     $completedStmt = $conn->prepare($completedSql);
     $completedStmt->bind_param("i", $project_id);
     $completedStmt->execute();
@@ -722,13 +722,25 @@ function getDelayedProjects($search = '', $filters = [])
 {
     global $conn;
 
+    // Updated query to include:
+    // 1. Projects where at least one assignee is currently delayed
+    // 2. Projects where an assignee has a deadline in the past and isn't completed
+    // 3. Projects that were ever delayed (task was overdue) even if now completed
+    // 4. Additionally, ensure we include projects that are marked completed but were once delayed
     $sql = "SELECT DISTINCT p.*, c.company_name, COUNT(pi.image_id) as image_count
             FROM tbl_projects p
             LEFT JOIN tbl_companies c ON p.company_id = c.company_id
             LEFT JOIN tbl_project_images pi ON p.project_id = pi.project_id
             LEFT JOIN tbl_project_assignments pa ON p.project_id = pa.project_id
-            WHERE pa.status_assignee = 'delayed' OR 
-                  (pa.deadline <= CURDATE() AND pa.status_assignee != 'completed')";
+            WHERE (pa.status_assignee = 'delayed' 
+                  OR (pa.deadline < CURDATE()) 
+                  OR p.status_project = 'delayed'
+                  OR EXISTS (
+                      SELECT 1 
+                      FROM tbl_project_assignments pa2 
+                      WHERE pa2.project_id = p.project_id 
+                      AND pa2.deadline < CURDATE()
+                  ))";
 
     // Add search condition if provided
     if (!empty($search)) {
@@ -889,14 +901,14 @@ function getDetailedProjectAssignments($project_id)
         if (isset($row['deadline'])) {
             $deadline = new DateTime($row['deadline']);
             $today = new DateTime('today');
-            
+
             if ($deadline == $today) {
                 $row['deadline_status'] = 'today';
                 $row['deadline_text'] = 'Deadline Today';
             } else if ($deadline < $today) {
                 $row['deadline_status'] = 'overdue';
                 $row['deadline_text'] = 'Overdue';
-                
+
                 // Calculate days overdue
                 $diff = $today->diff($deadline);
                 $days_overdue = $diff->days;
@@ -904,12 +916,12 @@ function getDetailedProjectAssignments($project_id)
                 $row['deadline_text'] .= ' by ' . $days_overdue . ' day' . ($days_overdue > 1 ? 's' : '');
             } else {
                 $row['deadline_status'] = 'upcoming';
-                
+
                 // Calculate days remaining
                 $diff = $today->diff($deadline);
                 $days_remaining = $diff->days;
                 $row['days_remaining'] = $days_remaining;
-                
+
                 if ($days_remaining <= 3) {
                     $row['deadline_text'] = 'Due in ' . $days_remaining . ' day' . ($days_remaining > 1 ? 's' : '');
                 } else {
@@ -932,39 +944,68 @@ function getDetailedProjectAssignments($project_id)
  * @param int $project_id Project ID
  * @return bool Success status
  */
-function checkAndUpdateProjectDelayStatus($project_id) 
+function checkAndUpdateProjectDelayStatus($project_id)
 {
     global $conn;
-    
-    // First check if any assignments are overdue
-    $sql = "SELECT COUNT(*) as overdue_count 
+
+    // First check if any assignments are or were ever overdue
+    $sql = "SELECT COUNT(*) as overdue_count,
+            (SELECT status_project FROM tbl_projects WHERE project_id = ?) as project_status,
+            (SELECT COUNT(*) FROM tbl_project_assignments 
+             WHERE project_id = ? AND status_assignee = 'completed') as completed_count,
+            (SELECT COUNT(*) FROM tbl_project_assignments 
+             WHERE project_id = ?) as total_count
             FROM tbl_project_assignments 
             WHERE project_id = ? 
-            AND deadline < CURDATE() 
-            AND status_assignee != 'completed'";
-            
+            AND deadline < CURDATE()";
+
     $stmt = $conn->prepare($sql);
-    $stmt->bind_param("i", $project_id);
+    $stmt->bind_param("iiii", $project_id, $project_id, $project_id, $project_id);
     $stmt->execute();
     $result = $stmt->get_result();
     $row = $result->fetch_assoc();
-    
+
     $has_overdue = ($row['overdue_count'] > 0);
-    
-    // Update project status if there are overdue assignments
-    if ($has_overdue) {
+    $current_status = $row['project_status'];
+    $all_completed = ($row['completed_count'] > 0 && $row['completed_count'] == $row['total_count']);
+
+    error_log("Project ID $project_id: Overdue: " . ($has_overdue ? 'Yes' : 'No') .
+        ", Status: $current_status, Completed: " . $row['completed_count'] .
+        " of " . $row['total_count']);
+
+    // Set status flags
+    $should_be_delayed = $has_overdue; // Mark as delayed if any assignee is overdue
+    $should_be_completed = $all_completed && $current_status != 'delayed';
+
+    // If it's a completed project that was once delayed, keep it marked as delayed
+    if ($all_completed && $current_status == 'delayed') {
+        $should_be_delayed = true;
+        $should_be_completed = false; // Don't change status from delayed to completed
+    }
+
+    // Update project status if needed
+    if ($should_be_delayed) {
         $updateSql = "UPDATE tbl_projects 
                      SET status_project = 'delayed', date_updated = NOW() 
-                     WHERE project_id = ? 
-                     AND status_project != 'completed'";
-                     
+                     WHERE project_id = ?";
+
         $updateStmt = $conn->prepare($updateSql);
         $updateStmt->bind_param("i", $project_id);
         $updateStmt->execute();
-        
+        error_log("Project ID $project_id marked as DELAYED");
+        return true;
+    } else if ($should_be_completed && $current_status != 'completed') {
+        $updateSql = "UPDATE tbl_projects 
+                     SET status_project = 'completed', date_updated = NOW() 
+                     WHERE project_id = ?";
+
+        $updateStmt = $conn->prepare($updateSql);
+        $updateStmt->bind_param("i", $project_id);
+        $updateStmt->execute();
+        error_log("Project ID $project_id marked as COMPLETED");
         return true;
     }
-    
+
     return false;
 }
 

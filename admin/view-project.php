@@ -1,6 +1,6 @@
 <?php
 include("includes/header.php");
-require_once 'controllers/project_controller.php';
+require_once 'controllers/unified_project_controller.php';
 
 // Check if project ID is provided
 if (!isset($_GET['id'])) {
@@ -26,7 +26,8 @@ $images = getProjectImages($project_id);
 $assignments = getProjectAssignments($project_id);
 
 // Functions to get status and priority display classes
-function getStatusClass($status) {
+function getStatusClass($status)
+{
     switch ($status) {
         case 'pending':
             return 'warning';
@@ -43,7 +44,8 @@ function getStatusClass($status) {
     }
 }
 
-function getPriorityClass($priority) {
+function getPriorityClass($priority)
+{
     switch (strtolower($priority)) {
         case 'high':
             return 'danger';
@@ -58,7 +60,8 @@ function getPriorityClass($priority) {
     }
 }
 
-function getAssignmentStatusClass($status) {
+function getAssignmentStatusClass($status)
+{
     switch ($status) {
         case 'pending':
             return 'warning';
@@ -180,11 +183,12 @@ function getAssignmentStatusClass($status) {
                                 <div class="form-group">
                                     <label>Project Status</label>
                                     <p class="form-control-static">
-                                        <span class="badge badge-<?php echo getStatusClass($project['status_project']); ?> p-2">
-                                            <?php 
+                                        <span
+                                            class="badge badge-<?php echo getStatusClass($project['status_project']); ?> p-2">
+                                            <?php
                                             $statusText = ucfirst(str_replace('_', ' ', $project['status_project'] ?? 'Unknown'));
                                             $statusIcon = '';
-                                            switch($project['status_project']) {
+                                            switch ($project['status_project']) {
                                                 case 'in_progress':
                                                     $statusIcon = '<i class="fas fa-spinner fa-spin mr-1"></i>';
                                                     break;
@@ -209,7 +213,8 @@ function getAssignmentStatusClass($status) {
                                 <div class="form-group">
                                     <label>Priority</label>
                                     <p class="form-control-static">
-                                        <span class="badge badge-<?php echo getPriorityClass($project['priority']); ?> p-2">
+                                        <span
+                                            class="badge badge-<?php echo getPriorityClass($project['priority']); ?> p-2">
                                             <?php echo ucfirst($project['priority'] ?? 'Not set'); ?>
                                         </span>
                                     </p>
@@ -266,7 +271,8 @@ function getAssignmentStatusClass($status) {
                                             <?php if (empty($images)): ?>
                                                 <div class="col-12">
                                                     <div class="alert alert-info">
-                                                        <i class="fas fa-info-circle mr-2"></i> No images have been uploaded for this project yet.
+                                                        <i class="fas fa-info-circle mr-2"></i> No images have been uploaded
+                                                        for this project yet.
                                                     </div>
                                                 </div>
                                             <?php else: ?>
@@ -306,12 +312,15 @@ function getAssignmentStatusClass($status) {
                                                             <div class="col-md-3 mb-3">
                                                                 <div class="card image-item h-100">
                                                                     <div class="card-body p-3">
-                                                                        <div class="d-flex justify-content-between align-items-center">
+                                                                        <div
+                                                                            class="d-flex justify-content-between align-items-center">
                                                                             <!-- Image Name on Left -->
                                                                             <div class="image-name-container">
                                                                                 <div class="d-flex align-items-center">
-                                                                                    <i class="fas fa-file-image text-primary mr-2"></i>
-                                                                                    <span class="image-name font-weight-bold text-truncate" 
+                                                                                    <i
+                                                                                        class="fas fa-file-image text-primary mr-2"></i>
+                                                                                    <span
+                                                                                        class="image-name font-weight-bold text-truncate"
                                                                                         title="<?php echo htmlspecialchars($fileName); ?>">
                                                                                         <?php echo htmlspecialchars($fileName); ?>
                                                                                     </span>
@@ -320,7 +329,8 @@ function getAssignmentStatusClass($status) {
 
                                                                             <!-- Availability on Right -->
                                                                             <div class="image-actions">
-                                                                                <span class="badge badge-<?php echo $availability == 'available' ? 'success' : 'info'; ?> py-1 px-2">
+                                                                                <span
+                                                                                    class="badge badge-<?php echo $availability == 'available' ? 'success' : 'info'; ?> py-1 px-2">
                                                                                     <?php echo $availability == 'available' ? 'Available' : '<i class="fas fa-user-circle mr-1"></i>' . ucfirst($availability); ?>
                                                                                 </span>
                                                                             </div>
@@ -354,18 +364,21 @@ function getAssignmentStatusClass($status) {
                         }
                     }
                     ?>
-                    <div class="card-header <?php echo $hasOverdueAssignment ? 'bg-danger' : 'bg-purple'; ?> text-white">
+                    <div
+                        class="card-header <?php echo $hasOverdueAssignment ? 'bg-danger' : 'bg-purple'; ?> text-white">
                         <h5 class="card-title mb-0">
                             <i class="fas fa-user-friends mr-1"></i> TEAM:
                             <?php if ($hasOverdueAssignment): ?>
-                                <span class="badge badge-warning ml-2"><i class="fas fa-exclamation-triangle"></i> Has Overdue Tasks</span>
+                                <span class="badge badge-warning ml-2"><i class="fas fa-exclamation-triangle"></i> Has
+                                    Overdue Tasks</span>
                             <?php endif; ?>
                         </h5>
                     </div>
                     <div class="card-body">
                         <?php if (empty($assignments)): ?>
                             <div class="alert alert-info">
-                                <i class="fas fa-info-circle mr-2"></i> No team members have been assigned to this project yet.
+                                <i class="fas fa-info-circle mr-2"></i> No team members have been assigned to this project
+                                yet.
                             </div>
                         <?php else: ?>
                             <!-- Task Tabs -->
@@ -388,12 +401,12 @@ function getAssignmentStatusClass($status) {
                                     ?>
                                     <li class="nav-item">
                                         <a class="nav-link <?php echo $index === 0 ? 'active' : ''; ?> <?php echo $tabStatusClass; ?>"
-                                           id="person-<?php echo $index; ?>-tab" data-toggle="tab"
-                                           href="#person-<?php echo $index; ?>" role="tab">
+                                            id="person-<?php echo $index; ?>-tab" data-toggle="tab"
+                                            href="#person-<?php echo $index; ?>" role="tab">
                                             <?php echo $assignment['first_name'] ?? 'Unknown'; ?>
                                             <?php if ($isOverdue || $isDueToday): ?>
                                                 <i class="fas fa-exclamation-circle ml-1"
-                                                   title="<?php echo $isOverdue ? 'Overdue' : 'Due today'; ?>"></i>
+                                                    title="<?php echo $isOverdue ? 'Overdue' : 'Due today'; ?>"></i>
                                             <?php endif; ?>
                                         </a>
                                     </li>
@@ -404,7 +417,7 @@ function getAssignmentStatusClass($status) {
                             <div class="tab-content mt-3">
                                 <?php foreach ($assignments as $index => $assignment): ?>
                                     <div class="tab-pane fade <?php echo $index === 0 ? 'show active' : ''; ?>"
-                                         id="person-<?php echo $index; ?>" role="tabpanel">
+                                        id="person-<?php echo $index; ?>" role="tabpanel">
                                         <div class="row">
                                             <!-- Right Column: Task Details -->
                                             <div class="col-md-4">
@@ -428,13 +441,13 @@ function getAssignmentStatusClass($status) {
                                                         <div class="form-group">
                                                             <label>Task Deadline</label>
                                                             <p class="form-control-static">
-                                                                <?php 
+                                                                <?php
                                                                 echo isset($assignment['deadline']) ? date('Y-m-d', strtotime($assignment['deadline'])) : 'Not set';
-                                                                
+
                                                                 // Show deadline status
                                                                 if ($deadline) {
                                                                     $days_left = $today->diff($deadline)->format("%R%a");
-                                                                    
+
                                                                     if ($days_left < 0) {
                                                                         echo ' <span class="badge badge-danger">Overdue by ' . abs($days_left) . ' days</span>';
                                                                     } elseif ($days_left == 0) {
@@ -451,7 +464,8 @@ function getAssignmentStatusClass($status) {
                                                         <div class="form-group">
                                                             <label>Task Status</label>
                                                             <p class="form-control-static">
-                                                                <span class="badge badge-<?php echo getAssignmentStatusClass($assignment['status_assignee'] ?? 'pending'); ?> p-2">
+                                                                <span
+                                                                    class="badge badge-<?php echo getAssignmentStatusClass($assignment['status_assignee'] ?? 'pending'); ?> p-2">
                                                                     <?php echo ucfirst($assignment['status_assignee'] ?? 'pending'); ?>
                                                                 </span>
                                                             </p>
@@ -503,11 +517,12 @@ function getAssignmentStatusClass($status) {
                                                                     <div class="col-md-4 mb-3">
                                                                         <div class="card h-100 shadow-sm">
                                                                             <div class="card-body p-2">
-                                                                                <h6 class="card-title mb-2 text-truncate font-weight-bold">
+                                                                                <h6
+                                                                                    class="card-title mb-2 text-truncate font-weight-bold">
                                                                                     <?php echo htmlspecialchars($fileName); ?>
                                                                                 </h6>
                                                                                 <small class="text-muted">
-                                                                                    <i class="fas fa-info-circle"></i> 
+                                                                                    <i class="fas fa-info-circle"></i>
                                                                                     ID: <?php echo $image['image_id']; ?>
                                                                                 </small>
                                                                             </div>
@@ -517,7 +532,8 @@ function getAssignmentStatusClass($status) {
                                                             <?php else: ?>
                                                                 <div class="col-12">
                                                                     <div class="alert alert-info">
-                                                                        <i class="fas fa-info-circle mr-2"></i> No images assigned to this team member.
+                                                                        <i class="fas fa-info-circle mr-2"></i> No images assigned
+                                                                        to this team member.
                                                                     </div>
                                                                 </div>
                                                             <?php endif; ?>
@@ -548,14 +564,14 @@ function getAssignmentStatusClass($status) {
 </div>
 
 <script>
-// Add some basic JavaScript to handle tab switching
-$(document).ready(function() {
-    console.log("View project page loaded.");
-    
-    // Log when tabs are clicked
-    $('#assignedTasksTabs a').on('click', function (e) {
-        console.log("Tab clicked: " + $(this).text().trim());
+    // Add some basic JavaScript to handle tab switching
+    $(document).ready(function () {
+        console.log("View project page loaded.");
+
+        // Log when tabs are clicked
+        $('#assignedTasksTabs a').on('click', function (e) {
+            console.log("Tab clicked: " + $(this).text().trim());
+        });
     });
-});
 </script>
 <?php include("includes/footer.php"); ?>

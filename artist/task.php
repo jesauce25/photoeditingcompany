@@ -1,7 +1,7 @@
 <?php
 // Start session if not already started
 if (session_status() === PHP_SESSION_NONE) {
-    session_start();
+  session_start();
 }
 
 // Log session details for debugging
@@ -18,20 +18,20 @@ $user_id = $_SESSION['user_id'] ?? 0;
 
 // Ensure we have a valid user ID
 if (!$user_id) {
-    error_log("Error: No valid user ID in session, redirecting to login");
-    header("Location: ../login.php");
-    exit;
+  error_log("Error: No valid user ID in session, redirecting to login");
+  header("Location: ../login.php");
+  exit;
 }
 
 // Initialize empty array for tasks
 $tasks = [];
 
 try {
-    // Log query for debugging
-    error_log("Task.php - Querying tasks for user ID: $user_id");
+  // Log query for debugging
+  error_log("Task.php - Querying tasks for user ID: $user_id");
 
-    // Fetch tasks assigned to the current user
-    $query = "SELECT pa.*, p.project_title, c.company_name, p.deadline as project_deadline, 
+  // Fetch tasks assigned to the current user
+  $query = "SELECT pa.*, p.project_title, c.company_name, p.deadline as project_deadline, 
               p.date_arrived, p.priority, p.status_project, p.total_images,
               COUNT(pi.image_id) as assigned_image_count
               FROM tbl_project_assignments pa
@@ -42,30 +42,30 @@ try {
               GROUP BY pa.assignment_id
               ORDER BY pa.deadline ASC";
 
-    $stmt = $conn->prepare($query);
+  $stmt = $conn->prepare($query);
 
-    if (!$stmt) {
-        throw new Exception("Query preparation failed: " . $conn->error);
-    }
+  if (!$stmt) {
+    throw new Exception("Query preparation failed: " . $conn->error);
+  }
 
-    $stmt->bind_param("i", $user_id);
+  $stmt->bind_param("i", $user_id);
 
-    if (!$stmt->execute()) {
-        throw new Exception("Query execution failed: " . $stmt->error);
-    }
+  if (!$stmt->execute()) {
+    throw new Exception("Query execution failed: " . $stmt->error);
+  }
 
-    $result = $stmt->get_result();
-    $tasks = $result->fetch_all(MYSQLI_ASSOC);
-    
-    error_log("Task.php - Found " . count($tasks) . " tasks for user ID: $user_id");
+  $result = $stmt->get_result();
+  $tasks = $result->fetch_all(MYSQLI_ASSOC);
+
+  error_log("Task.php - Found " . count($tasks) . " tasks for user ID: $user_id");
 
 } catch (Exception $e) {
-    // Log the error
-    error_log("Error in artist/task.php: " . $e->getMessage());
-    error_log("SQL Error: " . ($conn->error ?? 'None'));
+  // Log the error
+  error_log("Error in artist/task.php: " . $e->getMessage());
+  error_log("SQL Error: " . ($conn->error ?? 'None'));
 
-    // Create a friendly error message for display
-    $error_message = "There was an error loading your tasks. Please contact support.";
+  // Create a friendly error message for display
+  $error_message = "There was an error loading your tasks. Please contact support.";
 }
 
 // Include header after processing to avoid redirect issues
@@ -191,10 +191,10 @@ include("includes/header.php");
                       <th width="12%">Project Details</th>
                       <th width="10%">Status</th>
                       <th width="10%">Date Arrived</th>
-                      <th width="10%">Total Images</th>
-                      <th width="10%">Deadline</th>
-                      <th width="18%">Role</th>
-                      <th width="15%" class="text-center">Actions</th>
+                      <th width="15%">Total Images / Assigned</th>
+                      <th width="15%">Deadline / Task Deadline</th>
+                      <th width="10%">Role</th>
+                      <th width="10%" class="text-center">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -208,26 +208,39 @@ include("includes/header.php");
                           <td class="d-none"><?php echo $task['assignment_id']; ?></td>
                           <td>
                             <div class="task-details">
-                              <div class="project-title"><?php echo htmlspecialchars($task['project_title'] ?? 'Untitled Project'); ?></div>
+                              <div class="project-title">
+                                <?php echo htmlspecialchars($task['project_title'] ?? 'Untitled Project'); ?>
+                              </div>
                               <div class="company-info">
-                                <i class="fas fa-building mr-1"></i> <?php echo htmlspecialchars($task['company_name'] ?? 'No Company'); ?>
+                                <i class="fas fa-building mr-1"></i>
+                                <?php echo htmlspecialchars($task['company_name'] ?? 'No Company'); ?>
                               </div>
                             </div>
                           </td>
                           <td>
-                            <span class="project-status status-<?php echo strtolower($task['status_project'] ?? 'unknown'); ?>">
-                              <?php if (($task['status_project'] ?? '') == 'in_progress'): ?>
+                            <span
+                              class="project-status status-<?php echo strtolower($task['status_assignee'] ?? 'unknown'); ?>">
+                              <?php if (($task['status_assignee'] ?? '') == 'in_progress'): ?>
                                 <i class="fas fa-spinner fa-spin mr-1"></i>
-                              <?php elseif (($task['status_project'] ?? '') == 'pending'): ?>
+                              <?php elseif (($task['status_assignee'] ?? '') == 'pending'): ?>
                                 <i class="fas fa-hourglass-start mr-1"></i>
-                              <?php elseif (($task['status_project'] ?? '') == 'qa'): ?>
+                              <?php elseif (($task['status_assignee'] ?? '') == 'finish'): ?>
+                                <i class="fas fa-check mr-1"></i>
+                                Finished
+                              <?php elseif (($task['status_assignee'] ?? '') == 'qa'): ?>
                                 <i class="fas fa-clipboard-check mr-1"></i>
-                              <?php elseif (($task['status_project'] ?? '') == 'completed'): ?>
+                                In QA
+                              <?php elseif (($task['status_assignee'] ?? '') == 'completed'): ?>
                                 <i class="fas fa-check-circle mr-1"></i>
-                              <?php elseif (($task['status_project'] ?? '') == 'delayed'): ?>
+                                Completed
+                              <?php elseif (($task['status_assignee'] ?? '') == 'delayed'): ?>
                                 <i class="fas fa-exclamation-triangle mr-1"></i>
+                              <?php else: ?>
+                                <i class="fas fa-question-circle mr-1"></i>
                               <?php endif; ?>
-                              <?php echo ucfirst(str_replace('_', ' ', $task['status_project'] ?? 'unknown')); ?>
+                              <?php if (!in_array($task['status_assignee'] ?? '', ['finish', 'qa', 'completed'])): ?>
+                                <?php echo ucfirst(str_replace('_', ' ', $task['status_assignee'] ?? 'unknown')); ?>
+                              <?php endif; ?>
                             </span>
                             <div class="mt-1">
                               <span class="priority-badge priority-<?php echo strtolower($task['priority'] ?? 'normal'); ?>"
@@ -259,64 +272,78 @@ include("includes/header.php");
                           <td>
                             <div class="total-images-display">
                               <div class="total-count">
-                                <i class="fas fa-images"></i>
-                                <span><?php echo $task['total_images'] ?? 0; ?></span>
+                                <i class="fas fa-images mr-1"></i> Project:
+                                <span class="badge badge-info"><?php echo $task['total_images'] ?? 0; ?></span>
+                              </div>
+                              <div class="total-count mt-1">
+                                <i class="fas fa-tasks mr-1"></i> Assigned:
+                                <span class="badge badge-primary"><?php echo $task['assigned_image_count'] ?? 0; ?></span>
                               </div>
                             </div>
                           </td>
                           <td>
-                            <div class="deadline-text">
-                              <i class="far fa-clock mr-1"></i>
-                              <?php echo date('M d, Y', strtotime($task['project_deadline'] ?? date('Y-m-d'))); ?>
-                            </div>
-                            <?php
-                            $deadline = new DateTime($task['project_deadline'] ?? date('Y-m-d'));
-                            $now = new DateTime();
-                            $days_left = $now->diff($deadline)->format("%R%a");
+                            <div class="deadline-info">
+                              <div>
+                                <i class="far fa-calendar mr-1"></i> Project:
+                                <span class="badge badge-secondary">
+                                  <?php echo date('M d, Y', strtotime($task['project_deadline'] ?? date('Y-m-d'))); ?>
+                                </span>
+                              </div>
+                              <div class="mt-1">
+                                <i class="far fa-clock mr-1"></i> Task:
+                                <span class="badge badge-warning">
+                                  <?php echo date('M d, Y', strtotime($task['deadline'] ?? date('Y-m-d'))); ?>
+                                </span>
+                              </div>
+                              <?php
+                              $deadline = new DateTime($task['deadline'] ?? date('Y-m-d'));
+                              $now = new DateTime();
+                              $days_left = $now->diff($deadline)->format("%R%a");
 
-                            if ($days_left < 0) {
-                              echo '<small class="deadline-warning text-danger">';
-                              echo '<i class="fas fa-exclamation-triangle mr-1"></i> Overdue by ' . abs($days_left) . ' days';
-                              echo '</small>';
-                            } elseif ($days_left == 0) {
-                              echo '<small class="deadline-warning text-warning">';
-                              echo '<i class="fas fa-exclamation-circle mr-1"></i> Due today';
-                              echo '</small>';
-                            } elseif ($days_left <= 3) {
-                              echo '<small class="deadline-warning text-warning">';
-                              echo '<i class="fas fa-exclamation-triangle mr-1"></i> ' . $days_left . ' days left';
-                              echo '</small>';
-                            } else {
-                              echo '<small class="deadline-info text-info">';
-                              echo '<i class="fas fa-info-circle mr-1"></i> ' . $days_left . ' days left';
-                              echo '</small>';
-                            }
-                            ?>
+                              if ($days_left < 0) {
+                                echo '<small class="deadline-warning text-danger">';
+                                echo '<i class="fas fa-exclamation-triangle mr-1"></i> Overdue by ' . abs($days_left) . ' days';
+                                echo '</small>';
+                              } elseif ($days_left == 0) {
+                                echo '<small class="deadline-warning text-warning">';
+                                echo '<i class="fas fa-exclamation-circle mr-1"></i> Due today';
+                                echo '</small>';
+                              } elseif ($days_left <= 3) {
+                                echo '<small class="deadline-warning text-warning">';
+                                echo '<i class="fas fa-exclamation-triangle mr-1"></i> ' . $days_left . ' days left';
+                                echo '</small>';
+                              } else {
+                                echo '<small class="deadline-info text-info">';
+                                echo '<i class="fas fa-info-circle mr-1"></i> ' . $days_left . ' days left';
+                                echo '</small>';
+                              }
+                              ?>
+                            </div>
                           </td>
                           <td>
                             <div class="role-badge">
                               <span class="badge badge-info p-2">
-                                <i class="fas fa-paint-brush mr-1"></i> <?php echo htmlspecialchars($task['role'] ?? 'Not Assigned'); ?>
+                                <i class="fas fa-paint-brush mr-1"></i>
+                                <?php echo htmlspecialchars($task['role_task'] ?? 'Not Assigned'); ?>
                               </span>
-                              <small class="d-block text-muted mt-1">
-                                <i class="fas fa-tasks mr-1"></i> <?php echo htmlspecialchars($task['task_description'] ?? 'No description'); ?>
-                              </small>
                             </div>
                           </td>
                           <td>
                             <div class="action-buttons text-center">
-                              <a href="view-task.php?id=<?php echo $task['assignment_id'] ?? 0; ?>" class="btn btn-info btn-sm"
-                                title="View Task">
+                              <a href="view-task.php?id=<?php echo $task['assignment_id'] ?? 0; ?>"
+                                class="btn btn-info btn-sm" title="View Task">
                                 <i class="fas fa-eye"></i>
                               </a>
-                              <?php if (($task['status_project'] ?? '') == 'in_progress'): ?>
+                              <?php if (($task['status_assignee'] ?? '') == 'in_progress'): ?>
                                 <button type="button" class="btn btn-success btn-sm mark-done-btn"
-                                  data-id="<?php echo $task['assignment_id'] ?? 0; ?>" data-status="in_progress" title="Mark as Done">
+                                  data-id="<?php echo $task['assignment_id'] ?? 0; ?>" data-status="in_progress"
+                                  title="Mark as Finished">
                                   <i class="fas fa-check"></i>
                                 </button>
-                              <?php elseif (($task['status_project'] ?? '') == 'pending'): ?>
+                              <?php elseif (($task['status_assignee'] ?? '') == 'pending'): ?>
                                 <button type="button" class="btn btn-primary btn-sm start-task-btn"
-                                  data-id="<?php echo $task['assignment_id'] ?? 0; ?>" data-status="pending" title="Start Task">
+                                  data-id="<?php echo $task['assignment_id'] ?? 0; ?>" data-status="pending"
+                                  title="Start Task">
                                   <i class="fas fa-play"></i>
                                 </button>
                               <?php endif; ?>
@@ -359,7 +386,7 @@ include("includes/header.php");
           type: 'POST',
           data: {
             action: 'start_task',
-            task_id: taskId
+            assignment_id: taskId
           },
           dataType: 'json',
           success: function (response) {
@@ -373,7 +400,7 @@ include("includes/header.php");
               button.replaceWith('<button type="button" class="btn btn-success btn-sm mark-done-btn" ' +
                 'data-id="' + taskId + '" ' +
                 'data-status="in_progress" ' +
-                'title="Mark as Done">' +
+                'title="Mark as Finished">' +
                 '<i class="fas fa-check"></i>' +
                 '</button>');
 
@@ -394,27 +421,27 @@ include("includes/header.php");
     $('.mark-done-btn').on('click', function () {
       var taskId = $(this).data('id');
       var button = $(this);
-      if (confirm('Are you sure you want to mark this task as completed?')) {
+      if (confirm('Are you sure you want to mark this task as finished? This will send it to QA for review.')) {
         $.ajax({
           url: 'controllers/task_controller.php',
           type: 'POST',
           data: {
             action: 'complete_task',
-            task_id: taskId
+            assignment_id: taskId
           },
           dataType: 'json',
           success: function (response) {
             if (response.status === 'success') {
               // Update UI without reloading
               var row = button.closest('tr');
-              row.find('.project-status').html('<i class="fas fa-check-circle mr-1"></i> Completed');
-              row.find('.project-status').removeClass('status-in_progress').addClass('status-completed');
+              row.find('.project-status').html('<i class="fas fa-check mr-1"></i> Finished');
+              row.find('.project-status').removeClass('status-in_progress').addClass('status-finish');
 
               // Remove the button
               button.remove();
 
               // Show success message
-              toastr.success('Task completed successfully');
+              toastr.success('Task marked as finished and sent to QA');
             } else {
               toastr.error('Error: ' + response.message);
             }

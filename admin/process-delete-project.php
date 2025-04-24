@@ -13,7 +13,7 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 // Include the project controller
-require_once 'controllers/project_controller.php';
+require_once 'controllers/unified_project_controller.php';
 
 // Check if form is submitted with project_id
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['project_id'])) {
