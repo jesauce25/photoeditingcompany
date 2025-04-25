@@ -141,7 +141,7 @@ function getPriorityClass($priority)
     <?php include("includes/nav.php"); ?>
 
     <!-- Content Wrapper -->
-    <div class="content-wrapper">
+    <div class="content-wrapper container-fluid">
         <!-- Content Header -->
         <section class="content-header">
             <div class="container-fluid">
@@ -181,32 +181,43 @@ function getPriorityClass($priority)
                                     </h5>
                                 </div>
                                 <div class="card-body">
-                                    <div class="form-group">
-                                        <label>Project Name</label>
-                                        <p class="form-control-static">
-                                            <?php echo htmlspecialchars($task['project_title'] ?? 'Untitled Project'); ?>
-                                        </p>
+                                    <div class="row">
+
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                <label>Project Name</label>
+                                                <p class="form-control-static">
+                                                    <?php echo htmlspecialchars($task['project_title'] ?? 'Untitled Project'); ?>
+                                                </p>
+                                            </div>
+                                            <div class="form-group">
+                                                <label>Company</label>
+                                                <p class="form-control-static">
+                                                    <?php echo htmlspecialchars($task['company_name'] ?? 'No Company'); ?>
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                        
+                                            <div class="form-group">
+                                                <label>Description</label>
+                                                <p class="form-control-static">
+                                                    <?php echo nl2br(htmlspecialchars($task['description'] ?? 'No description')); ?>
+                                                </p>
+                                            </div>
+                                            <div class="form-group">
+                                                <label>Role</label>
+                                                <p class="form-control-static">
+                                                    <span class="badge badge-info p-2">
+                                                        <?php echo htmlspecialchars($task['role_task'] ?? 'Not Assigned'); ?>
+                                                    </span>
+                                                </p>
+                                            </div>
+                                        </div>
+                                   
+                                   
                                     </div>
-                                    <div class="form-group">
-                                        <label>Company</label>
-                                        <p class="form-control-static">
-                                            <?php echo htmlspecialchars($task['company_name'] ?? 'No Company'); ?>
-                                        </p>
-                                    </div>
-                                    <div class="form-group">
-                                        <label>Description</label>
-                                        <p class="form-control-static">
-                                            <?php echo nl2br(htmlspecialchars($task['description'] ?? 'No description')); ?>
-                                        </p>
-                                    </div>
-                                    <div class="form-group">
-                                        <label>Role</label>
-                                        <p class="form-control-static">
-                                            <span class="badge badge-info p-2">
-                                                <?php echo htmlspecialchars($task['role_task'] ?? 'Not Assigned'); ?>
-                                            </span>
-                                        </p>
-                                    </div>
+                                   
                                 </div>
                             </div>
                         </div>
@@ -218,92 +229,99 @@ function getPriorityClass($priority)
                                     </h5>
                                 </div>
                                 <div class="card-body">
-                                    <div class="form-group">
-                                        <label>Task Status</label>
-                                        <p class="form-control-static">
-                                            <span
-                                                class="badge badge-<?php echo getStatusClass($task['status_assignee'] ?? 'Unknown'); ?> p-2">
-                                                <?php
-                                                $statusText = ucfirst(str_replace('_', ' ', $task['status_assignee'] ?? 'Unknown'));
-                                                $statusIcon = '';
-                                                switch ($task['status_assignee'] ?? 'Unknown') {
-                                                    case 'in_progress':
-                                                        $statusIcon = '<i class="fas fa-spinner fa-spin mr-1"></i>';
-                                                        break;
-                                                    case 'pending':
-                                                        $statusIcon = '<i class="fas fa-clock mr-1"></i>';
-                                                        break;
-                                                    case 'finish':
-                                                        $statusIcon = '<i class="fas fa-check mr-1"></i>';
-                                                        $statusText = 'Finished';
-                                                        break;
-                                                    case 'qa':
-                                                    case 'review':
-                                                        $statusIcon = '<i class="fas fa-search mr-1"></i>';
-                                                        $statusText = 'In QA Review';
-                                                        break;
-                                                    case 'approved':
-                                                        $statusIcon = '<i class="fas fa-thumbs-up mr-1"></i>';
-                                                        break;
-                                                    case 'completed':
-                                                        $statusIcon = '<i class="fas fa-check-circle mr-1"></i>';
-                                                        break;
-                                                    case 'delayed':
-                                                        $statusIcon = '<i class="fas fa-exclamation-triangle mr-1"></i>';
-                                                        break;
-                                                }
-                                                echo $statusIcon . $statusText;
-                                                ?>
-                                            </span>
-                                        </p>
-                                    </div>
-                                    <div class="form-group">
-                                        <label>Priority</label>
-                                        <p class="form-control-static">
-                                            <span
-                                                class="badge badge-<?php echo getPriorityClass($task['priority'] ?? 'Not set'); ?> p-2">
-                                                <?php echo ucfirst($task['priority'] ?? 'Not set'); ?>
-                                            </span>
-                                        </p>
-                                    </div>
-                                    <div class="form-group">
-                                        <label>Date Received</label>
-                                        <p class="form-control-static">
-                                            <i class="far fa-calendar-alt mr-1"></i>
-                                            <?php echo isset($task['date_arrived']) ? date('Y-m-d', strtotime($task['date_arrived'])) : 'Not set'; ?>
-                                        </p>
-                                    </div>
-                                    <div class="form-group">
-                                        <label>Deadline</label>
-                                        <p class="form-control-static">
-                                            <i class="far fa-calendar-check mr-1"></i>
-                                            <?php echo isset($task['deadline']) ? date('Y-m-d', strtotime($task['deadline'])) : 'Not set'; ?>
-                                            <?php
-                                            if (isset($task['deadline'])) {
-                                                $deadline = new DateTime($task['deadline']);
-                                                $now = new DateTime();
-                                                $days_left = $now->diff($deadline)->format("%R%a");
+                                    <div class="row">
+                                        <!-- Left Column -->
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                <label>Task Status</label>
+                                                <p class="form-control-static">
+                                                    <span class="badge badge-<?php echo getStatusClass($task['status_assignee'] ?? 'Unknown'); ?> p-2">
+                                                        <?php
+                                                        $statusText = ucfirst(str_replace('_', ' ', $task['status_assignee'] ?? 'Unknown'));
+                                                        $statusIcon = '';
+                                                        switch ($task['status_assignee'] ?? 'Unknown') {
+                                                            case 'in_progress':
+                                                                $statusIcon = '<i class="fas fa-spinner fa-spin mr-1"></i>';
+                                                                break;
+                                                            case 'pending':
+                                                                $statusIcon = '<i class="fas fa-clock mr-1"></i>';
+                                                                break;
+                                                            case 'finish':
+                                                                $statusIcon = '<i class="fas fa-check mr-1"></i>';
+                                                                $statusText = 'Finished';
+                                                                break;
+                                                            case 'qa':
+                                                            case 'review':
+                                                                $statusIcon = '<i class="fas fa-search mr-1"></i>';
+                                                                $statusText = 'In QA Review';
+                                                                break;
+                                                            case 'approved':
+                                                                $statusIcon = '<i class="fas fa-thumbs-up mr-1"></i>';
+                                                                break;
+                                                            case 'completed':
+                                                                $statusIcon = '<i class="fas fa-check-circle mr-1"></i>';
+                                                                break;
+                                                            case 'delayed':
+                                                                $statusIcon = '<i class="fas fa-exclamation-triangle mr-1"></i>';
+                                                                break;
+                                                        }
+                                                        echo $statusIcon . $statusText;
+                                                        ?>
+                                                    </span>
+                                                </p>
+                                            </div>
+                                            <div class="form-group">
+                                                <label>Priority</label>
+                                                <p class="form-control-static">
+                                                    <span class="badge badge-<?php echo getPriorityClass($task['priority'] ?? 'Not set'); ?> p-2">
+                                                        <?php echo ucfirst($task['priority'] ?? 'Not set'); ?>
+                                                    </span>
+                                                </p>
+                                            </div>
+                                            <div class="form-group">
+                                                <label>Date Received</label>
+                                                <p class="form-control-static">
+                                                    <i class="far fa-calendar-alt mr-1"></i>
+                                                    <?php echo isset($task['date_arrived']) ? date('Y-m-d', strtotime($task['date_arrived'])) : 'Not set'; ?>
+                                                </p>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Right Column -->
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                <label>Deadline</label>
+                                                <p class="form-control-static">
+                                                    <i class="far fa-calendar-check mr-1"></i>
+                                                    <?php echo isset($task['deadline']) ? date('Y-m-d', strtotime($task['deadline'])) : 'Not set'; ?>
+                                                    <?php
+                                                    if (isset($task['deadline'])) {
+                                                        $deadline = new DateTime($task['deadline']);
+                                                        $now = new DateTime();
+                                                        $days_left = $now->diff($deadline)->format("%R%a");
 
-                                                if ($days_left < 0) {
-                                                    echo '<span class="badge badge-danger ml-2">Overdue by ' . abs($days_left) . ' days</span>';
-                                                } elseif ($days_left == 0) {
-                                                    echo '<span class="badge badge-warning ml-2">Due today</span>';
-                                                } elseif ($days_left <= 3) {
-                                                    echo '<span class="badge badge-warning ml-2">' . $days_left . ' days left</span>';
-                                                } else {
-                                                    echo '<span class="badge badge-info ml-2">' . $days_left . ' days left</span>';
-                                                }
-                                            }
-                                            ?>
-                                        </p>
-                                    </div>
-                                    <div class="form-group">
-                                        <label>Assigned Images</label>
-                                        <p class="form-control-static">
-                                            <span class="badge badge-primary p-2">
-                                                <i class="fas fa-images mr-1"></i> <?php echo count($images); ?> images
-                                            </span>
-                                        </p>
+                                                        if ($days_left < 0) {
+                                                            echo '<span class="badge badge-danger ml-2">Overdue by ' . abs($days_left) . ' days</span>';
+                                                        } elseif ($days_left == 0) {
+                                                            echo '<span class="badge badge-warning ml-2">Due today</span>';
+                                                        } elseif ($days_left <= 3) {
+                                                            echo '<span class="badge badge-warning ml-2">' . $days_left . ' days left</span>';
+                                                        } else {
+                                                            echo '<span class="badge badge-info ml-2">' . $days_left . ' days left</span>';
+                                                        }
+                                                    }
+                                                    ?>
+                                                </p>
+                                            </div>
+                                            <div class="form-group">
+                                                <label>Assigned Images</label>
+                                                <p class="form-control-static">
+                                                    <span class="badge badge-primary p-2">
+                                                        <i class="fas fa-images mr-1"></i> <?php echo count($images); ?> images
+                                                    </span>
+                                                </p>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>

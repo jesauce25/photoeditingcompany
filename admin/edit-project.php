@@ -715,14 +715,15 @@ $projectProgress = getProjectProgressStats($project_id);
 
                                                 // Format estimated time
                                                 $estimatedTimeDisplay = '';
-                                                if (!empty($image['estimated_time'])) {
-                                                    $time = intval($image['estimated_time']);
-                                                    if ($time >= 60) {
-                                                        $hours = floor($time / 60);
-                                                        $minutes = $time % 60;
-                                                        $estimatedTimeDisplay = $hours . 'hr' . ($minutes > 0 ? ' ' . $minutes . 'min' : '');
-                                                    } else {
-                                                        $estimatedTimeDisplay = $time . ' min';
+                                                if (isset($image['estimated_time']) && !empty($image['estimated_time'])) {
+                                                    $hours = floor($image['estimated_time'] / 60);
+                                                    $minutes = $image['estimated_time'] % 60;
+
+                                                    if ($hours > 0) {
+                                                        $estimatedTimeDisplay .= $hours . 'h ';
+                                                    }
+                                                    if ($minutes > 0 || $hours == 0) {
+                                                        $estimatedTimeDisplay .= $minutes . 'm';
                                                     }
                                                 }
                                                 ?>
@@ -767,7 +768,7 @@ $projectProgress = getProjectProgressStats($project_id);
                                                                 <!-- Delete button -->
                                                                 <div class="ml-auto">
                                                                     <button class="btn btn-sm btn-danger delete-image"
-                                                                        data-id="<?php echo $image['image_id']; ?>">
+                                                                        data-image-id="<?php echo $image['image_id']; ?>">
                                                                         <i class="fas fa-trash"></i>
                                                                     </button>
                                                                 </div>
@@ -2964,8 +2965,8 @@ $projectProgress = getProjectProgressStats($project_id);
 
             console.log('Admin approving task', { assignmentId, currentStatus });
 
-            // Update to 'approved' status (not directly to completed)
-            updateAssignmentStatus(assignmentId, 'approved');
+            // Update directly to 'completed' status (skipping 'approved')
+            updateAssignmentStatus(assignmentId, 'completed');
         });
 
         // Function to update assignment status
@@ -3133,7 +3134,6 @@ $projectProgress = getProjectProgressStats($project_id);
     });
 </script>
 
-<!-- Add script for logging tests (development only) -->
-<script src="js/logging-test.js"></script>
+
 
 <?php include("includes/footer.php"); ?>

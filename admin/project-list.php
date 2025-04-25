@@ -359,6 +359,30 @@ unset($_SESSION['success_message']);
     .assignee-more i {
         margin-right: 4px;
     }
+
+    /* Add project row highlighting styles */
+    .project-overdue {
+        background-color: #ffcccc !important;
+    }
+
+    .project-tomorrow {
+        background-color: #fff3cd !important;
+    }
+
+    /* When printing, ensure colors are visible */
+    @media print {
+        .project-overdue {
+            background-color: #ffcccc !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .project-tomorrow {
+            background-color: #fff3cd !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+    }
 </style>
 
 <div class="wrapper">
@@ -511,7 +535,25 @@ unset($_SESSION['success_message']);
                                         </tr>
                                     <?php else: ?>
                                         <?php foreach ($projects as $project): ?>
-                                            <tr>
+                                            <?php
+                                            // Determine row highlighting based on deadline
+                                            $rowClass = '';
+                                            $deadline = new DateTime($project['deadline']);
+                                            $now = new DateTime();
+                                            $tomorrow = new DateTime('tomorrow');
+                                            $tomorrow->setTime(0, 0, 0);
+
+                                            // Format dates for comparison (remove time part)
+                                            $deadlineDate = $deadline->format('Y-m-d');
+                                            $tomorrowDate = $tomorrow->format('Y-m-d');
+
+                                            if ($deadline < $now) {
+                                                $rowClass = 'project-overdue';
+                                            } elseif ($deadlineDate === $tomorrowDate) {
+                                                $rowClass = 'project-tomorrow';
+                                            }
+                                            ?>
+                                            <tr class="<?php echo $rowClass; ?>">
                                                 <td class="d-none"><?php echo $project['project_id']; ?></td>
                                                 <td>
                                                     <div class="project-title">

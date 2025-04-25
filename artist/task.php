@@ -334,19 +334,7 @@ include("includes/header.php");
                                 class="btn btn-info btn-sm" title="View Task">
                                 <i class="fas fa-eye"></i>
                               </a>
-                              <?php if (($task['status_assignee'] ?? '') == 'in_progress'): ?>
-                                <button type="button" class="btn btn-success btn-sm mark-done-btn"
-                                  data-id="<?php echo $task['assignment_id'] ?? 0; ?>" data-status="in_progress"
-                                  title="Mark as Finished">
-                                  <i class="fas fa-check"></i>
-                                </button>
-                              <?php elseif (($task['status_assignee'] ?? '') == 'pending'): ?>
-                                <button type="button" class="btn btn-primary btn-sm start-task-btn"
-                                  data-id="<?php echo $task['assignment_id'] ?? 0; ?>" data-status="pending"
-                                  title="Start Task">
-                                  <i class="fas fa-play"></i>
-                                </button>
-                              <?php endif; ?>
+
                             </div>
                           </td>
                         </tr>

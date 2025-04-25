@@ -455,13 +455,13 @@ function getProjectImages($project_id)
     // Only select columns that exist in the database table
     if ($hasAssignmentColumn) {
         $sql = "SELECT pi.image_id, pi.project_id, pi.image_path, pi.file_type, pi.file_size, 
-                pi.assignment_id, pi.status_image, u.first_name as assignee_first_name
+                pi.assignment_id, pi.status_image, pi.image_role, pi.estimated_time, u.first_name as assignee_first_name
                 FROM tbl_project_images pi
                 LEFT JOIN tbl_project_assignments pa ON pi.assignment_id = pa.assignment_id
                 LEFT JOIN tbl_users u ON pa.user_id = u.user_id
                 WHERE pi.project_id = ?";
     } else {
-        $sql = "SELECT image_id, project_id, image_path, file_type, file_size
+        $sql = "SELECT image_id, project_id, image_path, file_type, file_size, image_role, estimated_time
                 FROM tbl_project_images 
                 WHERE project_id = ?";
     }

@@ -285,14 +285,15 @@ function getAssignmentStatusClass($status)
 
                                             // Format estimated time
                                             $estimatedTimeDisplay = '';
-                                            if (!empty($image['estimated_time'])) {
-                                                $time = intval($image['estimated_time']);
-                                                if ($time >= 60) {
-                                                    $hours = floor($time / 60);
-                                                    $minutes = $time % 60;
-                                                    $estimatedTimeDisplay = $hours . 'hr' . ($minutes > 0 ? ' ' . $minutes . 'min' : '');
-                                                } else {
-                                                    $estimatedTimeDisplay = $time . ' min';
+                                            if (isset($image['estimated_time']) && !empty($image['estimated_time'])) {
+                                                $hours = floor($image['estimated_time'] / 60);
+                                                $minutes = $image['estimated_time'] % 60;
+
+                                                if ($hours > 0) {
+                                                    $estimatedTimeDisplay .= $hours . 'h ';
+                                                }
+                                                if ($minutes > 0 || $hours == 0) {
+                                                    $estimatedTimeDisplay .= $minutes . 'm';
                                                 }
                                             }
                                             ?>
@@ -341,201 +342,141 @@ function getAssignmentStatusClass($status)
                 </div>
 
                 <!-- Assigned Tasks Section -->
-                <div class="card theme-purple">
-                    <?php
-                    // Check if any assignment is overdue
-                    $hasOverdueAssignment = false;
-                    foreach ($assignments as $assignment) {
-                        $deadline = isset($assignment['deadline']) ? new DateTime($assignment['deadline']) : null;
-                        $today = new DateTime('today');
-                        if ($deadline && $deadline < $today) {
-                            $hasOverdueAssignment = true;
-                            break;
-                        }
-                    }
-                    ?>
-                    <div
-                        class="card-header <?php echo $hasOverdueAssignment ? 'bg-danger' : 'bg-purple'; ?> text-white">
-                        <h5 class="card-title mb-0">
-                            <i class="fas fa-user-friends mr-1"></i> TEAM:
-                            <?php if ($hasOverdueAssignment): ?>
-                                <span class="badge badge-warning ml-2"><i class="fas fa-exclamation-triangle"></i> Has
-                                    Overdue Tasks</span>
-                            <?php endif; ?>
-                        </h5>
-                    </div>
-                    <div class="card-body">
-                        <?php if (empty($assignments)): ?>
-                            <div class="alert alert-info">
-                                <i class="fas fa-info-circle mr-2"></i> No team members have been assigned to this project
-                                yet.
+                <!-- TEAM ASSIGNMENTS Section -->
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">Team Assignments</h5>
                             </div>
-                        <?php else: ?>
-                            <!-- Task Tabs -->
-                            <ul class="nav nav-tabs" id="assignedTasksTabs" role="tablist">
-                                <?php foreach ($assignments as $index => $assignment): ?>
-                                    <?php
-                                    // Check if task is overdue or due today
-                                    $deadline = isset($assignment['deadline']) ? new DateTime($assignment['deadline']) : null;
-                                    $today = new DateTime('today');
-                                    $isOverdue = $deadline && $deadline < $today;
-                                    $isDueToday = $deadline && $deadline->format('Y-m-d') === $today->format('Y-m-d');
-
-                                    // Set tab class based on status
-                                    $tabStatusClass = '';
-                                    if ($isOverdue) {
-                                        $tabStatusClass = 'text-danger';
-                                    } elseif ($isDueToday) {
-                                        $tabStatusClass = 'text-warning';
-                                    }
-                                    ?>
-                                    <li class="nav-item">
-                                        <a class="nav-link <?php echo $index === 0 ? 'active' : ''; ?> <?php echo $tabStatusClass; ?>"
-                                            id="person-<?php echo $index; ?>-tab" data-toggle="tab"
-                                            href="#person-<?php echo $index; ?>" role="tab">
-                                            <?php echo $assignment['first_name'] ?? 'Unknown'; ?>
-                                            <?php if ($isOverdue || $isDueToday): ?>
-                                                <i class="fas fa-exclamation-circle ml-1"
-                                                    title="<?php echo $isOverdue ? 'Overdue' : 'Due today'; ?>"></i>
-                                            <?php endif; ?>
-                                        </a>
-                                    </li>
-                                <?php endforeach; ?>
-                            </ul>
-
-                            <!-- Tab Content -->
-                            <div class="tab-content mt-3">
-                                <?php foreach ($assignments as $index => $assignment): ?>
-                                    <div class="tab-pane fade <?php echo $index === 0 ? 'show active' : ''; ?>"
-                                        id="person-<?php echo $index; ?>" role="tabpanel">
-                                        <div class="row">
-                                            <!-- Right Column: Task Details -->
-                                            <div class="col-md-4">
-                                                <div class="card">
-                                                    <div class="card-header">
-                                                        <h6 class="mb-0">Task Details</h6>
-                                                    </div>
-                                                    <div class="card-body">
-                                                        <div class="form-group">
-                                                            <label>Assignee Name</label>
-                                                            <p class="form-control-static">
-                                                                <?php echo htmlspecialchars(($assignment['first_name'] ?? '') . ' ' . ($assignment['last_name'] ?? '')); ?>
-                                                            </p>
-                                                        </div>
-                                                        <div class="form-group">
-                                                            <label>Role</label>
-                                                            <p class="form-control-static">
-                                                                <?php echo htmlspecialchars($assignment['role_task'] ?? ''); ?>
-                                                            </p>
-                                                        </div>
-                                                        <div class="form-group">
-                                                            <label>Task Deadline</label>
-                                                            <p class="form-control-static">
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>Team Member</th>
+                                                <th>Role</th>
+                                                <th>Assigned Images</th>
+                                                <th>Status</th>
+                                                <th>Deadline</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <?php if (count($assignments) > 0): ?>
+                                                <?php foreach ($assignments as $assignment): ?>
+                                                    <tr data-assignment-id="<?php echo $assignment['assignment_id']; ?>">
+                                                        <td>
+                                                            <div class="team-member-col">
                                                                 <?php
-                                                                echo isset($assignment['deadline']) ? date('Y-m-d', strtotime($assignment['deadline'])) : 'Not set';
-
-                                                                // Show deadline status
-                                                                if ($deadline) {
-                                                                    $days_left = $today->diff($deadline)->format("%R%a");
-
-                                                                    if ($days_left < 0) {
-                                                                        echo ' <span class="badge badge-danger">Overdue by ' . abs($days_left) . ' days</span>';
-                                                                    } elseif ($days_left == 0) {
-                                                                        echo ' <span class="badge badge-warning">Due today</span>';
-                                                                    } elseif ($days_left <= 3) {
-                                                                        echo ' <span class="badge badge-warning">' . $days_left . ' days left</span>';
-                                                                    } else {
-                                                                        echo ' <span class="badge badge-info">' . $days_left . ' days left</span>';
+                                                                $assigneeName = "Not Assigned";
+                                                                foreach ($graphicArtists as $artist) {
+                                                                    if ($artist['user_id'] == $assignment['user_id']) {
+                                                                        $assigneeName = $artist['full_name'];
+                                                                        break;
                                                                     }
                                                                 }
+                                                                echo $assigneeName;
                                                                 ?>
-                                                            </p>
-                                                        </div>
-                                                        <div class="form-group">
-                                                            <label>Task Status</label>
-                                                            <p class="form-control-static">
-                                                                <span
-                                                                    class="badge badge-<?php echo getAssignmentStatusClass($assignment['status_assignee'] ?? 'pending'); ?> p-2">
-                                                                    <?php echo ucfirst($assignment['status_assignee'] ?? 'pending'); ?>
-                                                                </span>
-                                                            </p>
-                                                        </div>
-                                                        <div class="form-group">
-                                                            <label>Assigned Images</label>
-                                                            <p class="form-control-static">
-                                                                <span class="badge badge-info p-2">
-                                                                    <?php echo $assignment['assigned_images'] ?? 0; ?> images
-                                                                </span>
-                                                            </p>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <!-- Left Column: Assigned Images -->
-                                            <div class="col-md-8">
-                                                <div class="card">
-                                                    <div class="card-header">
-                                                        <h6 class="mb-0">Assigned Images</h6>
-                                                    </div>
-                                                    <div class="card-body">
-                                                        <div class="row">
+                                                                <?php if ($assignment['status_assignee'] != 'pending'): ?>
+                                                                    <div class="mt-2">
+                                                                        <span class="badge badge-info">
+                                                                            <i class="fas fa-info-circle mr-1"></i> Status:
+                                                                            <?php echo ucfirst($assignment['status_assignee']); ?>
+                                                                        </span>
+                                                                    </div>
+                                                                <?php endif; ?>
+                                                            </div>
+                                                        </td>
+                                                        <td>
+                                                            <?php echo $assignment['role_task'] ? $assignment['role_task'] : 'Not Set'; ?>
+                                                        </td>
+                                                        <td>
+                                                            <?php echo $assignment['assigned_images']; ?> Images
+                                                            <div class="btn-group ml-2">
+                                                                <button type="button"
+                                                                    class="btn btn-sm btn-outline-primary view-assigned-images"
+                                                                    data-assignment-id="<?php echo $assignment['assignment_id']; ?>"
+                                                                    title="View Assigned Images">
+                                                                    <i class="fas fa-eye"></i>
+                                                                </button>
+                                                            </div>
+                                                        </td>
+                                                        <td>
                                                             <?php
-                                                            // Get assigned images for this assignment
-                                                            $assignedImages = []; // Default empty array
-                                                            // Check if there are assigned images for this assignment
-                                                            foreach ($images as $image) {
-                                                                if (isset($image['assignment_id']) && $image['assignment_id'] == $assignment['assignment_id']) {
-                                                                    $assignedImages[] = $image;
-                                                                }
-                                                            }
+                                                            // Define the timeline steps
+                                                            $timelineSteps = ['pending', 'in_progress', 'finish', 'qa', 'approved', 'completed'];
+                                                            $currentStatus = $assignment['status_assignee'];
 
-                                                            if (!empty($assignedImages)):
-                                                                ?>
-                                                                <?php foreach ($assignedImages as $imageIndex => $image): ?>
-                                                                    <?php
-                                                                    // Extract filename
-                                                                    $fileName = '';
-                                                                    if (isset($image['file_name']) && !empty($image['file_name'])) {
-                                                                        $fileName = $image['file_name'];
-                                                                    } else if (isset($image['image_path']) && !empty($image['image_path'])) {
-                                                                        $path_parts = pathinfo($image['image_path']);
-                                                                        $fileName = $path_parts['basename'];
-                                                                    } else {
-                                                                        $fileName = 'Image ' . $image['image_id'];
-                                                                    }
-                                                                    ?>
-                                                                    <div class="col-md-4 mb-3">
-                                                                        <div class="card h-100 shadow-sm">
-                                                                            <div class="card-body p-2">
-                                                                                <h6
-                                                                                    class="card-title mb-2 text-truncate font-weight-bold">
-                                                                                    <?php echo htmlspecialchars($fileName); ?>
-                                                                                </h6>
-                                                                                <small class="text-muted">
-                                                                                    <i class="fas fa-info-circle"></i>
-                                                                                    ID: <?php echo $image['image_id']; ?>
-                                                                                </small>
-                                                                            </div>
+                                                            // Determine the current step index
+                                                            $currentStepIndex = array_search($currentStatus, $timelineSteps);
+                                                            if ($currentStepIndex === false)
+                                                                $currentStepIndex = 0;
+
+                                                            // Display the timeline
+                                                            ?>
+                                                            <div class="status-timeline d-flex align-items-center"
+                                                                style="font-size: 0.8rem;">
+                                                                <?php foreach ($timelineSteps as $index => $step):
+                                                                    $isActive = $index <= $currentStepIndex;
+                                                                    $isCurrent = $index == $currentStepIndex;
+
+                                                                    // Determine classes
+                                                                    $stepClass = 'status-step';
+                                                                    if ($isActive)
+                                                                        $stepClass .= ' active';
+                                                                    if ($isCurrent)
+                                                                        $stepClass .= ' current';
+
+                                                                    // Display connector line for steps after the first
+                                                                    if ($index > 0): ?>
+                                                                        <div
+                                                                            class="status-connector <?php echo $index <= $currentStepIndex ? 'active' : ''; ?>">
                                                                         </div>
+                                                                    <?php endif; ?>
+
+                                                                    <div class="<?php echo $stepClass; ?>"
+                                                                        title="<?php echo ucfirst(str_replace('_', ' ', $step)); ?>">
+                                                                        <?php echo substr(ucfirst($step), 0, 1); ?>
                                                                     </div>
                                                                 <?php endforeach; ?>
-                                                            <?php else: ?>
-                                                                <div class="col-12">
-                                                                    <div class="alert alert-info">
-                                                                        <i class="fas fa-info-circle mr-2"></i> No images assigned
-                                                                        to this team member.
-                                                                    </div>
-                                                                </div>
-                                                            <?php endif; ?>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                <?php endforeach; ?>
+                                                            </div>
+                                                        </td>
+                                                        <td>
+                                                            <?php
+                                                            $deadline_date = new DateTime($assignment['deadline']);
+                                                            $today = new DateTime('today');
+                                                            $deadline_status = '';
+                                                            $badge_class = '';
+
+                                                            if ($deadline_date == $today) {
+                                                                $deadline_status = 'Today';
+                                                                $badge_class = 'badge-warning';
+                                                            } else if ($deadline_date < $today) {
+                                                                $deadline_status = 'Overdue';
+                                                                $badge_class = 'badge-danger';
+                                                            }
+                                                            ?>
+                                                            <div>
+                                                                <?php echo date('Y-m-d', strtotime($assignment['deadline'])); ?>
+                                                                <?php if (!empty($deadline_status)): ?>
+                                                                    <span class="badge <?php echo $badge_class; ?> ml-2">
+                                                                        <?php echo $deadline_status; ?>
+                                                                    </span>
+                                                                <?php endif; ?>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                <?php endforeach; ?>
+                                            <?php else: ?>
+                                                <tr>
+                                                    <td colspan="5" class="text-center">No team assignments found.</td>
+                                                </tr>
+                                            <?php endif; ?>
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
-                        <?php endif; ?>
+                        </div>
                     </div>
                 </div>
 
