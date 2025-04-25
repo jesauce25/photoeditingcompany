@@ -5,9 +5,20 @@
  * A more maintainable version of the edit project page
  */
 
+// Add server-side logging function for enhanced logging
+function log_server_action($action, $data = null)
+{
+    $log_message = "[" . date('Y-m-d H:i:s') . "] [EDIT-PROJECT] " . $action;
+    if ($data !== null) {
+        $log_message .= ": " . json_encode($data);
+    }
+    error_log($log_message);
+}
+
 // Include header and required controllers
 include("includes/header.php");
 include("controllers/unified_project_controller.php");
+
 
 // Add a console logging function that works with both error_log and JavaScript
 function console_log($message, $data = null)
@@ -39,11 +50,15 @@ if (!isset($_GET['id'])) {
 
 $project_id = intval($_GET['id']);
 
+// Log the project access
+log_server_action("Project edit page accessed", array("project_id" => $project_id, "user" => $_SESSION['username'] ?? 'Unknown'));
+
 // Fetch project data from database
 $project = getProjectById($project_id);
 
 if (!$project) {
     $_SESSION['error_message'] = "Project not found";
+    log_server_action("Project not found", array("project_id" => $project_id));
     header("Location: project-list.php");
     exit();
 }
@@ -53,11 +68,11 @@ $companies = getCompaniesForDropdown();
 
 // Get all project images
 $images = getProjectImages($project_id);
-error_log("Found " . count($images) . " images for project ID " . $project_id);
+log_server_action("Retrieved images", array("count" => count($images), "project_id" => $project_id));
 
 // Get project assignments
 $assignments = getProjectAssignments($project_id);
-error_log("Found " . count($assignments) . " assignments for project ID " . $project_id);
+log_server_action("Retrieved assignments", array("count" => count($assignments), "project_id" => $project_id));
 
 // Get project progress (for charts)
 $projectProgress = getProjectProgressStats($project_id);
@@ -237,28 +252,44 @@ $projectProgress = getProjectProgressStats($project_id);
         // Setup console logging
         const logging = {
             debug: function (message, data = null) {
-                console.debug(`[DEBUG] ${message}`, data || '');
+                console.debug(`[DEBUG][${new Date().toISOString()}] ${message}`, data || '');
             },
             info: function (message, data = null) {
-                console.info(`[INFO] ${message}`, data || '');
+                console.info(`[INFO][${new Date().toISOString()}] ${message}`, data || '');
             },
-            warn: function (message, data = null) {
-                console.warn(`[WARNING] ${message}`, data || '');
+            warning: function (message, data = null) {
+                console.warn(`[WARNING][${new Date().toISOString()}] ${message}`, data || '');
             },
             error: function (message, data = null) {
-                console.error(`[ERROR] ${message}`, data || '');
+                console.error(`[ERROR][${new Date().toISOString()}] ${message}`, data || '');
             },
             interaction: function (action, data = null) {
-                console.log(`[USER ACTION] ${action}`, data || '');
+                console.log(`[USER ACTION][${new Date().toISOString()}] ${action}`, data || '');
+
+                // Send interaction to server for logging if needed
+                if (window.navigator.sendBeacon) {
+                    try {
+                        const logData = {
+                            action: action,
+                            data: data || {},
+                            timestamp: new Date().toISOString(),
+                            page: 'edit-project',
+                            projectId: projectId
+                        };
+                        navigator.sendBeacon('controllers/log_client_action.php', JSON.stringify(logData));
+                    } catch (e) {
+                        console.error('Error sending beacon log:', e);
+                    }
+                }
             },
-            ajax: function (type, url, data = null) {
-                console.log(`[AJAX ${type}] ${url}`, data || '');
+            ajax: function (method, url, data = null) {
+                console.log(`[AJAX REQUEST][${new Date().toISOString()}] ${method} ${url}`, data || '');
             },
-            ajaxSuccess: function (type, url, response = null) {
-                console.log(`[AJAX ${type} SUCCESS] ${url}`, response || '');
+            ajaxSuccess: function (method, url, response = null) {
+                console.log(`[AJAX SUCCESS][${new Date().toISOString()}] ${method} ${url}`, response || '');
             },
-            ajaxError: function (type, url, error = null) {
-                console.error(`[AJAX ${type} ERROR] ${url}`, error || '');
+            ajaxError: function (method, url, error = null) {
+                console.error(`[AJAX ERROR][${new Date().toISOString()}] ${method} ${url}`, error || '');
             }
         };
     });
@@ -695,7 +726,7 @@ $projectProgress = getProjectProgressStats($project_id);
                                                     }
                                                 }
                                                 ?>
-                                                <div class="col-md-6 col-lg-4 mb-2">
+                                                <div class="col-md-6 col-lg-3 mb-2">
                                                     <div class="image-container card shadow-sm"
                                                         data-image-id="<?php echo $image['image_id']; ?>">
                                                         <div class="card-body p-2">
@@ -719,21 +750,17 @@ $projectProgress = getProjectProgressStats($project_id);
                                                                             <?php echo $statusText; ?>
                                                                         </span>
 
-                                                                        <!-- Role badge -->
-                                                                        <?php if (!empty($image['image_role'])): ?>
-                                                                            <span class="badge badge-info mr-1 mb-1">
-                                                                                <i class="fas fa-tasks mr-1"></i>
-                                                                                <?php echo htmlspecialchars($image['image_role']); ?>
-                                                                            </span>
-                                                                        <?php endif; ?>
+                                                                        <!-- Role badge -always show, even if empty -->
+                                                                        <span class="badge badge-info mr-1 mb-1">
+                                                                            <i class="fas fa-tasks mr-1"></i>
+                                                                            <?php echo !empty($image['image_role']) ? htmlspecialchars($image['image_role']) : 'Not Set'; ?>
+                                                                        </span>
 
-                                                                        <!-- Estimated time badge -->
-                                                                        <?php if (!empty($estimatedTimeDisplay)): ?>
-                                                                            <span class="badge badge-secondary mb-1">
-                                                                                <i class="far fa-clock mr-1"></i>
-                                                                                <?php echo $estimatedTimeDisplay; ?>
-                                                                            </span>
-                                                                        <?php endif; ?>
+                                                                        <!-- Estimated time badge - always show, even if empty -->
+                                                                        <span class="badge badge-secondary mb-1">
+                                                                            <i class="far fa-clock mr-1"></i>
+                                                                            <?php echo !empty($estimatedTimeDisplay) ? $estimatedTimeDisplay : 'No Time Set'; ?>
+                                                                        </span>
                                                                     </div>
                                                                 </div>
 
@@ -822,28 +849,26 @@ $projectProgress = getProjectProgressStats($project_id);
                                                             </td>
                                                             <td>
                                                                 <?php echo $assignment['assigned_images']; ?> Images
-                                                                <?php if ($assignment['assigned_images'] > 0): ?>
-                                                                    <div class="btn-group ml-2">
-                                                                        <button type="button"
-                                                                            class="btn btn-sm btn-outline-primary view-assigned-images"
-                                                                            data-assignment-id="<?php echo $assignment['assignment_id']; ?>"
-                                                                            title="View Assigned Images">
-                                                                            <i class="fas fa-eye"></i>
-                                                                        </button>
-                                                                        <button type="button"
-                                                                            class="btn btn-sm btn-outline-success add-more-images"
-                                                                            data-assignment-id="<?php echo $assignment['assignment_id']; ?>"
-                                                                            title="Add More Images" <?php echo $assignment['status_assignee'] != 'pending' ? 'disabled' : ''; ?>>
-                                                                            <i class="fas fa-plus"></i>
-                                                                        </button>
+                                                                <div class="btn-group ml-2">
+                                                                    <button type="button"
+                                                                        class="btn btn-sm btn-outline-primary view-assigned-images"
+                                                                        data-assignment-id="<?php echo $assignment['assignment_id']; ?>"
+                                                                        title="View Assigned Images">
+                                                                        <i class="fas fa-eye"></i>
+                                                                    </button>
+                                                                    <button type="button"
+                                                                        class="btn btn-sm btn-outline-success add-more-images"
+                                                                        data-assignment-id="<?php echo $assignment['assignment_id']; ?>"
+                                                                        title="Add More Images" <?php echo $assignment['status_assignee'] != 'pending' ? 'disabled' : ''; ?>>
+                                                                        <i class="fas fa-plus"></i>
+                                                                    </button>
+                                                                </div>
+                                                                <?php if ($assignment['status_assignee'] != 'pending'): ?>
+                                                                    <div class="mt-1">
+                                                                        <small class="text-muted">
+                                                                            <i class="fas fa-lock mr-1"></i> Some actions locked
+                                                                        </small>
                                                                     </div>
-                                                                    <?php if ($assignment['status_assignee'] != 'pending'): ?>
-                                                                        <div class="mt-1">
-                                                                            <small class="text-muted">
-                                                                                <i class="fas fa-lock mr-1"></i> Some actions locked
-                                                                            </small>
-                                                                        </div>
-                                                                    <?php endif; ?>
                                                                 <?php endif; ?>
                                                             </td>
                                                             <td>
@@ -920,18 +945,18 @@ $projectProgress = getProjectProgressStats($project_id);
                                                                         value="<?php echo $assignment['deadline']; ?>"
                                                                         data-assignment-id="<?php echo $assignment['assignment_id']; ?>"
                                                                         <?php echo $assignment['status_assignee'] != 'pending' ? 'disabled' : ''; ?>>
-                                                                    <?php if (!empty($deadline_status)): ?>
-                                                                        <span class="badge <?php echo $badge_class; ?> ml-2">
-                                                                            <?php echo $deadline_status; ?>
-                                                                        </span>
-                                                                    <?php endif; ?>
-                                                                    <?php if ($assignment['status_assignee'] != 'pending'): ?>
-                                                                        <div class="mt-1">
+                                                                    <div class="d-flex mt-1">
+                                                                        <?php if (!empty($deadline_status)): ?>
+                                                                            <span class="badge <?php echo $badge_class; ?> mr-2">
+                                                                                <?php echo $deadline_status; ?>
+                                                                            </span>
+                                                                        <?php endif; ?>
+                                                                        <?php if ($assignment['status_assignee'] != 'pending'): ?>
                                                                             <span class="badge badge-info">
                                                                                 <i class="fas fa-lock mr-1"></i> Locked
                                                                             </span>
-                                                                        </div>
-                                                                    <?php endif; ?>
+                                                                        <?php endif; ?>
+                                                                    </div>
                                                                 </div>
                                                             </td>
                                                             <td>
@@ -1072,28 +1097,44 @@ $projectProgress = getProjectProgressStats($project_id);
     // Set up logging functions
     const logging = {
         debug: function (message, data = null) {
-            console.debug(`[DEBUG] ${message}`, data || '');
+            console.debug(`[DEBUG][${new Date().toISOString()}] ${message}`, data || '');
         },
         info: function (message, data = null) {
-            console.info(`[INFO] ${message}`, data || '');
+            console.info(`[INFO][${new Date().toISOString()}] ${message}`, data || '');
         },
-        warn: function (message, data = null) {
-            console.warn(`[WARNING] ${message}`, data || '');
+        warning: function (message, data = null) {
+            console.warn(`[WARNING][${new Date().toISOString()}] ${message}`, data || '');
         },
         error: function (message, data = null) {
-            console.error(`[ERROR] ${message}`, data || '');
+            console.error(`[ERROR][${new Date().toISOString()}] ${message}`, data || '');
         },
-        interaction: function (action, details = null) {
-            console.log(`[USER ACTION] ${action}`, details || '');
+        interaction: function (action, data = null) {
+            console.log(`[USER ACTION][${new Date().toISOString()}] ${action}`, data || '');
+
+            // Send interaction to server for logging if needed
+            if (window.navigator.sendBeacon) {
+                try {
+                    const logData = {
+                        action: action,
+                        data: data || {},
+                        timestamp: new Date().toISOString(),
+                        page: 'edit-project',
+                        projectId: projectId
+                    };
+                    navigator.sendBeacon('controllers/log_client_action.php', JSON.stringify(logData));
+                } catch (e) {
+                    console.error('Error sending beacon log:', e);
+                }
+            }
         },
-        ajax: function (type, url, data = null) {
-            console.log(`[AJAX ${type}] ${url}`, data || '');
+        ajax: function (method, url, data = null) {
+            console.log(`[AJAX REQUEST][${new Date().toISOString()}] ${method} ${url}`, data || '');
         },
-        ajaxSuccess: function (type, url, response = null) {
-            console.log(`[AJAX ${type} SUCCESS] ${url}`, response || '');
+        ajaxSuccess: function (method, url, response = null) {
+            console.log(`[AJAX SUCCESS][${new Date().toISOString()}] ${method} ${url}`, response || '');
         },
-        ajaxError: function (type, url, error = null) {
-            console.error(`[AJAX ${type} ERROR] ${url}`, error || '');
+        ajaxError: function (method, url, error = null) {
+            console.error(`[AJAX ERROR][${new Date().toISOString()}] ${method} ${url}`, error || '');
         }
     };
 
@@ -1938,9 +1979,9 @@ $projectProgress = getProjectProgressStats($project_id);
                             if (data.images && data.images.length > 0) {
                                 // Create a table for image details
                                 imagesHtml = `
-                                <div class="table-responsive">
-                                    <table class="table table-bordered table-hover" id="assigned-images-table">
-                                        <thead>
+                                <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+                                    <table class="table table-bordered table-hover table-sm" id="assigned-images-table">
+                                        <thead class="thead-light sticky-top" style="position: sticky; top: 0; z-index: 1;">
                                             <tr>
                                                 <th>Image Name</th>
                                                 <th>Estimated Time</th>
@@ -2052,7 +2093,7 @@ $projectProgress = getProjectProgressStats($project_id);
                             // Create and show modal
                             const modalHtml = `
                                 <div class="modal fade" id="viewAssignedImagesModal" tabindex="-1" role="dialog">
-                                    <div class="modal-dialog modal-lg" role="document">
+                                    <div class="modal-dialog modal-xl" role="document">
                                         <div class="modal-content">
                                             <div class="modal-header bg-primary text-white">
                                                 <h5 class="modal-title">
@@ -2071,13 +2112,12 @@ $projectProgress = getProjectProgressStats($project_id);
                                                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
                                                 </div>
                                                 <div>
-                                                    ${statusEditable ?
-                                    `<button type="button" class="btn btn-danger remove-all-assigned-images mr-2" data-assignment-id="${assignmentId}">
+                                                    <button type="button" class="btn btn-danger remove-all-assigned-images mr-2" data-assignment-id="${assignmentId}" ${!statusEditable ? 'disabled' : ''}>
                                                         <i class="fas fa-trash mr-1"></i> Remove All Images
                                                     </button>
-                                                    <button type="button" class="btn btn-success save-all-image-details" data-assignment-id="${assignmentId}">
+                                                    <button type="button" class="btn btn-success save-all-image-details" data-assignment-id="${assignmentId}" ${!statusEditable ? 'disabled' : ''}>
                                                         <i class="fas fa-save mr-1"></i> Save All Changes
-                                            </button>` : ''}
+                                                    </button>
                                                 </div>
                                             </div>
                                         </div>
@@ -3092,5 +3132,8 @@ $projectProgress = getProjectProgressStats($project_id);
         });
     });
 </script>
+
+<!-- Add script for logging tests (development only) -->
+<script src="js/logging-test.js"></script>
 
 <?php include("includes/footer.php"); ?>

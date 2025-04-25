@@ -2,6 +2,7 @@
 include("includes/header.php");
 require_once 'controllers/unified_project_controller.php';
 
+
 // Check if project ID is provided
 if (!isset($_GET['id'])) {
     header("Location: project-list.php");
@@ -19,11 +20,27 @@ if (!$project) {
     exit();
 }
 
+// Add logging function for both server and client side
+function log_action($action, $data = null)
+{
+    // Server-side logging
+    $log_message = "[" . date('Y-m-d H:i:s') . "] [VIEW-PROJECT] " . $action;
+    if ($data !== null) {
+        $log_message .= ": " . json_encode($data);
+    }
+    error_log($log_message);
+}
+
+// Log view project access
+log_action("View project accessed", array("project_id" => $project_id, "user" => $_SESSION['username'] ?? 'Unknown'));
+
 // Get project images
 $images = getProjectImages($project_id);
+log_action("Retrieved images", array("count" => count($images), "project_id" => $project_id));
 
 // Get project assignments
 $assignments = getProjectAssignments($project_id);
+log_action("Retrieved assignments", array("count" => count($assignments), "project_id" => $project_id));
 
 // Functions to get status and priority display classes
 function getStatusClass($status)
@@ -92,40 +109,7 @@ function getAssignmentStatusClass($status)
                             <i class="fas fa-eye mr-2"></i>
                             View Project
                         </h1>
-                        <?php if (!empty($assignments)): ?>
-                            <div class="mt-2 d-flex align-items-center">
-                                <span class="text-muted mr-2">Team: </span>
-                                <div class="d-flex flex-wrap">
-                                    <?php
-                                    // Extract first names of all assignees for this project
-                                    $team = array();
-                                    foreach ($assignments as $assignment) {
-                                        if (isset($assignment['first_name'])) {
-                                            $is_overdue = false;
-                                            if (isset($assignment['deadline'])) {
-                                                $deadline = new DateTime($assignment['deadline']);
-                                                $today = new DateTime();
-                                                $is_overdue = $deadline < $today;
-                                            }
-                                            $team[] = array(
-                                                'name' => $assignment['first_name'],
-                                                'is_overdue' => $is_overdue
-                                            );
-                                        }
-                                    }
 
-                                    // Display team members with badges
-                                    foreach ($team as $member):
-                                        $badge_class = $member['is_overdue'] ? 'badge-danger' : 'badge-primary';
-                                        ?>
-                                        <span class="badge <?php echo $badge_class; ?> mr-1 mb-1 p-2">
-                                            <i class="fas fa-user-circle mr-1"></i>
-                                            <?php echo htmlspecialchars($member['name'] ?? ''); ?>
-                                        </span>
-                                    <?php endforeach; ?>
-                                </div>
-                            </div>
-                        <?php endif; ?>
                     </div>
                     <div class="col-sm-6">
                         <ol class="breadcrumb float-sm-right">
@@ -257,93 +241,99 @@ function getAssignmentStatusClass($status)
                 <div class="row mb-4">
                     <div class="col-12">
                         <div class="card">
-                            <div class="card-header bg-primary text-white">
+                            <div
+                                class="card-header d-flex justify-content-between align-items-center bg-primary text-white">
                                 <h5 class="card-title mb-0">
                                     <i class="fas fa-images mr-2"></i>
-                                    Project Images
-                                    <span class="badge badge-light ml-2"><?php echo count($images); ?></span>
+                                    Project Images (Total: <?php echo count($images); ?>)
                                 </h5>
                             </div>
-                            <div class="card-body p-0">
-                                <div class="p-3">
-                                    <div class="image-grid-container border-0 shadow-none">
-                                        <div class="row" id="projectImagesList">
-                                            <?php if (empty($images)): ?>
-                                                <div class="col-12">
-                                                    <div class="alert alert-info">
-                                                        <i class="fas fa-info-circle mr-2"></i> No images have been uploaded
-                                                        for this project yet.
-                                                    </div>
-                                                </div>
-                                            <?php else: ?>
-                                                <div class="col-12">
-                                                    <div class="row">
-                                                        <?php foreach ($images as $index => $image): ?>
-                                                            <?php
-                                                            $availability = "available";
-                                                            $assignment_id = null;
-                                                            $assignee_name = "";
+                            <div class="card-body">
+                                <!-- Images Grid -->
+                                <div class="row" id="projectImagesList">
+                                    <?php if (empty($images)): ?>
+                                        <div class="col-12 text-center py-5">
+                                            <p class="text-muted">No images uploaded yet.</p>
+                                        </div>
+                                    <?php else: ?>
+                                        <?php foreach ($images as $index => $image): ?>
+                                            <?php
+                                            // Determine status for UI display
+                                            $statusClass = 'badge-success';
+                                            $statusText = 'Available';
 
-                                                            // Check if this image is assigned to anyone
-                                                            if (isset($image['assignment_id']) && $image['assignment_id'] > 0) {
-                                                                $assignment_id = $image['assignment_id'];
+                                            if (isset($image['assignment_id']) && $image['assignment_id']) {
+                                                $statusClass = 'badge-primary';
+                                                // Show assignee's first name if assigned
+                                                $statusText = isset($image['assignee_first_name']) ? $image['assignee_first_name'] : 'Assigned';
+                                            }
 
-                                                                // Find assignee name by assignment_id
-                                                                foreach ($assignments as $assign) {
-                                                                    if ($assign['assignment_id'] == $assignment_id) {
-                                                                        $assignee_name = $assign['first_name'] ?? 'Unknown';
-                                                                        $availability = $assignee_name;
-                                                                        break;
-                                                                    }
-                                                                }
-                                                            }
+                                            if (isset($image['status_image']) && $image['status_image'] === 'completed') {
+                                                $statusClass = 'badge-success';
+                                                $statusText = 'Completed';
+                                            }
 
-                                                            // Extract filename from path
-                                                            $fileName = '';
-                                                            if (isset($image['file_name']) && !empty($image['file_name'])) {
-                                                                $fileName = $image['file_name'];
-                                                            } else if (isset($image['image_path']) && !empty($image['image_path'])) {
-                                                                $path_parts = pathinfo($image['image_path']);
-                                                                $fileName = $path_parts['basename'];
-                                                            } else {
-                                                                $fileName = 'Image ' . $image['image_id'];
-                                                            }
-                                                            ?>
-                                                            <div class="col-md-3 mb-3">
-                                                                <div class="card image-item h-100">
-                                                                    <div class="card-body p-3">
-                                                                        <div
-                                                                            class="d-flex justify-content-between align-items-center">
-                                                                            <!-- Image Name on Left -->
-                                                                            <div class="image-name-container">
-                                                                                <div class="d-flex align-items-center">
-                                                                                    <i
-                                                                                        class="fas fa-file-image text-primary mr-2"></i>
-                                                                                    <span
-                                                                                        class="image-name font-weight-bold text-truncate"
-                                                                                        title="<?php echo htmlspecialchars($fileName); ?>">
-                                                                                        <?php echo htmlspecialchars($fileName); ?>
-                                                                                    </span>
-                                                                                </div>
-                                                                            </div>
+                                            // Get file name for display
+                                            $fileName = '';
+                                            if (isset($image['file_name']) && !empty($image['file_name'])) {
+                                                $fileName = $image['file_name'];
+                                            } else if (isset($image['image_path']) && !empty($image['image_path'])) {
+                                                $fileName = pathinfo($image['image_path'], PATHINFO_BASENAME);
+                                            } else {
+                                                $fileName = 'Image ' . $image['image_id'];
+                                            }
 
-                                                                            <!-- Availability on Right -->
-                                                                            <div class="image-actions">
-                                                                                <span
-                                                                                    class="badge badge-<?php echo $availability == 'available' ? 'success' : 'info'; ?> py-1 px-2">
-                                                                                    <?php echo $availability == 'available' ? 'Available' : '<i class="fas fa-user-circle mr-1"></i>' . ucfirst($availability); ?>
-                                                                                </span>
-                                                                            </div>
-                                                                        </div>
-                                                                    </div>
+                                            // Format estimated time
+                                            $estimatedTimeDisplay = '';
+                                            if (!empty($image['estimated_time'])) {
+                                                $time = intval($image['estimated_time']);
+                                                if ($time >= 60) {
+                                                    $hours = floor($time / 60);
+                                                    $minutes = $time % 60;
+                                                    $estimatedTimeDisplay = $hours . 'hr' . ($minutes > 0 ? ' ' . $minutes . 'min' : '');
+                                                } else {
+                                                    $estimatedTimeDisplay = $time . ' min';
+                                                }
+                                            }
+                                            ?>
+                                            <div class="col-md-6 col-lg-3 mb-2">
+                                                <div class="image-container card shadow-sm">
+                                                    <div class="card-body p-2">
+                                                        <div class="d-flex align-items-center">
+
+
+                                                            <!-- Image details -->
+                                                            <div class="flex-grow-1">
+                                                                <h6 class="mb-0 text-truncate"
+                                                                    title="<?php echo htmlspecialchars($fileName); ?>">
+                                                                    <?php echo htmlspecialchars($fileName); ?>
+                                                                </h6>
+                                                                <div class="d-flex flex-wrap mt-1">
+                                                                    <!-- Assignee badge -->
+                                                                    <span class="badge <?php echo $statusClass; ?> mr-1 mb-1">
+                                                                        <i class="fas fa-user mr-1"></i>
+                                                                        <?php echo $statusText; ?>
+                                                                    </span>
+
+                                                                    <!-- Role badge - always show, even if empty -->
+                                                                    <span class="badge badge-info mr-1 mb-1">
+                                                                        <i class="fas fa-tasks mr-1"></i>
+                                                                        <?php echo !empty($image['image_role']) ? htmlspecialchars($image['image_role']) : 'Not Set'; ?>
+                                                                    </span>
+
+                                                                    <!-- Estimated time badge - always show, even if empty -->
+                                                                    <span class="badge badge-secondary mb-1">
+                                                                        <i class="far fa-clock mr-1"></i>
+                                                                        <?php echo !empty($estimatedTimeDisplay) ? $estimatedTimeDisplay : 'No Time Set'; ?>
+                                                                    </span>
                                                                 </div>
                                                             </div>
-                                                        <?php endforeach; ?>
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            <?php endif; ?>
-                                        </div>
-                                    </div>
+                                            </div>
+                                        <?php endforeach; ?>
+                                    <?php endif; ?>
                                 </div>
                             </div>
                         </div>
@@ -563,15 +553,81 @@ function getAssignmentStatusClass($status)
     </div>
 </div>
 
+<!-- Add script for client-side logging -->
 <script>
-    // Add some basic JavaScript to handle tab switching
     $(document).ready(function () {
-        console.log("View project page loaded.");
+        // Logging functions
+        const logging = {
+            debug: function (message, data = null) {
+                console.debug(`[DEBUG][${new Date().toISOString()}] ${message}`, data || '');
+            },
+            info: function (message, data = null) {
+                console.info(`[INFO][${new Date().toISOString()}] ${message}`, data || '');
+            },
+            warning: function (message, data = null) {
+                console.warn(`[WARNING][${new Date().toISOString()}] ${message}`, data || '');
+            },
+            error: function (message, data = null) {
+                console.error(`[ERROR][${new Date().toISOString()}] ${message}`, data || '');
+            },
+            interaction: function (action, data = null) {
+                console.log(`[USER ACTION][${new Date().toISOString()}] ${action}`, data || '');
 
-        // Log when tabs are clicked
-        $('#assignedTasksTabs a').on('click', function (e) {
-            console.log("Tab clicked: " + $(this).text().trim());
+                // Send interaction to server for logging if needed
+                if (window.navigator.sendBeacon) {
+                    try {
+                        const logData = {
+                            action: action,
+                            data: data || {},
+                            timestamp: new Date().toISOString(),
+                            page: 'view-project',
+                            projectId: <?php echo $project_id; ?>
+                        };
+                        navigator.sendBeacon('controllers/log_client_action.php', JSON.stringify(logData));
+                    } catch (e) {
+                        console.error('Error sending beacon log:', e);
+                    }
+                }
+            },
+            ajax: function (method, url, data = null) {
+                console.log(`[AJAX REQUEST][${new Date().toISOString()}] ${method} ${url}`, data || '');
+            },
+            ajaxSuccess: function (method, url, response = null) {
+                console.log(`[AJAX SUCCESS][${new Date().toISOString()}] ${method} ${url}`, response || '');
+            },
+            ajaxError: function (method, url, error = null) {
+                console.error(`[AJAX ERROR][${new Date().toISOString()}] ${method} ${url}`, error || '');
+            }
+        };
+
+        // Log page load
+        logging.info('View Project page loaded', { projectId: <?php echo $project_id; ?> });
+
+        // Log info about project data
+        logging.info('Project data loaded', {
+            projectTitle: '<?php echo addslashes($project['project_title'] ?? ''); ?>',
+            status: '<?php echo addslashes($project['status_project'] ?? ''); ?>',
+            imageCount: <?php echo count($images); ?>,
+            assignmentsCount: <?php echo count($assignments); ?>
+        });
+
+        // Log user interactions
+        $('.nav-link').click(function () {
+            const tabId = $(this).attr('href');
+            logging.interaction('Changed team member tab', { tab: tabId });
+        });
+
+        // Check for overdue items
+        <?php if ($hasOverdueAssignment): ?>
+            logging.warning('Project has overdue assignments', { projectId: <?php echo $project_id; ?> });
+        <?php endif; ?>
+
+        // Handle image thumbnail clicks
+        $('.image-container').click(function () {
+            const imageId = $(this).data('image-id');
+            logging.interaction('Image card clicked', { imageId });
         });
     });
 </script>
+
 <?php include("includes/footer.php"); ?>

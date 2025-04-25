@@ -3,6 +3,20 @@ include("includes/header.php");
 // Include required controllers
 require_once "controllers/unified_project_controller.php";
 
+
+// Add server-side logging function for enhanced logging
+function log_server_action($action, $data = null)
+{
+    $log_message = "[" . date('Y-m-d H:i:s') . "] [DELAYED-PROJECTS] " . $action;
+    if ($data !== null) {
+        $log_message .= ": " . json_encode($data);
+    }
+    error_log($log_message);
+}
+
+// Log page access
+log_server_action("Delayed projects page accessed", array("user" => $_SESSION['username'] ?? 'Unknown'));
+
 // Get all companies for filter dropdown
 $companies = getCompaniesForDropdown();
 
@@ -19,6 +33,38 @@ if (isset($_GET['priority']) && !empty($_GET['priority'])) {
 }
 
 $projects = getDelayedProjects($search, $filters);
+log_server_action("Fetched delayed projects", array(
+    "count" => count($projects),
+    "search" => $search,
+    "filters" => $filters
+));
+
+// Count overdue assignees for logging
+$overdue_assignee_count = 0;
+$overdue_project_count = 0;
+foreach ($projects as $project) {
+    $project_deadline = new DateTime($project['deadline']);
+    $today = new DateTime();
+    if ($project_deadline < $today) {
+        $overdue_project_count++;
+    }
+
+    $assignees = getProjectAssignee($project['project_id']);
+    foreach ($assignees as $assignee) {
+        if (isset($assignee['deadline'])) {
+            $assignee_deadline = new DateTime($assignee['deadline']);
+            if ($assignee_deadline < $today) {
+                $overdue_assignee_count++;
+                break; // Count projects with at least one overdue assignee
+            }
+        }
+    }
+}
+
+log_server_action("Overdue statistics", array(
+    "overdue_projects" => $overdue_project_count,
+    "projects_with_overdue_assignees" => $overdue_assignee_count
+));
 
 // Check for success message
 $success_message = isset($_SESSION['success_message']) ? $_SESSION['success_message'] : '';
@@ -144,14 +190,14 @@ unset($_SESSION['success_message']);
                                 <table id="delayedProjectTable" class="table table-bordered table-hover">
                                     <thead>
                                         <tr>
-                                            <th width="5%" class="d-none">#</th>
-                                            <th width="15%">Project Details</th>
-                                            <th width="10%">Status</th>
-                                            <th width="10%">Date Arrived</th>
-                                            <th width="15%">Total Images</th>
-                                            <th width="10%">Deadline</th>
-                                            <th width="10%">Assignee</th>
-                                            <th width="15%" class="text-center">Actions</th>
+                                            <th width="0%" class="d-none">#</th>
+                                            <th width="10%">Project Details</th>
+                                            <th width="8%">Status</th>
+                                            <th width="7%">Date Arrived</th>
+                                            <th width="7%">Total Images</th>
+                                            <th width="8%">Deadline</th>
+                                            <th width="30%">Assignee</th>
+                                            <th width="8%" class="text-center">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -271,8 +317,8 @@ unset($_SESSION['success_message']);
                                                         $assignees = getProjectAssignee($project['project_id']);
                                                         if (!empty($assignees)) {
                                                             $totalAssignees = count($assignees);
-                                                            $displayedAssignees = array_slice($assignees, 0, 3);
-                                                            $remaining = $totalAssignees - 3;
+                                                            $displayedAssignees = array_slice($assignees, 0, 5);
+                                                            $remaining = $totalAssignees - 5;
 
                                                             echo '<div class="assignee-container">';
 
@@ -395,28 +441,43 @@ unset($_SESSION['success_message']);
         // Logging functions
         const logging = {
             debug: function (message, data = null) {
-                console.debug(`[DEBUG] ${message}`, data || '');
+                console.debug(`[DEBUG][${new Date().toISOString()}] ${message}`, data || '');
             },
             info: function (message, data = null) {
-                console.info(`[INFO] ${message}`, data || '');
+                console.info(`[INFO][${new Date().toISOString()}] ${message}`, data || '');
             },
             warning: function (message, data = null) {
-                console.warn(`[WARNING] ${message}`, data || '');
+                console.warn(`[WARNING][${new Date().toISOString()}] ${message}`, data || '');
             },
             error: function (message, data = null) {
-                console.error(`[ERROR] ${message}`, data || '');
+                console.error(`[ERROR][${new Date().toISOString()}] ${message}`, data || '');
             },
             interaction: function (action, data = null) {
-                console.log(`[USER ACTION] ${action}`, data || '');
+                console.log(`[USER ACTION][${new Date().toISOString()}] ${action}`, data || '');
+
+                // Send interaction to server for logging if needed
+                if (window.navigator.sendBeacon) {
+                    try {
+                        const logData = {
+                            action: action,
+                            data: data || {},
+                            timestamp: new Date().toISOString(),
+                            page: 'delayed-project-list'
+                        };
+                        navigator.sendBeacon('controllers/log_client_action.php', JSON.stringify(logData));
+                    } catch (e) {
+                        console.error('Error sending beacon log:', e);
+                    }
+                }
             },
             ajax: function (method, url, data = null) {
-                console.log(`[AJAX REQUEST] ${method} ${url}`, data || '');
+                console.log(`[AJAX REQUEST][${new Date().toISOString()}] ${method} ${url}`, data || '');
             },
             ajaxSuccess: function (method, url, response = null) {
-                console.log(`[AJAX SUCCESS] ${method} ${url}`, response || '');
+                console.log(`[AJAX SUCCESS][${new Date().toISOString()}] ${method} ${url}`, response || '');
             },
             ajaxError: function (method, url, error = null) {
-                console.error(`[AJAX ERROR] ${method} ${url}`, error || '');
+                console.error(`[AJAX ERROR][${new Date().toISOString()}] ${method} ${url}`, error || '');
             }
         };
 
@@ -757,8 +818,8 @@ unset($_SESSION['success_message']);
     .assignee-overdue {
         background-color: rgba(255, 0, 0, 0.7) !important;
         color: white !important;
-        padding: 3px 5px;
-        border-radius: 3px;
+        border-radius: 20px;
+        border: 1px solid #f5c6cb;
     }
 
     /* When printing, ensure colors are visible */

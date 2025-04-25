@@ -494,14 +494,14 @@ unset($_SESSION['success_message']);
                             <table id="projectTable" class="table table-bordered table-hover">
                                 <thead>
                                     <tr>
-                                        <th width="5%" class="d-none">#</th>
-                                        <th width="12%">Project Details</th>
-                                        <th width="10%">Status</th>
-                                        <th width="10%">Date Arrived</th>
-                                        <th width="5%">Total Img</th>
-                                        <th width="10%">Deadline</th>
-                                        <th width="23%">Assignee</th>
-                                        <th width="15%" class="text-center">Actions</th>
+                                        <th width="0%" class="d-none">#</th>
+                                        <th width="10%">Project Details</th>
+                                        <th width="8%">Status</th>
+                                        <th width="7%">Date Arrived</th>
+                                        <th width="6%">Total Img</th>
+                                        <th width="7%">Deadline</th>
+                                        <th width="30%">Assignee</th>
+                                        <th width="8%" class="text-center">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
