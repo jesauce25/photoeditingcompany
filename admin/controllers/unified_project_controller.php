@@ -662,7 +662,8 @@ function getProjectAssignee($project_id)
 
     debug_log("Getting assignees for project ID: $project_id");
 
-    $sql = "SELECT DISTINCT u.user_id, u.first_name, u.last_name, u.email_address, u.profile_img, pa.role_task, pa.deadline, pa.status_assignee
+    $sql = "SELECT DISTINCT u.user_id, u.first_name, u.last_name, u.email_address, u.profile_img, 
+            pa.role_task, pa.deadline, pa.status_assignee, pa.delay_acceptable
             FROM tbl_project_assignments pa
             JOIN tbl_users u ON pa.user_id = u.user_id
             WHERE pa.project_id = ?

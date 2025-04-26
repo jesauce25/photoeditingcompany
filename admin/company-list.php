@@ -311,40 +311,45 @@ include("includes/header.php");
 
 <script>
     $(document).ready(function () {
-        // Initialize DataTable
-        var table = $('#companyTable').DataTable({
-            "responsive": true,
-            "lengthChange": true,
-            "autoWidth": false,
-            "pageLength": 10,
-            "searching": true,
-            "ordering": true,
-            "info": true,
-            "dom": "<'row'<'col-sm-12 col-md-6'l><'col-sm-12 col-md-6'f>>" +
-                "<'row'<'col-sm-12'tr>>" +
-                "<'row'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>",
-            "buttons": [
-                { extend: 'excel', className: 'hidden-button' },
-                { extend: 'pdf', className: 'hidden-button' },
-                { extend: 'print', className: 'hidden-button' }
-            ],
-            "language": {
-                "lengthMenu": "Show _MENU_ entries",
-                "search": "",
-                "searchPlaceholder": "Search companies...",
-                "info": "Showing _START_ to _END_ of _TOTAL_ companies",
-                "infoEmpty": "Showing 0 to 0 of 0 companies",
-                "infoFiltered": "(filtered from _MAX_ total companies)",
-                "zeroRecords": "No matching companies found",
-                "emptyTable": "No companies available",
-                "paginate": {
-                    "first": '<i class="fas fa-angle-double-left"></i>',
-                    "previous": '<i class="fas fa-angle-left"></i>',
-                    "next": '<i class="fas fa-angle-right"></i>',
-                    "last": '<i class="fas fa-angle-double-right"></i>'
+        // Initialize DataTable only if it's not already initialized
+        let table;
+        if (!$.fn.dataTable.isDataTable('#companyTable')) {
+            table = $('#companyTable').DataTable({
+                "responsive": true,
+                "lengthChange": true,
+                "autoWidth": false,
+                "pageLength": 10,
+                "searching": true,
+                "ordering": true,
+                "info": true,
+                "dom": "<'row'<'col-sm-12 col-md-6'l><'col-sm-12 col-md-6'f>>" +
+                    "<'row'<'col-sm-12'tr>>" +
+                    "<'row'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>",
+                "buttons": [
+                    { extend: 'excel', className: 'hidden-button' },
+                    { extend: 'pdf', className: 'hidden-button' },
+                    { extend: 'print', className: 'hidden-button' }
+                ],
+                "language": {
+                    "lengthMenu": "Show _MENU_ entries",
+                    "search": "",
+                    "searchPlaceholder": "Search companies...",
+                    "info": "Showing _START_ to _END_ of _TOTAL_ companies",
+                    "infoEmpty": "Showing 0 to 0 of 0 companies",
+                    "infoFiltered": "(filtered from _MAX_ total companies)",
+                    "zeroRecords": "No matching companies found",
+                    "emptyTable": "No companies available",
+                    "paginate": {
+                        "first": '<i class="fas fa-angle-double-left"></i>',
+                        "previous": '<i class="fas fa-angle-left"></i>',
+                        "next": '<i class="fas fa-angle-right"></i>',
+                        "last": '<i class="fas fa-angle-double-right"></i>'
+                    }
                 }
-            }
-        });
+            });
+        } else {
+            table = $('#companyTable').DataTable();
+        }
 
         // Handle custom export buttons
         $('.export-excel').on('click', function () {

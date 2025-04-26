@@ -116,7 +116,7 @@ if (session_status() === PHP_SESSION_NONE) {
                             }));
                             r.referrerPolicy = "origin";
                             r.src = "/cdn-cgi/zaraz/s.js?z=" + btoa(encodeURIComponent(JSON.stringify(j[l])));
-                            q.parentNode.insertBefore(r, q)
+                            // q.parentNode.insertBefore(r, q)
                         };
                         ["complete", "interactive"].includes(k.readyState) ? zaraz.init() : j.addEventListener("DOMContentLoaded", zaraz.init)
                     }

@@ -7,23 +7,23 @@
     // Check if local jQuery validation is available, otherwise use CDN
     var jQueryValidationScript = document.createElement('script');
     jQueryValidationScript.src = "../plugins/jquery-validation/jquery.validate.min.js";
-    jQueryValidationScript.onerror = function() {
+    jQueryValidationScript.onerror = function () {
         console.log("Local jQuery validation not found, using CDN");
         var cdnScript = document.createElement('script');
         cdnScript.src = "https://cdn.jsdelivr.net/npm/jquery-validation@1.19.5/dist/jquery.validate.min.js";
         document.head.appendChild(cdnScript);
-        
+
         // Additional methods
         var additionalScript = document.createElement('script');
         additionalScript.src = "https://cdn.jsdelivr.net/npm/jquery-validation@1.19.5/dist/additional-methods.min.js";
         document.head.appendChild(additionalScript);
     };
     document.head.appendChild(jQueryValidationScript);
-    
+
     // Try loading additional methods
     var additionalMethodsScript = document.createElement('script');
     additionalMethodsScript.src = "../plugins/jquery-validation/additional-methods.min.js";
-    additionalMethodsScript.onerror = function() {
+    additionalMethodsScript.onerror = function () {
         console.log("Local jQuery validation additional methods not found, using CDN if needed");
     };
     document.head.appendChild(additionalMethodsScript);
@@ -59,7 +59,8 @@
 <!-- AdminLTE dashboard demo (This is only for demo purposes) -->
 <script src="../dist/js/pages/dashboard.js"></script>
 
-
+<!-- SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <!-- Add DataTables & Export Plugins -->
 <script src="../plugins/datatables/jquery.dataTables.min.js"></script>
@@ -72,10 +73,89 @@
 <script src="../plugins/datatables-buttons/js/buttons.html5.min.js"></script>
 <script src="../plugins/datatables-buttons/js/buttons.print.min.js"></script>
 
-
-
 <script src="assets/js/edit-project/edit-project.js"></script>
 <script src="assets/js/user-list/user-list.js"></script>
+
+<!-- Notification System JavaScript -->
+<script>
+    $(document).ready(function () {
+        // Handle notification click - mark as read
+        $('.dropdown-menu a[data-notification-id]').on('click', function (e) {
+            e.preventDefault();
+            const notificationId = $(this).data('notification-id');
+
+            // Mark notification as read via AJAX
+            $.ajax({
+                url: 'controllers/notification_ajax.php',
+                type: 'POST',
+                data: {
+                    action: 'mark_read',
+                    notification_id: notificationId
+                },
+                success: function (response) {
+                    try {
+                        const data = JSON.parse(response);
+                        if (data.status === 'success') {
+                            // Update UI - mark as read visually
+                            $(`a[data-notification-id="${notificationId}"]`).removeClass('font-weight-bold').addClass('text-muted');
+
+                            // Update notification count
+                            let currentCount = parseInt($('#notification-bell .navbar-badge').text());
+                            currentCount--;
+
+                            if (currentCount <= 0) {
+                                $('#notification-bell .navbar-badge').remove();
+                            } else {
+                                $('#notification-bell .navbar-badge').text(currentCount);
+                                $('.dropdown-item.dropdown-header').text(currentCount + ' Notifications');
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Error parsing AJAX response:', error);
+                    }
+                },
+                error: function (xhr, status, error) {
+                    console.error('AJAX request failed:', status, error);
+                }
+            });
+        });
+
+        // Handle clear all notifications
+        $('#clear-notifications').on('click', function (e) {
+            e.preventDefault();
+
+            // Confirm before clearing
+            if (confirm('Are you sure you want to clear all notifications?')) {
+                // Clear all notifications via AJAX
+                $.ajax({
+                    url: 'controllers/notification_ajax.php',
+                    type: 'POST',
+                    data: {
+                        action: 'clear_all'
+                    },
+                    success: function (response) {
+                        try {
+                            const data = JSON.parse(response);
+                            if (data.status === 'success') {
+                                // Update UI - remove all notifications
+                                $('#notification-bell .navbar-badge').remove();
+                                $('.dropdown-item[data-notification-id]').remove();
+                                $('.dropdown-item.dropdown-header').text('0 Notifications');
+                                // Add a message
+                                $('.dropdown-menu').append('<a class="dropdown-item text-center"><i class="fas fa-check-circle text-success mr-2"></i>All notifications cleared</a>');
+                            }
+                        } catch (error) {
+                            console.error('Error parsing AJAX response:', error);
+                        }
+                    },
+                    error: function (xhr, status, error) {
+                        console.error('AJAX request failed:', status, error);
+                    }
+                });
+            }
+        });
+    });
+</script>
 
 <!-- Custom JavaScript for dynamic filters -->
 <script>
@@ -131,8 +211,6 @@
         $('.export-print').on('click', function () {
             table.button('.buttons-print').trigger();
         });
-
-
 
         // Initialize filter state - Country is default
         initializeFilters();
@@ -308,8 +386,9 @@
     });
 </script>
 
-<!-- Session Timeout Script -->
-<script src="../../includes/session_timeout.js"></script>
+<!-- Add SweetAlert2 library -->
+<script src="../plugins/sweetalert2/sweetalert2.all.min.js"></script>
+<link rel="stylesheet" href="../plugins/sweetalert2-theme-bootstrap-4/bootstrap-4.min.css">
 
 </body>
 

@@ -190,41 +190,7 @@ unset($_SESSION['success_message']);
         color: #007bff;
     }
 
-    /* File list styles */
-    .file-list {
-        max-height: 120px;
-        overflow-y: auto;
-        display: flex;
-        flex-direction: column;
-        gap: 5px;
-    }
 
-    .file-list .file-item {
-        display: flex;
-        align-items: center;
-        gap: 5px;
-        padding: 3px 6px;
-        background-color: #f8f9fa;
-        border-radius: 4px;
-        color: #495057;
-        font-size: 0.75rem;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        text-decoration: none;
-        transition: background-color 0.2s;
-        max-width: 100%;
-    }
-
-    .file-list .file-item:hover {
-        background-color: #e9ecef;
-        color: #212529;
-    }
-
-    .file-list .file-item i {
-        color: #6c757d;
-        font-size: 0.8rem;
-    }
 
     /* Total Images UI */
     .total-images-display {
@@ -254,60 +220,7 @@ unset($_SESSION['success_message']);
         font-size: 1rem;
     }
 
-    .files-preview {
-        margin-left: 12px;
-    }
 
-    .file-preview-list {
-        display: flex;
-        flex-direction: row;
-        gap: 8px;
-        align-items: center;
-        flex-wrap: nowrap;
-        overflow-x: auto;
-        white-space: nowrap;
-    }
-
-    .file-preview-list .file-item {
-        display: inline-flex;
-        align-items: center;
-        gap: 4px;
-        font-size: 0.8rem;
-        color: #6c757d;
-        background-color: #f8f9fa;
-        padding: 4px 8px;
-        border-radius: 4px;
-        cursor: default;
-        white-space: nowrap;
-        max-width: 120px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        flex-shrink: 0;
-    }
-
-    .file-preview-list .file-item i {
-        color: #6c757d;
-        font-size: 0.8rem;
-    }
-
-    .more-files {
-        display: inline-flex;
-        align-items: center;
-        gap: 4px;
-        font-size: 0.8rem;
-        color: #28a745;
-        font-weight: 500;
-        cursor: default;
-        background-color: #e8f5e9;
-        padding: 4px 8px;
-        border-radius: 4px;
-        white-space: nowrap;
-        flex-shrink: 0;
-    }
-
-    .more-files i {
-        color: #28a745;
-    }
 
     /* Assignee styling - horizontal layout */
     .assignee-container {
@@ -360,14 +273,20 @@ unset($_SESSION['success_message']);
         margin-right: 4px;
     }
 
-    /* Add project row highlighting styles */
+    /* Project row highlighting */
     .project-overdue {
-        background-color: #ffcccc !important;
+        background-color: rgba(255, 37, 37, 0.59) !important;
+    }
+
+    /* Override DataTables hover */
+    table.dataTable tbody tr.project-overdue:hover {
+        background-color: rgba(255, 37, 37, 0.59) !important;
     }
 
     .project-tomorrow {
         background-color: #fff3cd !important;
     }
+
 
     /* When printing, ensure colors are visible */
     @media print {
@@ -515,7 +434,7 @@ unset($_SESSION['success_message']);
 
                         <!-- Projects Table -->
                         <div class="table-responsive">
-                            <table id="projectTable" class="table table-bordered table-hover">
+                            <table id="projectTable" class="table table-bordered ">
                                 <thead>
                                     <tr>
                                         <th width="0%" class="d-none">#</th>
@@ -626,26 +545,46 @@ unset($_SESSION['success_message']);
                                                         <?php echo date('Y-m-d', strtotime($project['deadline'])); ?>
                                                     </div>
                                                     <?php
+                                                    // Set deadline date to the end of that day (23:59:59)
                                                     $deadline = new DateTime($project['deadline']);
-                                                    $now = new DateTime();
-                                                    $days_left = $now->diff($deadline)->format("%R%a");
+                                                    $deadline->setTime(23, 59, 59);
 
-                                                    if ($days_left < 0) {
+                                                    $now = new DateTime();
+
+                                                    // Handle overdue projects correctly
+                                                    if ($now > $deadline) {
+                                                        // Project is overdue
+                                                        $interval = $now->diff($deadline);
+                                                        $days_overdue = $interval->days;
+
+                                                        // Display the proper overdue message with singular/plural
                                                         echo '<small class="deadline-warning text-danger">';
-                                                        echo '<i class="fas fa-exclamation-triangle mr-1"></i> Overdue by ' . abs($days_left) . ' days';
+                                                        echo '<i class="fas fa-exclamation-triangle mr-1"></i> Overdue by ';
+                                                        echo $days_overdue > 1 ? $days_overdue . ' days' : $days_overdue . ' day';
                                                         echo '</small>';
-                                                    } elseif ($days_left == 0) {
+                                                    } elseif ($now->format('Y-m-d') === $deadline->format('Y-m-d')) {
+                                                        // Due today
                                                         echo '<small class="deadline-warning text-warning">';
                                                         echo '<i class="fas fa-exclamation-circle mr-1"></i> Due today';
                                                         echo '</small>';
-                                                    } elseif ($days_left <= 3) {
-                                                        echo '<small class="deadline-warning text-warning">';
-                                                        echo '<i class="fas fa-exclamation-triangle mr-1"></i> ' . $days_left . ' days left';
-                                                        echo '</small>';
                                                     } else {
-                                                        echo '<small class="deadline-info text-info">';
-                                                        echo '<i class="fas fa-info-circle mr-1"></i> ' . $days_left . ' days left';
-                                                        echo '</small>';
+                                                        // Calculate days difference for future deadlines
+                                                        $interval = $now->diff($deadline);
+                                                        $days_left = $interval->days;
+
+                                                        if ($days_left == 1) {
+                                                            echo '<small class="deadline-warning text-warning">';
+                                                            echo '<i class="fas fa-exclamation-circle mr-1"></i> Due tomorrow';
+                                                            echo '</small>';
+                                                        } elseif ($days_left <= 3) {
+                                                            echo '<small class="deadline-warning text-warning">';
+                                                            echo '<i class="fas fa-exclamation-triangle mr-1"></i> ' . $days_left . ' days left';
+                                                            echo '</small>';
+                                                        } else {
+                                                            echo '<small class="deadline-info text-info">';
+                                                            echo '<i class="fas fa-info-circle mr-1"></i> ' . $days_left . ' days left';
+                                                            echo '</small>';
+                                                        }
                                                     }
                                                     ?>
                                                 </td>

@@ -15,7 +15,8 @@ $user = [
     'birth_date' => '',
     'address' => '',
     'username' => '',
-    'profile_img' => ''
+    'profile_img' => '',
+    'password' => '' // Added for current password
 ];
 
 // Fetch user data from database
@@ -37,6 +38,20 @@ if ($user_id > 0) {
 
             // Log that we found user data
             error_log("User data fetched for user ID: $user_id");
+
+            // Fetch password from database (separate query for security best practices)
+            $passwordQuery = "SELECT password FROM tbl_accounts WHERE user_id = ?";
+            $passwordStmt = $conn->prepare($passwordQuery);
+            if ($passwordStmt) {
+                $passwordStmt->bind_param("i", $user_id);
+                $passwordStmt->execute();
+                $passwordResult = $passwordStmt->get_result();
+
+                if ($passwordResult->num_rows > 0) {
+                    $passwordRow = $passwordResult->fetch_assoc();
+                    $user['password'] = $passwordRow['password'];
+                }
+            }
         } else {
             error_log("No user data found for user ID: $user_id");
         }
@@ -378,18 +393,49 @@ if (!empty($user['profile_img'])) {
                                             </div>
                                             <div class="form-group">
                                                 <label>Current Password</label>
-                                                <input type="password" class="form-control" name="currentPassword"
-                                                    placeholder="Current Password" required>
+                                                <div class="input-group">
+                                                    <input type="password" class="form-control" name="currentPassword"
+                                                        id="currentPassword" placeholder="Current Password"
+                                                        value="<?php echo !empty($user['password']) ? '••••••••' : ''; ?>"
+                                                        required>
+                                                    <div class="input-group-append">
+                                                        <button class="btn btn-outline-secondary toggle-password"
+                                                            type="button" data-target="currentPassword">
+                                                            <i class="fa fa-eye"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                <small class="form-text text-muted">Enter your current password to
+                                                    confirm your identity</small>
                                             </div>
                                             <div class="form-group">
                                                 <label>New Password</label>
-                                                <input type="password" class="form-control" name="newPassword"
-                                                    placeholder="New Password" required>
+                                                <div class="input-group">
+                                                    <input type="password" class="form-control" name="newPassword"
+                                                        id="newPassword" placeholder="New Password" required>
+                                                    <div class="input-group-append">
+                                                        <button class="btn btn-outline-secondary toggle-password"
+                                                            type="button" data-target="newPassword">
+                                                            <i class="fa fa-eye"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                <small class="form-text text-muted">Choose a strong password with at
+                                                    least 8 characters</small>
                                             </div>
                                             <div class="form-group">
                                                 <label>Confirm New Password</label>
-                                                <input type="password" class="form-control" name="confirmPassword"
-                                                    placeholder="Confirm New Password" required>
+                                                <div class="input-group">
+                                                    <input type="password" class="form-control" name="confirmPassword"
+                                                        id="confirmPassword" placeholder="Confirm New Password"
+                                                        required>
+                                                    <div class="input-group-append">
+                                                        <button class="btn btn-outline-secondary toggle-password"
+                                                            type="button" data-target="confirmPassword">
+                                                            <i class="fa fa-eye"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
                                             </div>
                                             <div class="form-group">
                                                 <button type="submit" name="updateSecurity" class="btn btn-primary">
@@ -409,3 +455,29 @@ if (!empty($user['profile_img'])) {
 
     <?php include("includes/footer.php"); ?>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Handle password toggle buttons
+        document.querySelectorAll('.toggle-password').forEach(function (button) {
+            button.addEventListener('click', function () {
+                const targetId = this.getAttribute('data-target');
+                const passwordInput = document.getElementById(targetId);
+
+                // Toggle password visibility
+                if (passwordInput.type === 'password') {
+                    passwordInput.type = 'text';
+                    this.querySelector('i').classList.remove('fa-eye');
+                    this.querySelector('i').classList.add('fa-eye-slash');
+                } else {
+                    passwordInput.type = 'password';
+                    this.querySelector('i').classList.remove('fa-eye-slash');
+                    this.querySelector('i').classList.add('fa-eye');
+                }
+            });
+        });
+    });
+</script>
+</body>
+
+</html>

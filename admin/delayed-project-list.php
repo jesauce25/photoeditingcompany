@@ -213,8 +213,18 @@ unset($_SESSION['success_message']);
                                                 $today = new DateTime();
                                                 $is_project_overdue = $project_deadline < $today;
 
+                                                // Check if project is due tomorrow
+                                                $tomorrow = new DateTime('tomorrow');
+                                                $is_due_tomorrow = $project_deadline->format('Y-m-d') === $tomorrow->format('Y-m-d');
+
                                                 // Add project-overdue class if deadline is passed
-                                                $row_class = $is_project_overdue ? 'project-overdue' : '';
+                                                // Add project-tomorrow class if deadline is tomorrow
+                                                $row_class = '';
+                                                if ($is_project_overdue) {
+                                                    $row_class = 'project-overdue';
+                                                } elseif ($is_due_tomorrow) {
+                                                    $row_class = 'project-tomorrow';
+                                                }
                                                 ?>
                                                 <tr class="<?php echo $row_class; ?>">
                                                     <td class="d-none"><?php echo $project['project_id']; ?></td>
@@ -290,16 +300,26 @@ unset($_SESSION['success_message']);
                                                         </div>
                                                         <?php
                                                         $deadline = new DateTime($project['deadline']);
+                                                        $deadline->setTime(23, 59, 59);  // Set to end of day
+                                                
                                                         $now = new DateTime();
-                                                        $days_left = $now->diff($deadline)->format("%R%a");
 
-                                                        if ($days_left < 0) {
+                                                        // Calculate days difference
+                                                        $interval = $now->diff($deadline);
+                                                        $days_left = $interval->days;
+                                                        $is_negative = $interval->invert;
+
+                                                        if ($is_negative) {
                                                             echo '<small class="deadline-warning text-danger">';
-                                                            echo '<i class="fas fa-exclamation-triangle mr-1"></i> Overdue by ' . abs($days_left) . ' days';
+                                                            echo '<i class="fas fa-exclamation-triangle mr-1"></i> Overdue by ' . $days_left . ' days';
                                                             echo '</small>';
                                                         } elseif ($days_left == 0) {
                                                             echo '<small class="deadline-warning text-warning">';
                                                             echo '<i class="fas fa-exclamation-circle mr-1"></i> Due today';
+                                                            echo '</small>';
+                                                        } elseif ($days_left == 1) {
+                                                            echo '<small class="deadline-warning text-warning">';
+                                                            echo '<i class="fas fa-exclamation-circle mr-1"></i> Due tomorrow';
                                                             echo '</small>';
                                                         } elseif ($days_left <= 3) {
                                                             echo '<small class="deadline-warning text-warning">';
@@ -327,9 +347,14 @@ unset($_SESSION['success_message']);
 
                                                                 // Check if this assignee has an overdue task
                                                                 $is_assignee_overdue = false;
+                                                                $is_acceptable = false;
+
                                                                 if (isset($assignee['deadline'])) {
                                                                     $assignee_deadline = new DateTime($assignee['deadline']);
                                                                     $is_assignee_overdue = $assignee_deadline < $today;
+
+                                                                    // Check if the delay is marked as acceptable
+                                                                    $is_acceptable = isset($assignee['delay_acceptable']) && $assignee['delay_acceptable'] == 1;
 
                                                                     // Add server-side logging for overdue assignee
                                                                     if ($is_assignee_overdue) {
@@ -340,8 +365,14 @@ unset($_SESSION['success_message']);
                                                                 // Add overdue class if needed
                                                                 $assignee_class = $is_assignee_overdue ? 'assignee-overdue' : '';
 
+                                                                // Avatar initial styling based on status
+                                                                $avatar_class = '';
+                                                                if ($is_assignee_overdue && $is_acceptable) {
+                                                                    $avatar_class = 'acceptable-delay';
+                                                                }
+
                                                                 echo '<div class="assignee-item ' . $assignee_class . '">';
-                                                                echo '<div class="assignee-avatar">' . strtoupper($initials) . '</div>';
+                                                                echo '<div class="assignee-avatar ' . $avatar_class . '">' . strtoupper($initials) . '</div>';
                                                                 echo '<span>' . htmlspecialchars($assignee['first_name']) . '</span>';
                                                                 echo '</div>';
                                                             }
@@ -623,6 +654,47 @@ unset($_SESSION['success_message']);
 </script>
 
 <style>
+    /* Add additional styling on top of AdminLTE */
+    .project-details-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 5px 10px;
+        background-color: #f8f9fa;
+        border-radius: 5px;
+        margin-right: 5px;
+        margin-bottom: 5px;
+        font-size: 0.85rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .project-details-badge i {
+        margin-right: 5px;
+    }
+
+    .priority-badge {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        margin-right: 5px;
+    }
+
+    .priority-low {
+        background-color: #28a745;
+    }
+
+    .priority-medium {
+        background-color: #17a2b8;
+    }
+
+    .priority-high {
+        background-color: #ffc107;
+    }
+
+    .priority-urgent {
+        background-color: #dc3545;
+    }
+
     .project-status {
         display: inline-block;
         padding: 5px 10px;
@@ -654,30 +726,6 @@ unset($_SESSION['success_message']);
     .status-delayed {
         background-color: #f5c6cb;
         color: #721c24;
-    }
-
-    .priority-badge {
-        display: inline-block;
-        width: 10px;
-        height: 10px;
-        border-radius: 50%;
-        margin-right: 5px;
-    }
-
-    .priority-low {
-        background-color: #28a745;
-    }
-
-    .priority-medium {
-        background-color: #17a2b8;
-    }
-
-    .priority-high {
-        background-color: #ffc107;
-    }
-
-    .priority-urgent {
-        background-color: #dc3545;
     }
 
     .total-images-display {
@@ -742,6 +790,13 @@ unset($_SESSION['success_message']);
         justify-content: center;
         font-size: 0.7rem;
         margin-right: 6px;
+    }
+
+    /* Style for acceptable delay - green avatar initials */
+    .assignee-avatar.acceptable-delay {
+        background-color: #28a745;
+        color: white;
+        font-weight: bold;
     }
 
     .assignee-more {
@@ -814,9 +869,15 @@ unset($_SESSION['success_message']);
         background-color: rgba(255, 0, 0, 0.1) !important;
     }
 
+    /* Projects due tomorrow */
+    .project-tomorrow {
+        background-color: #fff3cd !important;
+        /* Light orange/yellow background */
+    }
+
     /* Overdue assignee (strong red background) */
     .assignee-overdue {
-        background-color: rgba(255, 0, 0, 0.7) !important;
+        background-color: rgb(255, 37, 37) !important;
         color: white !important;
         border-radius: 20px;
         border: 1px solid #f5c6cb;
@@ -825,7 +886,13 @@ unset($_SESSION['success_message']);
     /* When printing, ensure colors are visible */
     @media print {
         .project-overdue {
-            background-color: #ffcccc !important;
+            background-color: rgba(255, 37, 37, 0.59) !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .project-tomorrow {
+            background-color: #fff3cd !important;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }

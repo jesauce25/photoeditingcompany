@@ -157,6 +157,7 @@ try {
 
         $successCount = 0;
         $alreadyAssignedCount = 0;
+        $alreadyAssignedImages = [];
 
         foreach ($imageIds as $imageId) {
             // Check if image is already assigned
@@ -175,6 +176,29 @@ try {
 
             if ($imageData['assignment_id'] !== null && $imageData['assignment_id'] > 0) {
                 $alreadyAssignedCount++;
+
+                // Get the name of the current assignee
+                $getAssigneeSql = "SELECT u.first_name 
+                                  FROM tbl_project_assignments pa
+                                  JOIN tbl_users u ON pa.user_id = u.user_id
+                                  WHERE pa.assignment_id = ?";
+                $getAssigneeStmt = $conn->prepare($getAssigneeSql);
+                $getAssigneeStmt->bind_param("i", $imageData['assignment_id']);
+                $getAssigneeStmt->execute();
+                $assigneeResult = $getAssigneeStmt->get_result();
+                $assigneeData = $assigneeResult->fetch_assoc();
+
+                $assigneeName = $assigneeData['first_name'] ?? 'someone else';
+
+                // Add to the list of already assigned images with assignee name
+                if (!isset($alreadyAssignedImages)) {
+                    $alreadyAssignedImages = [];
+                }
+                $alreadyAssignedImages[] = [
+                    'image_id' => $imageId,
+                    'assignee_name' => $assigneeName
+                ];
+
                 continue;
             }
 
@@ -189,12 +213,19 @@ try {
         // Commit transaction
         $conn->commit();
 
+        // Prepare response with details about already assigned images
+        $responseMessage = "Assigned images successfully";
+        if ($alreadyAssignedCount > 0 && isset($alreadyAssignedImages)) {
+            $responseMessage .= ". However, $alreadyAssignedCount image(s) could not be assigned because they are already assigned.";
+        }
+
         ob_clean();
         echo json_encode([
             'success' => true,
-            'message' => "Assigned images successfully",
+            'message' => $responseMessage,
             'assigned_count' => $successCount,
             'already_assigned_count' => $alreadyAssignedCount,
+            'already_assigned_images' => $alreadyAssignedImages ?? [],
             'assignment_id' => $assignmentId
         ]);
     } else {

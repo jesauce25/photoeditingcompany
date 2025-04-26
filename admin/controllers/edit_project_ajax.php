@@ -651,54 +651,89 @@ if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQ
             $project_id = intval($_POST['project_id'] ?? 0);
             $assignment_id = intval($_POST['assignment_id'] ?? 0);
 
-            if ($project_id <= 0 || $assignment_id <= 0) {
-                echo json_encode(['status' => 'error', 'message' => 'Invalid project or assignment ID']);
+            if ($project_id <= 0) {
+                echo json_encode(['status' => 'error', 'message' => 'Invalid project ID']);
                 exit;
             }
 
-            // Get images assigned to this assignment
-            $sql = "SELECT i.image_id, i.image_path, i.status_image, i.file_type, i.upload_date,
-                          i.image_role, i.estimated_time,
-                          u.first_name, u.last_name
-                   FROM tbl_project_images i
-                   LEFT JOIN tbl_project_assignments pa ON i.assignment_id = pa.assignment_id
-                   LEFT JOIN tbl_users u ON pa.user_id = u.user_id
-                   WHERE i.project_id = ? AND i.assignment_id = ?
-                   ORDER BY i.upload_date DESC";
+            // If assignment_id is provided, get images for that specific assignment
+            if ($assignment_id > 0) {
+                // Get images assigned to this assignment
+                $sql = "SELECT i.image_id, i.image_path, i.status_image, i.file_type, i.upload_date,
+                              i.image_role, i.estimated_time,
+                              u.first_name, u.last_name
+                       FROM tbl_project_images i
+                       LEFT JOIN tbl_project_assignments pa ON i.assignment_id = pa.assignment_id
+                       LEFT JOIN tbl_users u ON pa.user_id = u.user_id
+                       WHERE i.project_id = ? AND i.assignment_id = ?
+                       ORDER BY i.upload_date DESC";
 
-            $stmt = $conn->prepare($sql);
-            $stmt->bind_param("ii", $project_id, $assignment_id);
-            $stmt->execute();
-            $result = $stmt->get_result();
+                $stmt = $conn->prepare($sql);
+                $stmt->bind_param("ii", $project_id, $assignment_id);
+                $stmt->execute();
+                $result = $stmt->get_result();
 
-            $images = [];
-            while ($row = $result->fetch_assoc()) {
-                // Ensure image path is complete for display
-                if (!empty($row['image_path'])) {
-                    $image_url = '../uploads/projects/' . $project_id . '/' . $row['image_path'];
-                    $row['image_url'] = $image_url;
+                $images = [];
+                while ($row = $result->fetch_assoc()) {
+                    // Ensure image path is complete for display
+                    if (!empty($row['image_path'])) {
+                        $image_url = '../uploads/projects/' . $project_id . '/' . $row['image_path'];
+                        $row['image_url'] = $image_url;
+                    }
+                    $images[] = $row;
                 }
-                $images[] = $row;
+
+                // Get assignment details for context with a detailed query
+                $assignmentSql = "SELECT pa.assignment_id, pa.role_task, pa.status_assignee, pa.deadline, pa.assigned_images,
+                                       u.first_name, u.last_name, CONCAT(u.first_name, ' ', u.last_name) as full_name
+                                 FROM tbl_project_assignments pa
+                                 LEFT JOIN tbl_users u ON pa.user_id = u.user_id
+                                 WHERE pa.assignment_id = ?";
+
+                $assignmentStmt = $conn->prepare($assignmentSql);
+                $assignmentStmt->bind_param("i", $assignment_id);
+                $assignmentStmt->execute();
+                $assignmentResult = $assignmentStmt->get_result();
+                $assignment = $assignmentResult->fetch_assoc();
+
+                echo json_encode([
+                    'status' => 'success',
+                    'images' => $images,
+                    'assignment' => $assignment
+                ]);
+            } else {
+                // Get all assigned images for the project
+                $sql = "SELECT i.image_id, i.image_path, i.status_image, i.file_type, i.upload_date,
+                              i.image_role, i.estimated_time, i.assignment_id,
+                              pa.role_task, pa.status_assignee,
+                              u.first_name, u.last_name, CONCAT(u.first_name, ' ', u.last_name) as team_name
+                       FROM tbl_project_images i
+                       LEFT JOIN tbl_project_assignments pa ON i.assignment_id = pa.assignment_id
+                       LEFT JOIN tbl_users u ON pa.user_id = u.user_id
+                       WHERE i.project_id = ? AND i.assignment_id IS NOT NULL
+                       ORDER BY i.upload_date DESC";
+
+                $stmt = $conn->prepare($sql);
+                $stmt->bind_param("i", $project_id);
+                $stmt->execute();
+                $result = $stmt->get_result();
+
+                $images = [];
+                while ($row = $result->fetch_assoc()) {
+                    // Ensure image path is complete for display
+                    if (!empty($row['image_path'])) {
+                        $image_url = '../uploads/projects/' . $project_id . '/' . $row['image_path'];
+                        $row['image_url'] = $image_url;
+                    }
+                    $images[] = $row;
+                }
+
+                echo json_encode([
+                    'status' => 'success',
+                    'images' => $images,
+                    'count' => count($images)
+                ]);
             }
-
-            // Get assignment details for context with a detailed query
-            $assignmentSql = "SELECT pa.assignment_id, pa.role_task, pa.status_assignee, pa.deadline, pa.assigned_images,
-                                   u.first_name, u.last_name, CONCAT(u.first_name, ' ', u.last_name) as full_name
-                             FROM tbl_project_assignments pa
-                             LEFT JOIN tbl_users u ON pa.user_id = u.user_id
-                             WHERE pa.assignment_id = ?";
-
-            $assignmentStmt = $conn->prepare($assignmentSql);
-            $assignmentStmt->bind_param("i", $assignment_id);
-            $assignmentStmt->execute();
-            $assignmentResult = $assignmentStmt->get_result();
-            $assignment = $assignmentResult->fetch_assoc();
-
-            echo json_encode([
-                'status' => 'success',
-                'images' => $images,
-                'assignment' => $assignment
-            ]);
             break;
 
         case 'update_image_details':
@@ -885,6 +920,51 @@ if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQ
                 ]);
             } catch (Exception $e) {
                 // Rollback on error
+                $conn->rollback();
+                echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+            }
+            break;
+
+        case 'mark_delay_acceptable':
+            if (!isset($_POST['assignment_id'])) {
+                echo json_encode(['status' => 'error', 'message' => 'Missing assignment ID']);
+                exit;
+            }
+
+            $assignmentId = intval($_POST['assignment_id']);
+
+            // Start transaction
+            $conn->begin_transaction();
+
+            try {
+                // Update the delay_acceptable field in the assignment table
+                $updateQuery = "UPDATE tbl_project_assignments 
+                               SET delay_acceptable = 1, 
+                                   last_updated = NOW() 
+                               WHERE assignment_id = ?";
+
+                $stmt = $conn->prepare($updateQuery);
+                $stmt->bind_param('i', $assignmentId);
+
+                if (!$stmt->execute()) {
+                    throw new Exception('Failed to update assignment: ' . $conn->error);
+                }
+
+                // Log the action
+                logAjaxRequest('mark_delay_acceptable', [
+                    'assignment_id' => $assignmentId,
+                    'user_id' => $_SESSION['user_id'] ?? 0
+                ]);
+
+                // Commit transaction
+                $conn->commit();
+
+                echo json_encode([
+                    'status' => 'success',
+                    'message' => 'Delay has been marked as acceptable.'
+                ]);
+            } catch (Exception $e) {
+                // Rollback transaction on error
                 $conn->rollback();
                 echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
             }

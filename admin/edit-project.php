@@ -417,6 +417,51 @@ $projectProgress = getProjectProgressStats($project_id);
         padding: 2px;
         font-size: 0.7rem;
     }
+
+    .image-container .badge-primary {
+        position: relative;
+    }
+
+    .image-container .badge-primary:after {
+        content: '\f023';
+        /* Lock icon */
+        font-family: 'Font Awesome 5 Free';
+        font-weight: 900;
+        font-size: 0.7em;
+        position: absolute;
+        top: -3px;
+        right: -3px;
+        background-color: #fff;
+        border-radius: 50%;
+        width: 14px;
+        height: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #007bff;
+        border: 1px solid #007bff;
+    }
+
+    .image-container.already-assigned {
+        position: relative;
+        overflow: hidden;
+    }
+
+    .image-container.already-assigned:before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(0, 123, 255, 0.05);
+        z-index: 1;
+        pointer-events: none;
+    }
+
+    .image-container.already-assigned:hover {
+        cursor: not-allowed;
+    }
 </style>
 
 <!-- Custom styles for the image cards -->
@@ -436,6 +481,41 @@ $projectProgress = getProjectProgressStats($project_id);
     .image-container.selected {
         border-color: #007bff;
         background-color: rgba(0, 123, 255, 0.05);
+    }
+
+    /* Styling for already assigned images */
+    .image-container.already-assigned {
+        opacity: 0.7;
+        position: relative;
+        cursor: not-allowed;
+        border: 2px dashed #d9534f;
+        background-color: rgba(217, 83, 79, 0.05);
+    }
+
+    .image-container.already-assigned:hover {
+        box-shadow: none !important;
+        border: 2px dashed #d9534f;
+    }
+
+    .image-container.already-assigned::after {
+        content: "Already Assigned";
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background-color: rgba(217, 83, 79, 0.8);
+        color: white;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: bold;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.2s ease;
+    }
+
+    .image-container.already-assigned:hover::after {
+        opacity: 1;
     }
 
     /* Selection Indicator */
@@ -728,7 +808,7 @@ $projectProgress = getProjectProgressStats($project_id);
                                                 }
                                                 ?>
                                                 <div class="col-md-6 col-lg-3 mb-2">
-                                                    <div class="image-container card shadow-sm"
+                                                    <div class="image-container card shadow-sm <?php echo (isset($image['assignment_id']) && $image['assignment_id']) ? 'already-assigned' : ''; ?>"
                                                         data-image-id="<?php echo $image['image_id']; ?>">
                                                         <div class="card-body p-2">
                                                             <div class="d-flex align-items-center">
@@ -937,8 +1017,31 @@ $projectProgress = getProjectProgressStats($project_id);
                                                                     $deadline_status = 'Today';
                                                                     $badge_class = 'badge-warning';
                                                                 } else if ($deadline_date < $today) {
-                                                                    $deadline_status = 'Overdue';
+                                                                    // Calculate days overdue
+                                                                    $interval = $today->diff($deadline_date);
+                                                                    $days_overdue = $interval->days;
+                                                                    $deadline_status = 'Overdue by ' . $days_overdue . ($days_overdue > 1 ? ' days' : ' day');
                                                                     $badge_class = 'badge-danger';
+                                                                } else {
+                                                                    // Calculate days remaining
+                                                                    $interval = $today->diff($deadline_date);
+                                                                    $days_left = $interval->days;
+                                                                    if ($days_left == 1) {
+                                                                        $deadline_status = 'Due tomorrow';
+                                                                        $badge_class = 'badge-warning';
+                                                                    } else if ($days_left <= 3) {
+                                                                        $deadline_status = $days_left . ' days left';
+                                                                        $badge_class = 'badge-warning';
+                                                                    } else {
+                                                                        $deadline_status = $days_left . ' days left';
+                                                                        $badge_class = 'badge-info';
+                                                                    }
+                                                                }
+
+                                                                // Check if assignment is marked as understandable (will use this in the next feature)
+                                                                $isUnderstandable = isset($assignment['delay_acceptable']) && $assignment['delay_acceptable'] == 1;
+                                                                if ($isUnderstandable && $badge_class == 'badge-danger') {
+                                                                    $badge_class = 'badge-success';
                                                                 }
                                                                 ?>
                                                                 <div class="deadline-container">
@@ -947,32 +1050,44 @@ $projectProgress = getProjectProgressStats($project_id);
                                                                         data-assignment-id="<?php echo $assignment['assignment_id']; ?>"
                                                                         <?php echo $assignment['status_assignee'] != 'pending' ? 'disabled' : ''; ?>>
                                                                     <div class="d-flex mt-1">
-                                                                        <?php if (!empty($deadline_status)): ?>
-                                                                            <span class="badge <?php echo $badge_class; ?> mr-2">
-                                                                                <?php echo $deadline_status; ?>
-                                                                            </span>
-                                                                        <?php endif; ?>
-                                                                        <?php if ($assignment['status_assignee'] != 'pending'): ?>
-                                                                            <span class="badge badge-info">
-                                                                                <i class="fas fa-lock mr-1"></i> Locked
-                                                                            </span>
+
+                                                                        <!-- Status badges -->
+                                                                        <div class="d-flex flex-wrap align-items-center mt-2">
+                                                                            <?php if (!empty($deadline_status)): ?>
+                                                                                <span
+                                                                                    class="badge <?php echo $badge_class; ?> mr-2 mb-1">
+                                                                                    <?php echo $deadline_status; ?>
+                                                                                </span>
+                                                                            <?php endif; ?>
+                                                                            <?php if ($assignment['status_assignee'] != 'pending'): ?>
+                                                                                <span class="badge badge-info mr-2 mb-1">
+                                                                                    <i class="fas fa-lock mr-1"></i> Locked
+                                                                                </span>
+                                                                            <?php endif; ?>
+                                                                        </div>
+
+                                                                        <!-- Mark as Acceptable button in its own row if needed -->
+                                                                        <?php if ($badge_class == 'badge-danger' && !$isUnderstandable): ?>
+                                                                            <div class="mt-0">
+                                                                                <button type="button"
+                                                                                    class="btn btn-sm btn-outline-success mark-acceptable-btn p-1"
+                                                                                    data-assignment-id="<?php echo $assignment['assignment_id']; ?>"
+                                                                                    data-toggle="tooltip"
+                                                                                    title="Mark this delay as understandable">
+                                                                                    <i class="fas fa-check-circle mr-1"></i> Mark as
+                                                                                    Acceptable
+                                                                                </button>
+                                                                            </div>
                                                                         <?php endif; ?>
                                                                     </div>
                                                                 </div>
                                                             </td>
                                                             <td>
                                                                 <button class="btn btn-sm btn-danger delete-assignment"
-                                                                    data-assignment-id="<?php echo $assignment['assignment_id']; ?>"
-                                                                    <?php echo $assignment['status_assignee'] != 'pending' ? 'disabled' : ''; ?>>
+                                                                    data-assignment-id="<?php echo $assignment['assignment_id']; ?>">
                                                                     <i class="fas fa-trash"></i>
                                                                 </button>
-                                                                <?php if ($assignment['status_assignee'] != 'pending'): ?>
-                                                                    <div class="mt-1">
-                                                                        <span class="badge badge-info">
-                                                                            <i class="fas fa-lock mr-1"></i> Locked
-                                                                        </span>
-                                                                    </div>
-                                                                <?php endif; ?>
+
                                                             </td>
                                                         </tr>
                                                     <?php endforeach; ?>
@@ -1010,6 +1125,24 @@ $projectProgress = getProjectProgressStats($project_id);
 <!-- Add toastr for notifications -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+
+<style>
+    /* Custom styles for deadline and mark as acceptable button */
+    .deadline-container {
+        position: relative;
+    }
+
+    .mark-acceptable-btn {
+        transition: all 0.2s ease;
+        border-width: 2px;
+    }
+
+    .mark-acceptable-btn:hover {
+        background-color: #28a745;
+        color: white;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    }
+</style>
 
 <!-- Add Images Modal -->
 <div class="modal fade" id="addImagesModal" tabindex="-1" role="dialog" aria-labelledby="addImagesModalLabel"
@@ -1202,6 +1335,21 @@ $projectProgress = getProjectProgressStats($project_id);
             return;
         }
 
+        // Check if image is already assigned to someone
+        const statusBadge = $(this).find('.badge:first');
+        if (statusBadge.hasClass('badge-primary')) {
+            // Get the assignee name
+            const assigneeName = statusBadge.text().trim();
+            // Show a tooltip or message that the image is already assigned
+            Swal.fire({
+                title: 'Image Already Assigned',
+                html: `This image is already assigned to <strong>${assigneeName}</strong>.<br>To reassign, you must first unassign it from the current assignee.`,
+                icon: 'warning',
+                confirmButtonText: 'OK'
+            });
+            return; // Exit the function without selecting
+        }
+
         $(this).toggleClass('selected');
         updateBatchActions();
 
@@ -1299,6 +1447,7 @@ $projectProgress = getProjectProgressStats($project_id);
                         const data = JSON.parse(response);
                         if (data.status === 'success') {
                             logging.info('Images assigned successfully', data);
+
                             // Reload the page to show updated assignments
                             location.reload();
                         } else {
@@ -2129,6 +2278,11 @@ $projectProgress = getProjectProgressStats($project_id);
                             // Add modal to body and show it
                             $('body').append(modalHtml);
                             $('#viewAssignedImagesModal').modal('show');
+
+                            // Make sure the modal is removed from the DOM when hidden to prevent duplicates
+                            $('#viewAssignedImagesModal').on('hidden.bs.modal', function () {
+                                $(this).remove();
+                            });
 
                             // Now let's handle the new single save button for all image details
                             $('.save-all-image-details').click(function () {
@@ -3128,6 +3282,102 @@ $projectProgress = getProjectProgressStats($project_id);
                     showToast('error', 'Server error while updating team member');
                     // Reset selection
                     selectElement.val(selectElement.find('option[selected]').val());
+                }
+            });
+        });
+
+        // Function to check if all assignments are completed and update project status
+        function checkAndUpdateProjectStatus() {
+            // ... existing code ...
+        }
+
+        // Handle mark as acceptable button click
+        $(document).on('click', '.mark-acceptable-btn', function () {
+            const assignmentId = $(this).data('assignment-id');
+
+            // Log the action
+            console.log('Marking delay as acceptable', { assignmentId });
+
+            // Show confirmation dialog
+            Swal.fire({
+                title: 'Confirm Action',
+                text: 'Are you sure you want to mark this delay as acceptable?',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#28a745',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Yes, mark as acceptable'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Show loading indicator
+                    const loadingModal = Swal.fire({
+                        title: 'Processing...',
+                        html: '<div class="text-center"><i class="fas fa-spinner fa-spin fa-3x"></i></div>',
+                        showConfirmButton: false,
+                        allowOutsideClick: false
+                    });
+
+                    // Make AJAX call to update
+                    $.ajax({
+                        url: 'controllers/edit_project_ajax.php',
+                        type: 'POST',
+                        data: {
+                            action: 'mark_delay_acceptable',
+                            assignment_id: assignmentId
+                        },
+                        success: function (response) {
+                            loadingModal.close();
+
+                            try {
+                                const data = JSON.parse(response);
+
+                                if (data.status === 'success') {
+                                    // Show success message
+                                    Swal.fire({
+                                        title: 'Success!',
+                                        text: data.message || 'Delay marked as acceptable.',
+                                        icon: 'success',
+                                        confirmButtonColor: '#28a745'
+                                    }).then(() => {
+                                        // Update the UI without reloading
+                                        const button = $(`.mark-acceptable-btn[data-assignment-id="${assignmentId}"]`);
+                                        const deadlineContainer = button.closest('.deadline-container');
+                                        const badgeElement = deadlineContainer.find('.badge');
+
+                                        // Change badge color from danger to success
+                                        badgeElement.removeClass('badge-danger').addClass('badge-success');
+                                        // Update text to include (Acceptable)
+                                        badgeElement.text(badgeElement.text() + ' (Acceptable)');
+                                        // Remove the button
+                                        button.remove();
+                                    });
+                                } else {
+                                    // Show error message
+                                    Swal.fire({
+                                        title: 'Error',
+                                        text: data.message || 'Failed to mark delay as acceptable.',
+                                        icon: 'error'
+                                    });
+                                }
+                            } catch (error) {
+                                console.error('Error parsing response:', error, response);
+                                Swal.fire({
+                                    title: 'Error',
+                                    text: 'Something went wrong. Please try again.',
+                                    icon: 'error'
+                                });
+                            }
+                        },
+                        error: function (xhr, status, error) {
+                            loadingModal.close();
+                            console.error('AJAX error:', xhr, status, error);
+                            Swal.fire({
+                                title: 'Error',
+                                text: 'Failed to communicate with the server. Please try again.',
+                                icon: 'error'
+                            });
+                        }
+                    });
                 }
             });
         });
