@@ -3286,10 +3286,6 @@ $projectProgress = getProjectProgressStats($project_id);
             });
         });
 
-        // Function to check if all assignments are completed and update project status
-        function checkAndUpdateProjectStatus() {
-            // ... existing code ...
-        }
 
         // Handle mark as acceptable button click
         $(document).on('click', '.mark-acceptable-btn', function () {

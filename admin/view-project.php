@@ -42,17 +42,6 @@ log_action("Retrieved images", array("count" => count($images), "project_id" => 
 $assignments = getProjectAssignments($project_id);
 log_action("Retrieved assignments", array("count" => count($assignments), "project_id" => $project_id));
 
-// Count overdue assignments
-$overdue_assignments = 0;
-$today = new DateTime('today');
-foreach ($assignments as $assignment) {
-    $deadline_date = new DateTime($assignment['deadline']);
-    if ($deadline_date < $today) {
-        $overdue_assignments++;
-    }
-}
-log_action("Counted overdue assignments", array("count" => $overdue_assignments, "project_id" => $project_id));
-
 // Functions to get status and priority display classes
 function getStatusClass($status)
 {
@@ -447,7 +436,6 @@ function getAssignmentStatusClass($status)
                                                             $today = new DateTime('today');
                                                             $deadline_status = '';
                                                             $badge_class = '';
-                                                            $is_overdue = false;
 
                                                             if ($deadline_date == $today) {
                                                                 $deadline_status = 'Today';
@@ -458,7 +446,6 @@ function getAssignmentStatusClass($status)
                                                                 $days_overdue = $interval->days;
                                                                 $deadline_status = 'Overdue by ' . $days_overdue . ($days_overdue > 1 ? ' days' : ' day');
                                                                 $badge_class = 'badge-danger';
-                                                                $is_overdue = true;
                                                             } else {
                                                                 // Calculate days remaining
                                                                 $interval = $today->diff($deadline_date);
@@ -474,20 +461,12 @@ function getAssignmentStatusClass($status)
                                                                     $badge_class = 'badge-info';
                                                                 }
                                                             }
-
-                                                            // Check if assignment is already marked as understandable
-                                                            $isUnderstandable = isset($assignment['delay_acceptable']) && $assignment['delay_acceptable'] == 1;
-                                                            if ($isUnderstandable && $is_overdue) {
-                                                                $badge_class = 'badge-success';
-                                                                $deadline_status .= ' (Acceptable)';
-                                                            }
                                                             ?>
                                                             <div>
                                                                 <?php echo date('Y-m-d', strtotime($assignment['deadline'])); ?>
                                                                 <span class="badge <?php echo $badge_class; ?> ml-2">
                                                                     <?php echo $deadline_status; ?>
                                                                 </span>
-
                                                             </div>
                                                         </td>
                                                     </tr>
@@ -540,17 +519,6 @@ function getAssignmentStatusClass($status)
         color: #007bff;
     }
 
-    /* Make View Assigned Images button more prominent */
-    .view-assigned-images {
-        transition: all 0.2s ease;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    }
-
-    .view-assigned-images:hover {
-        transform: scale(1.05);
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-    }
-
     #assigned-images-table img {
         transition: transform 0.2s ease;
         border: 1px solid #ddd;
@@ -564,241 +532,248 @@ function getAssignmentStatusClass($status)
     }
 </style>
 <script>
-    $(document).ready(function () {
-        // Define project ID once for use throughout the script
-        const projectId = <?php echo $project_id; ?>;
-
-        console.log("Page loaded with project ID:", projectId);
-
-        // Check if SweetAlert2 is available
-        if (typeof Swal === 'undefined') {
-            console.error("SweetAlert2 is not loaded. This will cause modal functionality to fail.");
-        } else {
-            console.log("SweetAlert2 is loaded and available.");
+    document.addEventListener("DOMContentLoaded", function () {
+        // Wait for jQuery to be available
+        function checkJQuery() {
+            if (window.jQuery) {
+                // jQuery is loaded, initialize everything
+                initializePage();
+            } else {
+                // Check again in 100ms
+                setTimeout(checkJQuery, 100);
+            }
         }
 
-        // Log page load
-        logActivity({
-            type: 'page_load',
-            action: 'viewed_project',
-            project_id: projectId,
-            page: 'view-project.php'
-        });
+        checkJQuery();
 
-        // Log warning for overdue assignments
-        <?php if ($overdue_assignments > 0): ?>
-            logActivity({
-                type: 'warning',
-                action: 'overdue_assignments_detected',
-                project_id: projectId,
-                count: <?php echo $overdue_assignments; ?>,
-                page: 'view-project.php'
-            });
-        <?php endif; ?>
+        function initializePage() {
+            // Logging functions
+            const logging = {
+                debug: function (message, data = null) {
+                    console.debug(`[DEBUG][${new Date().toISOString()}] ${message}`, data || '');
+                },
+                info: function (message, data = null) {
+                    console.info(`[INFO][${new Date().toISOString()}] ${message}`, data || '');
+                },
+                warning: function (message, data = null) {
+                    console.warn(`[WARNING][${new Date().toISOString()}] ${message}`, data || '');
+                },
+                error: function (message, data = null) {
+                    console.error(`[ERROR][${new Date().toISOString()}] ${message}`, data || '');
+                },
+                interaction: function (action, data = null) {
+                    console.log(`[USER ACTION][${new Date().toISOString()}] ${action}`, data || '');
 
-        // Mark as Understandable button click handler
-        $('.mark-acceptable').click(function (e) {
-            e.preventDefault();
-            const assignmentId = $(this).data('assignment-id');
-
-            console.log("Mark as Understandable clicked for assignment:", assignmentId);
-
-            // Confirm with the admin
-            Swal.fire({
-                title: 'Confirm Action',
-                text: 'Are you sure you want to mark this delay as understandable? This will change the status indicator for this assignment.',
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonText: 'Yes, mark it',
-                cancelButtonText: 'Cancel'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    // Send AJAX request
-                    $.ajax({
-                        url: 'controllers/edit_project_ajax.php',
-                        type: 'POST',
-                        data: {
-                            action: 'mark_delay_acceptable',
-                            assignment_id: assignmentId
-                        },
-                        success: function (response) {
-                            try {
-                                const data = JSON.parse(response);
-
-                                if (data.status === 'success') {
-                                    // Update UI
-                                    const $badge = $(e.target).closest('td').find('.badge');
-                                    $badge.removeClass('badge-danger').addClass('badge-success');
-                                    $badge.text($badge.text() + ' (Acceptable)');
-
-                                    // Remove the button
-                                    $(e.target).closest('button').remove();
-
-                                    // Show success message
-                                    Swal.fire({
-                                        title: 'Success',
-                                        text: data.message,
-                                        icon: 'success',
-                                        confirmButtonText: 'OK'
-                                    });
-                                } else {
-                                    Swal.fire({
-                                        title: 'Error',
-                                        text: data.message || 'Failed to mark deadline as acceptable.',
-                                        icon: 'error',
-                                        confirmButtonText: 'OK'
-                                    });
-                                }
-                            } catch (error) {
-                                console.error("Error parsing response:", error);
-                                Swal.fire({
-                                    title: 'Error',
-                                    text: 'Failed to process the server response.',
-                                    icon: 'error',
-                                    confirmButtonText: 'OK'
-                                });
-                            }
-                        },
-                        error: function (xhr, status, error) {
-                            console.error("AJAX request failed:", status, error);
-                            Swal.fire({
-                                title: 'Error',
-                                text: 'Failed to connect to the server. Please try again.',
-                                icon: 'error',
-                                confirmButtonText: 'OK'
-                            });
+                    // Send interaction to server for logging if needed
+                    if (window.navigator.sendBeacon) {
+                        try {
+                            const logData = {
+                                action: action,
+                                data: data || {},
+                                timestamp: new Date().toISOString(),
+                                page: 'view-project',
+                                projectId: <?php echo $project_id; ?>
+                            };
+                            navigator.sendBeacon('controllers/log_client_action.php', JSON.stringify(logData));
+                        } catch (e) {
+                            console.error('Error sending beacon log:', e);
                         }
-                    });
-                }
-            });
-        });
-
-        // View Assigned Images button click handler
-        $('.view-assigned-images').click(function (e) {
-            e.preventDefault();
-            console.log("View Assigned Images button clicked");
-
-            // Get data attribute
-            const assignmentId = $(this).data('assignment-id');
-            console.log("Button data-assignment-id:", assignmentId, "Current projectId:", projectId);
-
-            // Display loading modal
-            try {
-                Swal.fire({
-                    title: 'Loading assigned images...',
-                    html: '<div class="spinner-border text-primary" role="status"><span class="sr-only">Loading...</span></div>',
-                    showConfirmButton: false,
-                    allowOutsideClick: false,
-                    customClass: {
-                        popup: 'swal-wide'
-                    }
-                });
-                console.log("Loading modal displayed successfully");
-            } catch (error) {
-                console.error("Error displaying loading modal:", error);
-                alert("Error loading images. Please try again.");
-                return;
-            }
-
-            // Prepare data for AJAX request
-            const ajaxData = {
-                action: 'get_assigned_images',
-                project_id: projectId
-            };
-
-            // Add assignment_id if available
-            if (assignmentId) {
-                ajaxData.assignment_id = assignmentId;
-            }
-
-            // AJAX request to get assigned images
-            console.log("Sending AJAX request with data:", ajaxData);
-            $.ajax({
-                url: 'controllers/edit_project_ajax.php',
-                type: 'POST',
-                data: ajaxData,
-                success: function (response) {
-                    console.log("AJAX response received:", response);
-                    try {
-                        const data = JSON.parse(response);
-                        console.log("Parsed data:", data);
-
-                        if (data.status === 'success') {
-                            if (data.images && data.images.length > 0) {
-                                let content = '<div class="container"><div class="row">';
-
-                                data.images.forEach(function (image) {
-                                    console.log("Processing image:", image);
-                                    const imagePath = `../uploads/projects/${projectId}/${image.image_path}`;
-                                    console.log("Image path:", imagePath);
-
-                                    content += `
-                                    <div class="col-md-4 mb-3">
-                                        <div class="card">
-                                            <img src="${imagePath}" class="card-img-top" alt="Assigned Image" onerror="this.src='assets/img/image-not-found.png'">
-                                            <div class="card-body">
-                                                <h5 class="card-title">${image.title || 'Image ID: ' + image.image_id}</h5>
-                                                <p class="card-text">Assigned to: ${image.team_name || 'No team'}</p>
-                                                <p class="card-text"><small class="text-muted">Status: ${image.status_image || 'Not started'}</small></p>
-                                            </div>
-                                        </div>
-                                    </div>`;
-                                });
-
-                                content += '</div></div>';
-
-                                Swal.fire({
-                                    title: 'Assigned Images',
-                                    html: content,
-                                    confirmButtonText: 'Close',
-                                    width: '90%',
-                                    customClass: {
-                                        popup: 'swal-wide',
-                                        content: 'swal-large-content'
-                                    }
-                                });
-                            } else {
-                                Swal.fire({
-                                    title: 'No Images Found',
-                                    text: 'No images have been assigned for this project.',
-                                    icon: 'info',
-                                    confirmButtonText: 'Close'
-                                });
-                            }
-                        } else {
-                            console.error("Error in response:", data.message);
-                            Swal.fire({
-                                title: 'Error',
-                                text: data.message || 'Failed to load assigned images.',
-                                icon: 'error',
-                                confirmButtonText: 'Close'
-                            });
-                        }
-                    } catch (error) {
-                        console.error("Error parsing AJAX response:", error, "Raw response:", response);
-                        Swal.fire({
-                            title: 'Error',
-                            text: 'Failed to process the server response.',
-                            icon: 'error',
-                            confirmButtonText: 'Close'
-                        });
                     }
                 },
-                error: function (xhr, status, error) {
-                    console.error("AJAX request failed:", status, error);
-                    console.log("XHR object:", xhr);
-                    Swal.fire({
-                        title: 'Error',
-                        text: 'Failed to connect to the server. Please try again.',
-                        icon: 'error',
-                        confirmButtonText: 'Close'
-                    });
+                ajax: function (method, url, data = null) {
+                    console.log(`[AJAX REQUEST][${new Date().toISOString()}] ${method} ${url}`, data || '');
+                },
+                ajaxSuccess: function (method, url, response = null) {
+                    console.log(`[AJAX SUCCESS][${new Date().toISOString()}] ${method} ${url}`, response || '');
+                },
+                ajaxError: function (method, url, error = null) {
+                    console.error(`[AJAX ERROR][${new Date().toISOString()}] ${method} ${url}`, error || '');
                 }
-            });
-        });
+            };
 
-        // Existing code for other click handlers
-        // ... existing code ...
+            // Log page load
+            logging.info('View Project page loaded', { projectId: <?php echo $project_id; ?> });
+
+            // Log info about project data
+            logging.info('Project data loaded', {
+                projectTitle: '<?php echo addslashes($project['project_title'] ?? ''); ?>',
+                status: '<?php echo addslashes($project['status_project'] ?? ''); ?>',
+                imageCount: <?php echo count($images); ?>,
+                assignmentsCount: <?php echo count($assignments); ?>
+            });
+
+            // Log user interactions
+            $('.nav-link').click(function () {
+                const tabId = $(this).attr('href');
+                logging.interaction('Changed team member tab', { tab: tabId });
+            });
+
+
+
+            // Handle image thumbnail clicks
+            $('.image-container').click(function () {
+                const imageId = $(this).data('image-id');
+                logging.interaction('Image card clicked', { imageId });
+            });
+
+            // Handle view assigned images
+            $('.view-assigned-images').click(function () {
+                const assignmentId = $(this).data('assignment-id');
+
+                logging.interaction('Viewing assigned images', {
+                    assignmentId
+                });
+
+                // Show loading indicator
+                const loadingModal = Swal.fire({
+                    title: 'Loading...',
+                    html: '<div class="text-center"><i class="fas fa-spinner fa-spin fa-3x"></i></div>',
+                    showConfirmButton: false,
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    allowEnterKey: false
+                });
+
+                // AJAX call to get assigned images
+                $.ajax({
+                    url: 'controllers/edit_project_ajax.php',
+                    type: 'POST',
+                    data: {
+                        action: 'get_assigned_images',
+                        project_id: <?php echo $project_id; ?>,
+                        assignment_id: assignmentId
+                    },
+                    success: function (response) {
+                        try {
+                            // Close loading indicator
+                            loadingModal.close();
+
+                            const data = JSON.parse(response);
+                            if (data.status === 'success') {
+                                let imagesHtml = '';
+                                let assignmentInfo = '';
+
+                                // Add assignment information if available
+                                if (data.assignment) {
+                                    const assignmentData = data.assignment;
+                                    const deadlineDate = assignmentData.deadline ? new Date(assignmentData.deadline) : null;
+                                    const formattedDeadline = deadlineDate ? deadlineDate.toLocaleDateString() : 'Not set';
+
+                                    assignmentInfo = `
+                                    <div class="alert alert-info mb-3">
+                                        <h5>Assignment Details</h5>
+                                        <p><strong>Assignee:</strong> ${assignmentData.full_name || 'Unknown'}</p>
+                                        <p><strong>Role/Task:</strong> ${assignmentData.role_task || 'Not specified'}</p>
+                                        <p><strong>Status:</strong> ${assignmentData.status_assignee || 'Pending'}</p>
+                                        <p><strong>Deadline:</strong> ${formattedDeadline}</p>
+                                    </div>
+                                    `;
+                                }
+
+                                if (data.images && data.images.length > 0) {
+                                    // Create a table for image details
+                                    imagesHtml = `
+                                    ${assignmentInfo}
+                                    <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+                                        <table class="table table-bordered table-hover table-sm" id="assigned-images-table">
+                                            <thead class="thead-light sticky-top" style="position: sticky; top: 0; z-index: 1;">
+                                                <tr>
+                                                    <th>Image Preview</th>
+                                                    <th>Image Name</th>
+                                                    <th>Estimated Time</th>
+                                                    <th>Role</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                    `;
+
+                                    data.images.forEach(image => {
+                                        const fileName = image.image_path ? image.image_path.split('/').pop() : 'Unknown';
+                                        const imageUrl = image.image_url || '';
+                                        const estimatedHours = Math.floor((image.estimated_time || 0) / 60);
+                                        const estimatedMinutes = (image.estimated_time || 0) % 60;
+                                        const imageRole = image.image_role || 'Not specified';
+
+                                        // Create a row for each image with preview
+                                        imagesHtml += `
+                                            <tr>
+                                                <td class="text-center">
+                                                    <img src="${imageUrl}" alt="${fileName}" style="max-height: 80px; max-width: 100%;" 
+                                                        onclick="window.open('${imageUrl}', '_blank')" class="cursor-pointer">
+                                                </td>
+                                                <td>
+                                                    <a href="${imageUrl}" target="_blank" class="image-preview-link">
+                                                        ${fileName}
+                                                    </a>
+                                                </td>
+                                                <td>
+                                                    ${estimatedHours}hr ${estimatedMinutes}min
+                                                </td>
+                                                <td>
+                                                    ${imageRole}
+                                                </td>
+                                            </tr>
+                                        `;
+                                    });
+
+                                    imagesHtml += `
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    `;
+                                } else {
+                                    imagesHtml = assignmentInfo + '<div class="alert alert-info">No images assigned to this team member.</div>';
+                                }
+
+                                // Create and show modal with SweetAlert2
+                                Swal.fire({
+                                    title: `<i class="fas fa-images mr-2"></i>Assigned Images (${data.images ? data.images.length : 0})`,
+                                    html: imagesHtml,
+                                    width: '80%',
+                                    confirmButtonText: 'Close',
+                                    confirmButtonColor: '#3085d6',
+                                    showCloseButton: true,
+                                    customClass: {
+                                        container: 'swal-wide',
+                                        popup: 'swal-large-content'
+                                    }
+                                });
+
+                                // Add custom style for large content
+                                $('<style>.swal-large-content { max-height: 80vh; overflow-y: auto; } .cursor-pointer { cursor: pointer; }</style>').appendTo('head');
+                            } else {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Error',
+                                    text: data.message || 'Failed to load assigned images'
+                                });
+                            }
+                        } catch (e) {
+                            console.error('Error parsing JSON response', e);
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error',
+                                text: 'An error occurred while processing the response'
+                            });
+                        }
+                    },
+                    error: function (xhr, status, error) {
+                        // Close loading indicator
+                        loadingModal.close();
+
+                        console.error('AJAX Error', {
+                            status,
+                            error
+                        });
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: 'An error occurred while loading assigned images: ' + error
+                        });
+                    }
+                });
+            });
+        }
     });
 </script>
 
