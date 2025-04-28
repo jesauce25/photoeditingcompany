@@ -191,31 +191,40 @@ include("includes/header.php");
                 </div>
               <?php endif; ?>
 
-              <?php if ($has_overdue_tasks): ?>
-              <div class="alert alert-danger">
-                <div class="d-flex align-items-center">
-                  <i class="fas fa-exclamation-triangle fa-2x mr-3"></i>
-                  <div>
-                    <h5 class="alert-heading mb-1">Your account is currently restricted</h5>
-                    <p class="mb-1"><?php echo htmlspecialchars($overdue_reason); ?></p>
-                    <p class="mb-0 small">You can still view and work on your existing tasks, but new tasks will be locked until you complete your overdue ones.</p>
+              <?php if (isset($_SESSION['error_message'])): ?>
+                  <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-circle mr-2"></i> <?php echo $_SESSION['error_message']; ?>
                   </div>
+                  <?php unset($_SESSION['error_message']); ?>
+              <?php endif; ?>
+
+              <?php if ($has_overdue_tasks): ?>
+                <div class="alert alert-danger">
+                  <div class="d-flex align-items-center">
+                    <i class="fas fa-exclamation-triangle fa-2x mr-3"></i>
+                    <div>
+                      <h5 class="alert-heading mb-1">Your account is currently restricted</h5>
+                      <p class="mb-1"><?php echo htmlspecialchars($overdue_reason); ?></p>
+                      <p class="mb-0 small">You can still view and work on your existing tasks, but new tasks will be
+                        locked until you complete your overdue ones.</p>
+                    </div>
+                  </div>
+                  <?php if (!empty($overdue_tasks)): ?>
+                    <hr>
+                    <p class="mb-1"><strong>Overdue tasks:</strong></p>
+                    <ul class="mb-0">
+                      <?php foreach ($overdue_tasks as $overdue): ?>
+                        <li>
+                          <a href="view-task.php?id=<?php echo $overdue['assignment_id']; ?>" class="text-danger">
+                            <?php echo htmlspecialchars($overdue['project_title']); ?>
+                            (<?php echo htmlspecialchars($overdue['role_task']); ?>)
+                            - Due: <?php echo date('M d, Y', strtotime($overdue['deadline'])); ?>
+                          </a>
+                        </li>
+                      <?php endforeach; ?>
+                    </ul>
+                  <?php endif; ?>
                 </div>
-                <?php if (!empty($overdue_tasks)): ?>
-                <hr>
-                <p class="mb-1"><strong>Overdue tasks:</strong></p>
-                <ul class="mb-0">
-                  <?php foreach ($overdue_tasks as $overdue): ?>
-                  <li>
-                    <a href="view-task.php?id=<?php echo $overdue['assignment_id']; ?>" class="text-danger">
-                      <?php echo htmlspecialchars($overdue['project_title']); ?> (<?php echo htmlspecialchars($overdue['role_task']); ?>)
-                      - Due: <?php echo date('M d, Y', strtotime($overdue['deadline'])); ?>
-                    </a>
-                  </li>
-                  <?php endforeach; ?>
-                </ul>
-                <?php endif; ?>
-              </div>
               <?php endif; ?>
 
               <div class="table-responsive">
@@ -238,22 +247,22 @@ include("includes/header.php");
                         <td colspan="8" class="text-center">No tasks assigned to you yet</td>
                       </tr>
                     <?php else: ?>
-                      <?php foreach ($tasks as $task): 
-                          // Check if the task is overdue
-                          $is_task_overdue = strtotime($task['deadline']) < time();
-                          
-                          // If artist has overdue tasks, check if this is one of them or is delay acceptable
-                          $is_task_locked = false;
-                          $delay_acceptable = isset($task['delay_acceptable']) && $task['delay_acceptable'] == '1';
-                          
-                          if ($has_overdue_tasks && !$is_task_overdue && !$delay_acceptable) {
-                              $is_task_locked = true;
-                          }
-                          
-                          // Status and priority classes
-                          $statusClass = getStatusClass($task['status_assignee']);
-                          $priorityClass = getPriorityClass($task['priority']);
-                      ?>
+                      <?php foreach ($tasks as $task):
+                        // Check if the task is overdue
+                        $is_task_overdue = strtotime($task['deadline']) < time();
+
+                        // If artist has overdue tasks, check if this is one of them or is delay acceptable
+                        $is_task_locked = false;
+                        $delay_acceptable = isset($task['delay_acceptable']) && $task['delay_acceptable'] == '1';
+
+                        if ($has_overdue_tasks && !$is_task_overdue && !$delay_acceptable) {
+                          $is_task_locked = true;
+                        }
+
+                        // Status and priority classes
+                        $statusClass = getStatusClass($task['status_assignee']);
+                        $priorityClass = getPriorityClass($task['priority']);
+                        ?>
                         <tr class="<?php echo $is_task_overdue ? 'table-danger' : ''; ?>">
                           <td class="d-none"><?php echo $task['assignment_id']; ?></td>
                           <td>
@@ -261,13 +270,14 @@ include("includes/header.php");
                               <div class="project-title">
                                 <?php echo htmlspecialchars($task['project_title']); ?>
                                 <?php if ($is_task_locked): ?>
-                                <span class="ml-1 text-danger" title="This task is locked due to overdue tasks">
-                                  <i class="fas fa-lock"></i>
-                                </span>
+                                  <span class="ml-1 text-danger" title="This task is locked due to overdue tasks">
+                                    <i class="fas fa-lock"></i>
+                                  </span>
                                 <?php endif; ?>
                               </div>
                               <div class="project-client">
-                                <i class="fas fa-building mr-1"></i> <?php echo htmlspecialchars($task['company_name'] ?? 'N/A'); ?>
+                                <i class="fas fa-building mr-1"></i>
+                                <?php echo htmlspecialchars($task['company_name'] ?? 'N/A'); ?>
                               </div>
                             </div>
                           </td>
@@ -286,16 +296,19 @@ include("includes/header.php");
                             <div class="task-count">
                               <div class="images-count">
                                 <i class="fas fa-images mr-1"></i>
-                                <span><?php echo $task['assigned_image_count'] ?? 0; ?> / <?php echo $task['assigned_images']; ?></span>
+                                <span><?php echo $task['total_images'] ?? 0; ?> /
+                                  <?php echo $task['assigned_image_count']; ?></span>
                               </div>
                             </div>
                           </td>
                           <td>
                             <div class="deadlines">
                               <div class="project-deadline">
-                                <strong>Project:</strong> <?php echo date('M d, Y', strtotime($task['project_deadline'])); ?>
+                                <strong>Project:</strong>
+                                <?php echo date('M d, Y', strtotime($task['project_deadline'])); ?>
                               </div>
-                              <div class="task-deadline <?php echo (strtotime($task['deadline']) < time()) ? 'text-danger' : ''; ?>">
+                              <div
+                                class="task-deadline <?php echo (strtotime($task['deadline']) < time()) ? 'text-danger' : ''; ?>">
                                 <strong>Task:</strong> <?php echo date('M d, Y', strtotime($task['deadline'])); ?>
                                 <?php if (strtotime($task['deadline']) < time()): ?>
                                   <span class="badge badge-danger ml-1">Overdue</span>
@@ -309,14 +322,17 @@ include("includes/header.php");
                             </span>
                           </td>
                           <td class="text-center">
-                            <a href="view-task.php?id=<?php echo $task['assignment_id']; ?>" 
-                               class="btn btn-info btn-sm <?php echo $is_task_locked ? 'task-locked' : ''; ?>"
-                               <?php if ($is_task_locked): ?>
-                               title="This task is locked due to overdue tasks. Complete your overdue tasks first."
-                               <?php endif; ?>>
-                              <i class="fas <?php echo $is_task_locked ? 'fa-lock' : 'fa-eye'; ?> mr-1"></i>
-                              <?php echo $is_task_locked ? 'Locked' : 'View'; ?>
-                            </a>
+                            <?php if ($is_task_locked): ?>
+                              <button type="button" class="btn btn-secondary btn-sm task-locked" data-toggle="modal"
+                                data-target="#accessBlockedModal"
+                                data-reason="<?php echo htmlspecialchars($overdue_reason); ?>">
+                                <i class="fas fa-lock mr-1"></i> Locked
+                              </button>
+                            <?php else: ?>
+                              <a href="view-task.php?id=<?php echo $task['assignment_id']; ?>" class="btn btn-info btn-sm">
+                                <i class="fas fa-eye mr-1"></i> View
+                              </a>
+                            <?php endif; ?>
                           </td>
                         </tr>
                       <?php endforeach; ?>
@@ -360,7 +376,7 @@ include("includes/header.php");
     font-weight: bold;
     color: #343a40;
   }
-  
+
   /* Override DataTables styling */
   .dataTables_wrapper .dataTables_filter {
     margin-bottom: 15px;
@@ -523,6 +539,54 @@ include("includes/header.php");
         "timeOut": "3000"
       };
     }
+  });
+</script>
+
+<!-- Access Blocked Modal -->
+<div class="modal fade" id="accessBlockedModal" tabindex="-1" role="dialog" aria-labelledby="accessBlockedModalLabel"
+  aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title" id="accessBlockedModalLabel">
+          <i class="fas fa-exclamation-triangle mr-2"></i>
+          Access Blocked
+        </h5>
+        <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="text-center mb-4">
+          <i class="fas fa-lock fa-4x text-danger mb-3"></i>
+          <h4>Your account is currently blocked</h4>
+          <p class="text-muted" id="blockReasonText"></p>
+        </div>
+        <div class="alert alert-warning">
+          <i class="fas fa-info-circle"></i> What you need to do:
+          <ul class="mb-0 mt-2">
+            <li>Complete your earliest overdue task as soon as possible</li>
+            <li>If your delay is justifiable, contact your supervisor</li>
+            <li>Once resolved, you'll be able to access new tasks</li>
+          </ul>
+        </div>
+      </div>
+      <div class="modal-footer justify-content-center">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">
+          <i class="fas fa-times mr-1"></i> Close
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Handle showing the access blocked modal with the correct reason
+  $('#accessBlockedModal').on('show.bs.modal', function (event) {
+    var button = $(event.relatedTarget);
+    var reason = button.data('reason');
+    var modal = $(this);
+    modal.find('#blockReasonText').text(reason);
   });
 </script>
 

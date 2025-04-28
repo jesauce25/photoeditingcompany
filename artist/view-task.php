@@ -1,101 +1,100 @@
 <?php
+// Start session if not already started
+if (session_status() === PHP_SESSION_NONE) {
+  session_start();
+}
+
 include("includes/header.php");
 require_once '../includes/db_connection.php';
+require_once 'includes/auth_check.php';
 require_once 'includes/task_block_check.php';
+require_once 'includes/helper_functions.php';
 
 // Get the current user's ID from session
 $user_id = $_SESSION['user_id'] ?? 0;
 
-// Get the assignment ID from URL
-$assignment_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
-
 // Initialize variables
+$assignment_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 $task = null;
+$project = null;
 $images = [];
-$error_message = null;
-$is_blocked = false;
-$block_reason = '';
+$error = false;
+$error_message = '';
 
+// If no assignment ID provided, redirect to tasks page
+if (!$assignment_id) {
+  header("Location: task.php");
+  exit;
+}
+
+// Check if task is blocked due to overdue tasks
+$blockCheck = isTaskBlocked($user_id, $assignment_id);
+
+if ($blockCheck['blocked']) {
+  // If the task is blocked, redirect back to tasks page with an error message
+  $_SESSION['error_message'] = $blockCheck['reason'];
+  header("Location: task.php");
+  exit;
+}
+
+// Load task details
 try {
-    // Check if this assignment belongs to the current user (security check)
-    $checkQuery = "SELECT pa.assignment_id 
-                   FROM tbl_project_assignments pa 
-                   WHERE pa.assignment_id = ? AND pa.user_id = ?";
-
-    $checkStmt = $conn->prepare($checkQuery);
-
-    if (!$checkStmt) {
-        throw new Exception("Query preparation failed: " . $conn->error);
-    }
-
-    $checkStmt->bind_param("ii", $assignment_id, $user_id);
-    $checkStmt->execute();
-    $checkResult = $checkStmt->get_result();
-
-    if ($checkResult->num_rows === 0) {
-        throw new Exception("You don't have permission to view this task or it doesn't exist.");
-    }
-
-    // Check if the artist is blocked from accessing this task
-    $blockCheck = isTaskBlocked($user_id, $assignment_id);
-    $is_blocked = $blockCheck['blocked'];
-    $block_reason = $blockCheck['reason'];
-
-    // We'll still load the task data for display, but will prevent interaction if blocked
-
-    // Fetch the assignment details
-    $query = "SELECT pa.*, p.project_title, p.description, p.date_arrived, p.priority, 
-                     p.status_project, p.deadline as project_deadline, p.total_images,
-                     c.company_name
+  // Removed block checking code here since we now do this at the beginning of the file
+  
+  // Fetch assignment details and associated project
+  $query = "SELECT pa.*, p.project_title, p.project_id, p.description, 
+                      p.deadline as project_deadline, p.total_images,
+                      p.company_id, p.client_name, p.designer, p.date_arrived,
+                      p.priority, c.company_name, c.company_logo
               FROM tbl_project_assignments pa
               JOIN tbl_projects p ON pa.project_id = p.project_id
               LEFT JOIN tbl_companies c ON p.company_id = c.company_id
               WHERE pa.assignment_id = ? AND pa.user_id = ?";
 
-    $stmt = $conn->prepare($query);
+  $stmt = $conn->prepare($query);
 
-    if (!$stmt) {
-        throw new Exception("Query preparation failed: " . $conn->error);
-    }
+  if (!$stmt) {
+      throw new Exception("Query preparation failed: " . $conn->error);
+  }
 
-    $stmt->bind_param("ii", $assignment_id, $user_id);
+  $stmt->bind_param("ii", $assignment_id, $user_id);
 
-    if (!$stmt->execute()) {
-        throw new Exception("Query execution failed: " . $stmt->error);
-    }
+  if (!$stmt->execute()) {
+      throw new Exception("Query execution failed: " . $stmt->error);
+  }
 
-    $result = $stmt->get_result();
-    $task = $result->fetch_assoc();
+  $result = $stmt->get_result();
+  $task = $result->fetch_assoc();
 
-    if (!$task) {
-        throw new Exception("Task not found.");
-    }
+  if (!$task) {
+      throw new Exception("Task not found.");
+  }
 
-    // Get images assigned to this task
-    $imagesQuery = "SELECT pi.* 
-                    FROM tbl_project_images pi
-                    WHERE pi.assignment_id = ?
-                    ORDER BY pi.upload_date DESC";
+  // Get images assigned to this task
+  $imagesQuery = "SELECT pi.* 
+                  FROM tbl_project_images pi
+                  WHERE pi.assignment_id = ?
+                  ORDER BY pi.upload_date DESC";
 
-    $imagesStmt = $conn->prepare($imagesQuery);
+  $imagesStmt = $conn->prepare($imagesQuery);
 
-    if (!$imagesStmt) {
-        throw new Exception("Images query preparation failed: " . $conn->error);
-    }
+  if (!$imagesStmt) {
+      throw new Exception("Images query preparation failed: " . $conn->error);
+  }
 
-    $imagesStmt->bind_param("i", $assignment_id);
+  $imagesStmt->bind_param("i", $assignment_id);
 
-    if (!$imagesStmt->execute()) {
-        throw new Exception("Images query execution failed: " . $imagesStmt->error);
-    }
+  if (!$imagesStmt->execute()) {
+      throw new Exception("Images query execution failed: " . $imagesStmt->error);
+  }
 
-    $imagesResult = $imagesStmt->get_result();
+  $imagesResult = $imagesStmt->get_result();
 
-    while ($image = $imagesResult->fetch_assoc()) {
-        // Add the full path for display
-        $image['image_url'] = '../uploads/projects/' . ($task['project_id'] ?? '') . '/' . $image['image_path'];
-        $images[] = $image;
-    }
+  while ($image = $imagesResult->fetch_assoc()) {
+      // Add the full path for display
+      $image['image_url'] = '../uploads/projects/' . ($task['project_id'] ?? '') . '/' . $image['image_path'];
+      $images[] = $image;
+  }
 
 } catch (Exception $e) {
     // Log the error
@@ -550,46 +549,6 @@ function getPriorityClass($priority)
     </div>
 </div>
 
-<!-- Task Blocked Modal -->
-<div class="modal fade" id="taskBlockedModal" tabindex="-1" role="dialog" aria-labelledby="taskBlockedModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered" role="document">
-        <div class="modal-content">
-            <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title" id="taskBlockedModalLabel">
-                    <i class="fas fa-exclamation-triangle mr-2"></i>
-                    Access Blocked
-                </h5>
-                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <div class="modal-body">
-                <div class="text-center mb-4">
-                    <i class="fas fa-lock fa-4x text-danger mb-3"></i>
-                    <h4>Your account is currently blocked</h4>
-                    <p class="text-muted"><?php echo htmlspecialchars($block_reason); ?></p>
-                </div>
-                <div class="alert alert-warning">
-                    <i class="fas fa-info-circle"></i> What you need to do:
-                    <ul class="mb-0 mt-2">
-                        <li>Complete your overdue tasks as soon as possible</li>
-                        <li>If your delay is justifiable, contact your supervisor</li>
-                        <li>Once resolved, you'll be able to access new tasks</li>
-                    </ul>
-                </div>
-            </div>
-            <div class="modal-footer justify-content-center">
-                <a href="task.php" class="btn btn-secondary">
-                    <i class="fas fa-arrow-left mr-1"></i> Back to Tasks
-                </a>
-                <a href="#" class="btn btn-primary" data-dismiss="modal">
-                    <i class="fas fa-eye mr-1"></i> View Task Details
-                </a>
-            </div>
-        </div>
-    </div>
-</div>
-
 <!-- Status Timeline Styles -->
 <style>
     /* Status Timeline Styles */
@@ -664,32 +623,6 @@ function getPriorityClass($priority)
     
     .status-info {
         padding: 10px 0;
-    }
-    
-    .blocked-overlay {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-color: rgba(0, 0, 0, 0.5);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        z-index: 100;
-    }
-    
-    .blocked-message {
-        background-color: #dc3545;
-        color: white;
-        padding: 15px 25px;
-        border-radius: 5px;
-        font-weight: bold;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
-    }
-    
-    .blocked-message i {
-        margin-right: 10px;
     }
     
     .task-content {
@@ -858,24 +791,6 @@ function getPriorityClass($priority)
                 $('.start-task-btn, .complete-task-btn').fadeOut();
             }
         }
-
-        // Show task blocked modal if needed
-        $(document).ready(function() {
-            <?php if ($is_blocked): ?>
-                // Show the modal when page loads
-                $('#taskBlockedModal').modal({
-                    backdrop: 'static',
-                    keyboard: false
-                });
-            
-                // Disable all interactive elements in the task
-                $('.task-action-btn').addClass('disabled').prop('disabled', true);
-                $('.task-action-btn').attr('title', 'You have overdue tasks. Complete them first.');
-            
-                // Show overlay on task content
-                $('.task-content').prepend('<div class="blocked-overlay"><div class="blocked-message"><i class="fas fa-lock"></i> Task locked due to overdue tasks</div></div>');
-            <?php endif; ?>
-        });
     });
 </script>
 

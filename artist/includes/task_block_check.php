@@ -24,14 +24,15 @@ function checkArtistOverdueTasks($user_id)
     $result = [
         'blocked' => false,
         'reason' => '',
-        'overdue_tasks' => []
+        'overdue_tasks' => [],
+        'first_overdue' => null
     ];
 
     try {
         // Get the current date for comparison
         $today = date('Y-m-d');
 
-        // Query to get overdue tasks for this artist
+        // Query to get overdue tasks for this artist ordered by deadline
         $query = "SELECT pa.assignment_id, pa.project_id, pa.role_task, pa.deadline, pa.delay_acceptable,
                         p.project_title, p.status_project
                  FROM tbl_project_assignments pa
@@ -39,7 +40,8 @@ function checkArtistOverdueTasks($user_id)
                  WHERE pa.user_id = ? 
                    AND pa.status_assignee NOT IN ('completed', 'deleted')
                    AND pa.deadline < ?
-                   AND (pa.delay_acceptable IS NULL OR pa.delay_acceptable != '1')";
+                   AND (pa.delay_acceptable IS NULL OR pa.delay_acceptable != '1')
+                 ORDER BY pa.deadline ASC"; // Order by deadline to get earliest overdue task first
 
         $stmt = $conn->prepare($query);
 
@@ -61,16 +63,40 @@ function checkArtistOverdueTasks($user_id)
 
         $taskResult = $stmt->get_result();
         $overdueTasks = [];
+        $first_overdue = null;
 
         while ($task = $taskResult->fetch_assoc()) {
+            // Store the first overdue task separately
+            if ($first_overdue === null) {
+                $first_overdue = $task['assignment_id'];
+            }
             $overdueTasks[] = $task;
         }
 
         // Block if there are any overdue tasks
         if (count($overdueTasks) > 0) {
             $result['blocked'] = true;
-            $result['reason'] = "You have " . count($overdueTasks) . " overdue task(s). Please complete them before starting new tasks.";
+            $result['reason'] = "You have " . count($overdueTasks) . " overdue task(s). Please complete the earliest overdue task before accessing other tasks.";
             $result['overdue_tasks'] = $overdueTasks;
+            $result['first_overdue'] = $first_overdue;
+
+            // Update the user status to 'Blocked' in tbl_accounts
+            $updateQuery = "UPDATE tbl_accounts SET status = 'Blocked' WHERE user_id = ?";
+            $updateStmt = $conn->prepare($updateQuery);
+
+            if ($updateStmt) {
+                $updateStmt->bind_param("i", $user_id);
+                $updateStmt->execute();
+            }
+        } else {
+            // If no overdue tasks, set user status to 'Active' (in case they were previously blocked)
+            $updateQuery = "UPDATE tbl_accounts SET status = 'Active' WHERE user_id = ?";
+            $updateStmt = $conn->prepare($updateQuery);
+
+            if ($updateStmt) {
+                $updateStmt->bind_param("i", $user_id);
+                $updateStmt->execute();
+            }
         }
 
         return $result;
@@ -106,9 +132,8 @@ function isTaskBlocked($user_id, $assignment_id)
     }
 
     try {
-        // Check if this specific task is one of the overdue tasks
-        // (we should allow artists to access their own overdue tasks)
-        $query = "SELECT pa.assignment_id, pa.deadline, pa.delay_acceptable
+        // Check if this task is already completed
+        $query = "SELECT pa.assignment_id, pa.deadline, pa.delay_acceptable, pa.status_assignee
                  FROM tbl_project_assignments pa
                  WHERE pa.assignment_id = ? AND pa.user_id = ?";
 
@@ -133,21 +158,38 @@ function isTaskBlocked($user_id, $assignment_id)
 
         // If this is one of the artist's tasks
         if ($task) {
-            $today = date('Y-m-d');
-            $isOverdue = strtotime($task['deadline']) < strtotime($today);
-            $isUnderstandableDelay = isset($task['delay_acceptable']) && $task['delay_acceptable'] == '1';
-
-            // Allow if it's an overdue task (they should be able to work on their own overdue tasks)
-            // Also allow if the delay has been marked as acceptable
-            if ($isOverdue || $isUnderstandableDelay) {
+            // Always allow access to completed tasks
+            if ($task['status_assignee'] === 'completed') {
                 return [
                     'blocked' => false,
                     'reason' => ''
                 ];
             }
 
-            // For non-overdue tasks, block only if there are other overdue tasks
-            return $overdue;
+            // Allow if it's the first overdue task (that became overdue first)
+            if ($assignment_id == $overdue['first_overdue']) {
+                return [
+                    'blocked' => false,
+                    'reason' => ''
+                ];
+            }
+
+            // Check if delay is acceptable
+            $isUnderstandableDelay = isset($task['delay_acceptable']) && $task['delay_acceptable'] == '1';
+
+            // Allow if delay is marked as acceptable
+            if ($isUnderstandableDelay) {
+                return [
+                    'blocked' => false,
+                    'reason' => ''
+                ];
+            }
+
+            // For all other tasks, block them
+            return [
+                'blocked' => true,
+                'reason' => "You have overdue tasks. Please complete your first overdue task before accessing this task."
+            ];
         }
 
         // Default to blocking if we can't determine
