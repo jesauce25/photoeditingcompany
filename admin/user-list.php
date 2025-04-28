@@ -388,7 +388,6 @@ include("includes/header.php");
             });
         }
 
-        // Function to display users in the table
         function displayUsers(users) {
             console.log('Displaying users:', users);
             if (!users || users.length === 0) {
@@ -398,43 +397,46 @@ include("includes/header.php");
 
             let tableHtml = '';
             users.forEach(function (user) {
+                // Handle profile image path - remove any leading ../ or ./
+                let profileImgPath = user.profile_img.replace(/^(\.\.\/|\.\/)/, '');
+
                 tableHtml += `
-                    <tr>
-                        <td>
-                            <div class="d-flex align-items-center">
-                                <img src="${user.profile_img}" class="img-circle mr-3" style="width: 40px; height: 40px;" alt="User Image">
-                                <div>
-                                    <strong>${user.full_name}</strong><br>
-                                    <small class="text-muted">${user.email_address}</small>
-                                </div>
-                            </div>
-                        </td>
-                        <td>${user.username}</td>
-                        <td>${user.email_address}</td>
-                        <td>${user.role}</td>
-                        <td>
-                            <span class="badge ${user.status === 'Active' ? 'badge-success' : 'badge-danger'}">
-                                ${user.status}
-                            </span>
-                        </td>
-                        <td>
-                            <div class="action-buttons text-center">
-                                <a href="view-user.php?id=${user.user_id}" class="btn btn-info btn-sm view-user" data-toggle="tooltip" title="View User">
-                                    <i class="fas fa-eye"></i>
-                                </a>
-                                <a href="edit-user.php?id=${user.user_id}" class="btn btn-info btn-sm">
-                                    <i class="fas fa-edit"></i>
-                                </a>
-                                <button class="btn btn-warning btn-sm toggle-status" data-id="${user.user_id}" data-status="${user.status}">
-                                    <i class="fas ${user.status === 'Active' ? 'fa-ban' : 'fa-check'}"></i>
-                                </button>
-                                <button class="btn btn-danger btn-sm delete-user" data-id="${user.user_id}">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                `;
+        <tr>
+            <td>
+                <div class="d-flex align-items-center">
+                    <img src="${profileImgPath}" class="img-circle mr-3" style="width: 40px; height: 40px;" 
+                         alt="User Image" onerror="this.src='../dist/img/user-default.jpg';">
+                    <div>
+                        <strong>${user.full_name}</strong><br>
+                        <small class="text-muted">${user.email_address}</small>
+                    </div>
+                </div>
+            </td>
+            <td>${user.username}</td>
+            <td>${user.email_address}</td>
+            <td>${user.role}</td>
+            <td>
+                <span class="badge ${user.status === 'Active' ? 'badge-success' : 'badge-danger'}">
+                    ${user.status}
+                </span>
+            </td>
+            <td>
+                <div class="action-buttons text-center">
+                    <a href="view-user.php?id=${user.user_id}" class="btn btn-info btn-sm view-user" data-toggle="tooltip" title="View User">
+                        <i class="fas fa-eye"></i>
+                    </a>
+                    <a href="edit-user.php?id=${user.user_id}" class="btn btn-info btn-sm">
+                        <i class="fas fa-edit"></i>
+                    </a>
+                    <button class="btn btn-warning btn-sm toggle-status" data-id="${user.user_id}" data-status="${user.status}">
+                        <i class="fas ${user.status === 'Active' ? 'fa-ban' : 'fa-check'}"></i>
+                    </button>
+                    <button class="btn btn-danger btn-sm delete-user" data-id="${user.user_id}">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </td>
+        </tr>`;
             });
             $('#userTableBody').html(tableHtml);
         }

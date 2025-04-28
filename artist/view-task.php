@@ -1,6 +1,7 @@
 <?php
 include("includes/header.php");
 require_once '../includes/db_connection.php';
+require_once 'includes/task_block_check.php';
 
 // Get the current user's ID from session
 $user_id = $_SESSION['user_id'] ?? 0;
@@ -12,6 +13,8 @@ $assignment_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 $task = null;
 $images = [];
 $error_message = null;
+$is_blocked = false;
+$block_reason = '';
 
 try {
     // Check if this assignment belongs to the current user (security check)
@@ -32,6 +35,13 @@ try {
     if ($checkResult->num_rows === 0) {
         throw new Exception("You don't have permission to view this task or it doesn't exist.");
     }
+
+    // Check if the artist is blocked from accessing this task
+    $blockCheck = isTaskBlocked($user_id, $assignment_id);
+    $is_blocked = $blockCheck['blocked'];
+    $block_reason = $blockCheck['reason'];
+
+    // We'll still load the task data for display, but will prevent interaction if blocked
 
     // Fetch the assignment details
     $query = "SELECT pa.*, p.project_title, p.description, p.date_arrived, p.priority, 
@@ -167,335 +177,160 @@ function getPriorityClass($priority)
         <section class="content">
             <div class="container-fluid">
                 <?php if ($error_message): ?>
-                    <div class="alert alert-danger">
-                        <i class="fas fa-exclamation-circle mr-2"></i> <?php echo $error_message; ?>
-                    </div>
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-circle mr-2"></i> <?php echo $error_message; ?>
+                        </div>
                 <?php elseif ($task): ?>
-                    <!-- Task Overview Section -->
-                    <div class="row mb-4">
-                        <div class="col-md-6">
-                            <div class="card">
-                                <div class="card-header bg-primary text-white">
-                                    <h5 class="card-title mb-0">
-                                        <i class="fas fa-info-circle mr-2"></i>Task Details
-                                    </h5>
-                                </div>
-                                <div class="card-body">
-                                    <div class="row">
-
-                                        <div class="col-md-6">
-                                            <div class="form-group">
-                                                <label>Project Name</label>
-                                                <p class="form-control-static">
-                                                    <?php echo htmlspecialchars($task['project_title'] ?? 'Untitled Project'); ?>
-                                                </p>
-                                            </div>
-                                            <div class="form-group">
-                                                <label>Company</label>
-                                                <p class="form-control-static">
-                                                    <?php echo htmlspecialchars($task['company_name'] ?? 'No Company'); ?>
-                                                </p>
-                                            </div>
+                        <!-- Task Overview Section -->
+                        <div class="task-content">
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <div class="card">
+                                        <div class="card-header bg-primary text-white">
+                                            <h5 class="card-title mb-0">
+                                                <i class="fas fa-info-circle mr-2"></i>Task Details
+                                            </h5>
                                         </div>
-                                        <div class="col-md-6">
-                                        
-                                            <div class="form-group">
-                                                <label>Description</label>
-                                                <p class="form-control-static">
-                                                    <?php echo nl2br(htmlspecialchars($task['description'] ?? 'No description')); ?>
-                                                </p>
-                                            </div>
-                                            <div class="form-group">
-                                                <label>Role</label>
-                                                <p class="form-control-static">
-                                                    <span class="badge badge-info p-2">
-                                                        <?php echo htmlspecialchars($task['role_task'] ?? 'Not Assigned'); ?>
-                                                    </span>
-                                                </p>
-                                            </div>
-                                        </div>
-                                   
-                                   
-                                    </div>
-                                   
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="card">
-                                <div class="card-header bg-primary text-white">
-                                    <h5 class="card-title mb-0">
-                                        <i class="fas fa-calendar-alt mr-2"></i>Task Status
-                                    </h5>
-                                </div>
-                                <div class="card-body">
-                                    <div class="row">
-                                        <!-- Left Column -->
-                                        <div class="col-md-6">
-                                            <div class="form-group">
-                                                <label>Task Status</label>
-                                                <p class="form-control-static">
-                                                    <span class="badge badge-<?php echo getStatusClass($task['status_assignee'] ?? 'Unknown'); ?> p-2">
-                                                        <?php
-                                                        $statusText = ucfirst(str_replace('_', ' ', $task['status_assignee'] ?? 'Unknown'));
-                                                        $statusIcon = '';
-                                                        switch ($task['status_assignee'] ?? 'Unknown') {
-                                                            case 'in_progress':
-                                                                $statusIcon = '<i class="fas fa-spinner fa-spin mr-1"></i>';
-                                                                break;
-                                                            case 'pending':
-                                                                $statusIcon = '<i class="fas fa-clock mr-1"></i>';
-                                                                break;
-                                                            case 'finish':
-                                                                $statusIcon = '<i class="fas fa-check mr-1"></i>';
-                                                                $statusText = 'Finished';
-                                                                break;
-                                                            case 'qa':
-                                                            case 'review':
-                                                                $statusIcon = '<i class="fas fa-search mr-1"></i>';
-                                                                $statusText = 'In QA Review';
-                                                                break;
-                                                            case 'approved':
-                                                                $statusIcon = '<i class="fas fa-thumbs-up mr-1"></i>';
-                                                                break;
-                                                            case 'completed':
-                                                                $statusIcon = '<i class="fas fa-check-circle mr-1"></i>';
-                                                                break;
-                                                            case 'delayed':
-                                                                $statusIcon = '<i class="fas fa-exclamation-triangle mr-1"></i>';
-                                                                break;
-                                                        }
-                                                        echo $statusIcon . $statusText;
-                                                        ?>
-                                                    </span>
-                                                </p>
-                                            </div>
-                                            <div class="form-group">
-                                                <label>Priority</label>
-                                                <p class="form-control-static">
-                                                    <span class="badge badge-<?php echo getPriorityClass($task['priority'] ?? 'Not set'); ?> p-2">
-                                                        <?php echo ucfirst($task['priority'] ?? 'Not set'); ?>
-                                                    </span>
-                                                </p>
-                                            </div>
-                                            <div class="form-group">
-                                                <label>Date Received</label>
-                                                <p class="form-control-static">
-                                                    <i class="far fa-calendar-alt mr-1"></i>
-                                                    <?php echo isset($task['date_arrived']) ? date('Y-m-d', strtotime($task['date_arrived'])) : 'Not set'; ?>
-                                                </p>
-                                            </div>
-                                        </div>
-                                        
-                                        <!-- Right Column -->
-                                        <div class="col-md-6">
-                                            <div class="form-group">
-                                                <label>Deadline</label>
-                                                <p class="form-control-static">
-                                                    <i class="far fa-calendar-check mr-1"></i>
-                                                    <?php echo isset($task['deadline']) ? date('Y-m-d', strtotime($task['deadline'])) : 'Not set'; ?>
-                                                    <?php
-                                                    if (isset($task['deadline'])) {
-                                                        $deadline = new DateTime($task['deadline']);
-                                                        $now = new DateTime();
-                                                        $days_left = $now->diff($deadline)->format("%R%a");
+                                        <div class="card-body">
+                                            <div class="row">
 
-                                                        if ($days_left < 0) {
-                                                            echo '<span class="badge badge-danger ml-2">Overdue by ' . abs($days_left) . ' days</span>';
-                                                        } elseif ($days_left == 0) {
-                                                            echo '<span class="badge badge-warning ml-2">Due today</span>';
-                                                        } elseif ($days_left <= 3) {
-                                                            echo '<span class="badge badge-warning ml-2">' . $days_left . ' days left</span>';
-                                                        } else {
-                                                            echo '<span class="badge badge-info ml-2">' . $days_left . ' days left</span>';
-                                                        }
-                                                    }
-                                                    ?>
-                                                </p>
-                                            </div>
-                                            <div class="form-group">
-                                                <label>Assigned Images</label>
-                                                <p class="form-control-static">
-                                                    <span class="badge badge-primary p-2">
-                                                        <i class="fas fa-images mr-1"></i> <?php echo count($images); ?> images
-                                                    </span>
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Task Images Section -->
-                    <div class="card card-primary card-outline mt-4">
-                        <div class="card-header">
-                            <h3 class="card-title">
-                                <i class="fas fa-images mr-2"></i>Assigned Images
-                                <span class="badge badge-pill badge-primary ml-2"><?php echo count($images); ?></span>
-                            </h3>
-                        </div>
-                        <div class="card-body">
-                            <?php if (empty($images)): ?>
-                                <div class="text-center text-muted p-4">
-                                    <i class="fas fa-image fa-3x mb-3"></i>
-                                    <p>No images assigned to this task yet.</p>
-                                </div>
-                            <?php else: ?>
-                                <div class="table-responsive">
-                                    <table class="table table-striped">
-                                        <thead>
-                                            <tr>
-                                                <th>#</th>
-                                                <th>Image Name</th>
-                                                <th>Estimated Time</th>
-                                                <th>Role</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <?php foreach ($images as $index => $image): ?>
-                                                <tr>
-                                                    <td><?php echo $index + 1; ?></td>
-                                                    <td><?php echo htmlspecialchars($image['image_path']); ?></td>
-                                                    <td>
-                                                        <?php
-                                                        if (!empty($image['estimated_time'])) {
-                                                            $time = intval($image['estimated_time']);
-                                                            if ($time >= 60) {
-                                                                $hours = floor($time / 60);
-                                                                $minutes = $time % 60;
-                                                                echo $hours . 'hr' . ($minutes > 0 ? ' ' . $minutes . 'min' : '');
-                                                            } else {
-                                                                echo $time . ' min';
-                                                            }
-                                                        } else {
-                                                            echo '<span class="text-muted">Not set</span>';
-                                                        }
-                                                        ?>
-                                                    </td>
-                                                    <td>
-                                                        <?php if (!empty($image['image_role'])): ?>
-                                                            <span class="badge badge-info">
-                                                                <?php echo htmlspecialchars($image['image_role']); ?>
-                                                            </span>
-                                                        <?php else: ?>
-                                                            <span class="text-muted">Not set</span>
-                                                        <?php endif; ?>
-                                                    </td>
-                                                </tr>
-                                            <?php endforeach; ?>
-                                        </tbody>
-                                    </table>
-                                </div>
-                            <?php endif; ?>
-                        </div>
-                    </div>
-
-                    <!-- Task Actions Section -->
-                    <div class="row mb-4">
-                        <div class="col-12">
-                            <div class="card">
-                                <div class="card-header bg-primary text-white">
-                                    <h5 class="card-title mb-0">
-                                        <i class="fas fa-cogs mr-2"></i>
-                                        Task Actions
-                                    </h5>
-                                </div>
-                                <div class="card-body">
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <div class="task-action-buttons">
-                                                <?php if (($task['status_assignee'] ?? '') == 'pending'): ?>
-                                                    <button type="button" class="btn btn-primary start-task-btn"
-                                                        data-id="<?php echo $task['assignment_id'] ?? ''; ?>">
-                                                        <i class="fas fa-play mr-2"></i> Start Task
-                                                    </button>
-                                                <?php elseif (($task['status_assignee'] ?? '') == 'in_progress'): ?>
-                                                    <button type="button" class="btn btn-success complete-task-btn"
-                                                        data-id="<?php echo $task['assignment_id'] ?? ''; ?>">
-                                                        <i class="fas fa-check mr-2"></i> Mark as Finished
-                                                    </button>
-                                                <?php elseif (($task['status_assignee'] ?? '') == 'finish'): ?>
-                                                    <button type="button" class="btn btn-info" disabled>
-                                                        <i class="fas fa-hourglass-half mr-2"></i> Awaiting QA
-                                                    </button>
-                                                <?php elseif (($task['status_assignee'] ?? '') == 'qa'): ?>
-                                                    <button type="button" class="btn btn-info" disabled>
-                                                        <i class="fas fa-clipboard-check mr-2"></i> In QA Review
-                                                    </button>
-                                                <?php elseif (($task['status_assignee'] ?? '') == 'completed'): ?>
-                                                    <button type="button" class="btn btn-success" disabled>
-                                                        <i class="fas fa-trophy mr-2"></i> Task Completed
-                                                    </button>
-                                                <?php endif; ?>
-
-                                                <a href="task.php" class="btn btn-secondary">
-                                                    <i class="fas fa-arrow-left mr-2"></i> Back to Tasks
-                                                </a>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="form-group">
-                                                <label for="statusUpdate">Update Status</label>
-                                                <div class="status-timeline-container mt-2">
-                                                    <?php
-                                                    // Define the timeline steps
-                                                    $timelineSteps = ['pending', 'in_progress', 'finish', 'qa', 'completed'];
-                                                    $currentStatus = $task['status_assignee'] ?? 'pending';
-                                                    
-                                                    // Determine the current step index
-                                                    $currentStepIndex = array_search($currentStatus, $timelineSteps);
-                                                    if ($currentStepIndex === false) $currentStepIndex = 0;
-                                                    
-                                                    // Display the timeline
-                                                    ?>
-                                                    <div class="status-timeline d-flex align-items-center">
-                                                        <?php foreach ($timelineSteps as $index => $step): 
-                                                            $isActive = $index <= $currentStepIndex;
-                                                            $isCurrent = $index == $currentStepIndex;
-                                                            $canUpdate = false;
-                                                            
-                                                            // Determine if this step can be updated by the artist
-                                                            if (($currentStatus === 'pending' && $step === 'in_progress') || 
-                                                                ($currentStatus === 'in_progress' && $step === 'finish')) {
-                                                                $canUpdate = true;
-                                                            }
-                                                            
-                                                            // Determine classes
-                                                            $stepClass = 'status-step';
-                                                            if ($isActive) $stepClass .= ' active';
-                                                            if ($isCurrent) $stepClass .= ' current';
-                                                            if ($canUpdate) $stepClass .= ' can-update';
-                                                            
-                                                            // Display connector line for steps after the first
-                                                            if ($index > 0): ?>
-                                                                <div class="status-connector <?php echo $index <= $currentStepIndex ? 'active' : ''; ?>"></div>
-                                                            <?php endif; ?>
-                                                            
-                                                            <div class="<?php echo $stepClass; ?>" 
-                                                                 data-assignment-id="<?php echo $task['assignment_id']; ?>"
-                                                                 data-status="<?php echo $step; ?>"
-                                                                 title="<?php echo ucfirst(str_replace('_', ' ', $step)); ?>"
-                                                                 <?php echo !$canUpdate ? 'data-locked="true"' : ''; ?>>
-                                                                <?php echo substr(ucfirst($step), 0, 1); ?>
-                                                                <span class="status-label"><?php echo ucfirst(str_replace('_', ' ', $step)); ?></span>
-                                                            </div>
-                                                        <?php endforeach; ?>
+                                                <div class="col-md-6">
+                                                    <div class="form-group">
+                                                        <label>Project Name</label>
+                                                        <p class="form-control-static">
+                                                            <?php echo htmlspecialchars($task['project_title'] ?? 'Untitled Project'); ?>
+                                                        </p>
                                                     </div>
-                                                    
-                                                    <div class="status-info mt-2">
-                                                        <?php if ($currentStatus === 'pending'): ?>
-                                                            <small class="text-muted">Click "In Progress" when you start working on this task.</small>
-                                                        <?php elseif ($currentStatus === 'in_progress'): ?>
-                                                            <small class="text-muted">Click "Finish" when your work is complete.</small>
-                                                        <?php elseif ($currentStatus === 'finish'): ?>
-                                                            <small class="text-muted">Task is awaiting QA by an administrator.</small>
-                                                        <?php elseif ($currentStatus === 'qa'): ?>
-                                                            <small class="text-muted">Task is in QA. Awaiting approval.</small>
-                                                        <?php elseif ($currentStatus === 'completed'): ?>
-                                                            <small class="text-success"><i class="fas fa-check-circle"></i> Task has been completed.</small>
-                                                        <?php endif; ?>
+                                                    <div class="form-group">
+                                                        <label>Company</label>
+                                                        <p class="form-control-static">
+                                                            <?php echo htmlspecialchars($task['company_name'] ?? 'No Company'); ?>
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-6">
+                                            
+                                                    <div class="form-group">
+                                                        <label>Description</label>
+                                                        <p class="form-control-static">
+                                                            <?php echo nl2br(htmlspecialchars($task['description'] ?? 'No description')); ?>
+                                                        </p>
+                                                    </div>
+                                                    <div class="form-group">
+                                                        <label>Role</label>
+                                                        <p class="form-control-static">
+                                                            <span class="badge badge-info p-2">
+                                                                <?php echo htmlspecialchars($task['role_task'] ?? 'Not Assigned'); ?>
+                                                            </span>
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                       
+                                       
+                                            </div>
+                                       
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card">
+                                        <div class="card-header bg-primary text-white">
+                                            <h5 class="card-title mb-0">
+                                                <i class="fas fa-calendar-alt mr-2"></i>Task Status
+                                            </h5>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="row">
+                                                <!-- Left Column -->
+                                                <div class="col-md-6">
+                                                    <div class="form-group">
+                                                        <label>Task Status</label>
+                                                        <p class="form-control-static">
+                                                            <span class="badge badge-<?php echo getStatusClass($task['status_assignee'] ?? 'Unknown'); ?> p-2">
+                                                                <?php
+                                                                $statusText = ucfirst(str_replace('_', ' ', $task['status_assignee'] ?? 'Unknown'));
+                                                                $statusIcon = '';
+                                                                switch ($task['status_assignee'] ?? 'Unknown') {
+                                                                    case 'in_progress':
+                                                                        $statusIcon = '<i class="fas fa-spinner fa-spin mr-1"></i>';
+                                                                        break;
+                                                                    case 'pending':
+                                                                        $statusIcon = '<i class="fas fa-clock mr-1"></i>';
+                                                                        break;
+                                                                    case 'finish':
+                                                                        $statusIcon = '<i class="fas fa-check mr-1"></i>';
+                                                                        $statusText = 'Finished';
+                                                                        break;
+                                                                    case 'qa':
+                                                                    case 'review':
+                                                                        $statusIcon = '<i class="fas fa-search mr-1"></i>';
+                                                                        $statusText = 'In QA Review';
+                                                                        break;
+                                                                    case 'approved':
+                                                                        $statusIcon = '<i class="fas fa-thumbs-up mr-1"></i>';
+                                                                        break;
+                                                                    case 'completed':
+                                                                        $statusIcon = '<i class="fas fa-check-circle mr-1"></i>';
+                                                                        break;
+                                                                    case 'delayed':
+                                                                        $statusIcon = '<i class="fas fa-exclamation-triangle mr-1"></i>';
+                                                                        break;
+                                                                }
+                                                                echo $statusIcon . $statusText;
+                                                                ?>
+                                                            </span>
+                                                        </p>
+                                                    </div>
+                                                    <div class="form-group">
+                                                        <label>Priority</label>
+                                                        <p class="form-control-static">
+                                                            <span class="badge badge-<?php echo getPriorityClass($task['priority'] ?? 'Not set'); ?> p-2">
+                                                                <?php echo ucfirst($task['priority'] ?? 'Not set'); ?>
+                                                            </span>
+                                                        </p>
+                                                    </div>
+                                                    <div class="form-group">
+                                                        <label>Date Received</label>
+                                                        <p class="form-control-static">
+                                                            <i class="far fa-calendar-alt mr-1"></i>
+                                                            <?php echo isset($task['date_arrived']) ? date('Y-m-d', strtotime($task['date_arrived'])) : 'Not set'; ?>
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            
+                                                <!-- Right Column -->
+                                                <div class="col-md-6">
+                                                    <div class="form-group">
+                                                        <label>Deadline</label>
+                                                        <p class="form-control-static">
+                                                            <i class="far fa-calendar-check mr-1"></i>
+                                                            <?php echo isset($task['deadline']) ? date('Y-m-d', strtotime($task['deadline'])) : 'Not set'; ?>
+                                                            <?php
+                                                            if (isset($task['deadline'])) {
+                                                                $deadline = new DateTime($task['deadline']);
+                                                                $now = new DateTime();
+                                                                $days_left = $now->diff($deadline)->format("%R%a");
+
+                                                                if ($days_left < 0) {
+                                                                    echo '<span class="badge badge-danger ml-2">Overdue by ' . abs($days_left) . ' days</span>';
+                                                                } elseif ($days_left == 0) {
+                                                                    echo '<span class="badge badge-warning ml-2">Due today</span>';
+                                                                } elseif ($days_left <= 3) {
+                                                                    echo '<span class="badge badge-warning ml-2">' . $days_left . ' days left</span>';
+                                                                } else {
+                                                                    echo '<span class="badge badge-info ml-2">' . $days_left . ' days left</span>';
+                                                                }
+                                                            }
+                                                            ?>
+                                                        </p>
+                                                    </div>
+                                                    <div class="form-group">
+                                                        <label>Assigned Images</label>
+                                                        <p class="form-control-static">
+                                                            <span class="badge badge-primary p-2">
+                                                                <i class="fas fa-images mr-1"></i> <?php echo count($images); ?> images
+                                                            </span>
+                                                        </p>
                                                     </div>
                                                 </div>
                                             </div>
@@ -504,7 +339,190 @@ function getPriorityClass($priority)
                                 </div>
                             </div>
                         </div>
-                    </div>
+
+                        <!-- Task Images Section -->
+                        <div class="card card-primary card-outline mt-4">
+                            <div class="card-header">
+                                <h3 class="card-title">
+                                    <i class="fas fa-images mr-2"></i>Assigned Images
+                                    <span class="badge badge-pill badge-primary ml-2"><?php echo count($images); ?></span>
+                                </h3>
+                            </div>
+                            <div class="card-body">
+                                <?php if (empty($images)): ?>
+                                        <div class="text-center text-muted p-4">
+                                            <i class="fas fa-image fa-3x mb-3"></i>
+                                            <p>No images assigned to this task yet.</p>
+                                        </div>
+                                <?php else: ?>
+                                        <div class="table-responsive">
+                                            <table class="table table-striped">
+                                                <thead>
+                                                    <tr>
+                                                        <th>#</th>
+                                                        <th>Image Name</th>
+                                                        <th>Estimated Time</th>
+                                                        <th>Role</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <?php foreach ($images as $index => $image): ?>
+                                                            <tr>
+                                                                <td><?php echo $index + 1; ?></td>
+                                                                <td><?php echo htmlspecialchars($image['image_path']); ?></td>
+                                                                <td>
+                                                                    <?php
+                                                                    if (!empty($image['estimated_time'])) {
+                                                                        $time = intval($image['estimated_time']);
+                                                                        if ($time >= 60) {
+                                                                            $hours = floor($time / 60);
+                                                                            $minutes = $time % 60;
+                                                                            echo $hours . 'hr' . ($minutes > 0 ? ' ' . $minutes . 'min' : '');
+                                                                        } else {
+                                                                            echo $time . ' min';
+                                                                        }
+                                                                    } else {
+                                                                        echo '<span class="text-muted">Not set</span>';
+                                                                    }
+                                                                    ?>
+                                                                </td>
+                                                                <td>
+                                                                    <?php if (!empty($image['image_role'])): ?>
+                                                                            <span class="badge badge-info">
+                                                                                <?php echo htmlspecialchars($image['image_role']); ?>
+                                                                            </span>
+                                                                    <?php else: ?>
+                                                                            <span class="text-muted">Not set</span>
+                                                                    <?php endif; ?>
+                                                                </td>
+                                                            </tr>
+                                                    <?php endforeach; ?>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+
+                        <!-- Task Actions Section -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <div class="card">
+                                    <div class="card-header bg-primary text-white">
+                                        <h5 class="card-title mb-0">
+                                            <i class="fas fa-cogs mr-2"></i>
+                                            Task Actions
+                                        </h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <div class="task-action-buttons">
+                                                    <?php if (($task['status_assignee'] ?? '') == 'pending'): ?>
+                                                            <button type="button" class="btn btn-primary start-task-btn"
+                                                                data-id="<?php echo $task['assignment_id'] ?? ''; ?>">
+                                                                <i class="fas fa-play mr-2"></i> Start Task
+                                                            </button>
+                                                    <?php elseif (($task['status_assignee'] ?? '') == 'in_progress'): ?>
+                                                            <button type="button" class="btn btn-success complete-task-btn"
+                                                                data-id="<?php echo $task['assignment_id'] ?? ''; ?>">
+                                                                <i class="fas fa-check mr-2"></i> Mark as Finished
+                                                            </button>
+                                                    <?php elseif (($task['status_assignee'] ?? '') == 'finish'): ?>
+                                                            <button type="button" class="btn btn-info" disabled>
+                                                                <i class="fas fa-hourglass-half mr-2"></i> Awaiting QA
+                                                            </button>
+                                                    <?php elseif (($task['status_assignee'] ?? '') == 'qa'): ?>
+                                                            <button type="button" class="btn btn-info" disabled>
+                                                                <i class="fas fa-clipboard-check mr-2"></i> In QA Review
+                                                            </button>
+                                                    <?php elseif (($task['status_assignee'] ?? '') == 'completed'): ?>
+                                                            <button type="button" class="btn btn-success" disabled>
+                                                                <i class="fas fa-trophy mr-2"></i> Task Completed
+                                                            </button>
+                                                    <?php endif; ?>
+
+                                                    <a href="task.php" class="btn btn-secondary">
+                                                        <i class="fas fa-arrow-left mr-2"></i> Back to Tasks
+                                                    </a>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="form-group">
+                                                    <label for="statusUpdate">Update Status</label>
+                                                    <div class="status-timeline-container mt-2">
+                                                        <?php
+                                                        // Define the timeline steps
+                                                        $timelineSteps = ['pending', 'in_progress', 'finish', 'qa', 'completed'];
+                                                        $currentStatus = $task['status_assignee'] ?? 'pending';
+
+                                                        // Determine the current step index
+                                                        $currentStepIndex = array_search($currentStatus, $timelineSteps);
+                                                        if ($currentStepIndex === false)
+                                                            $currentStepIndex = 0;
+
+                                                        // Display the timeline
+                                                        ?>
+                                                        <div class="status-timeline d-flex align-items-center">
+                                                            <?php foreach ($timelineSteps as $index => $step):
+                                                                $isActive = $index <= $currentStepIndex;
+                                                                $isCurrent = $index == $currentStepIndex;
+                                                                $canUpdate = false;
+
+                                                                // Determine if this step can be updated by the artist
+                                                                if (
+                                                                    ($currentStatus === 'pending' && $step === 'in_progress') ||
+                                                                    ($currentStatus === 'in_progress' && $step === 'finish')
+                                                                ) {
+                                                                    $canUpdate = true;
+                                                                }
+
+                                                                // Determine classes
+                                                                $stepClass = 'status-step';
+                                                                if ($isActive)
+                                                                    $stepClass .= ' active';
+                                                                if ($isCurrent)
+                                                                    $stepClass .= ' current';
+                                                                if ($canUpdate)
+                                                                    $stepClass .= ' can-update';
+
+                                                                // Display connector line for steps after the first
+                                                                if ($index > 0): ?>
+                                                                            <div class="status-connector <?php echo $index <= $currentStepIndex ? 'active' : ''; ?>"></div>
+                                                                    <?php endif; ?>
+                                                            
+                                                                    <div class="<?php echo $stepClass; ?>" 
+                                                                         data-assignment-id="<?php echo $task['assignment_id']; ?>"
+                                                                         data-status="<?php echo $step; ?>"
+                                                                         title="<?php echo ucfirst(str_replace('_', ' ', $step)); ?>"
+                                                                         <?php echo !$canUpdate ? 'data-locked="true"' : ''; ?>>
+                                                                        <?php echo substr(ucfirst($step), 0, 1); ?>
+                                                                        <span class="status-label"><?php echo ucfirst(str_replace('_', ' ', $step)); ?></span>
+                                                                    </div>
+                                                            <?php endforeach; ?>
+                                                        </div>
+                                                    
+                                                        <div class="status-info mt-2">
+                                                            <?php if ($currentStatus === 'pending'): ?>
+                                                                    <small class="text-muted">Click "In Progress" when you start working on this task.</small>
+                                                            <?php elseif ($currentStatus === 'in_progress'): ?>
+                                                                    <small class="text-muted">Click "Finish" when your work is complete.</small>
+                                                            <?php elseif ($currentStatus === 'finish'): ?>
+                                                                    <small class="text-muted">Task is awaiting QA by an administrator.</small>
+                                                            <?php elseif ($currentStatus === 'qa'): ?>
+                                                                    <small class="text-muted">Task is in QA. Awaiting approval.</small>
+                                                            <?php elseif ($currentStatus === 'completed'): ?>
+                                                                    <small class="text-success"><i class="fas fa-check-circle"></i> Task has been completed.</small>
+                                                            <?php endif; ?>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                 <?php endif; ?>
             </div>
         </section>
@@ -527,6 +545,46 @@ function getPriorityClass($priority)
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Task Blocked Modal -->
+<div class="modal fade" id="taskBlockedModal" tabindex="-1" role="dialog" aria-labelledby="taskBlockedModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="taskBlockedModalLabel">
+                    <i class="fas fa-exclamation-triangle mr-2"></i>
+                    Access Blocked
+                </h5>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="text-center mb-4">
+                    <i class="fas fa-lock fa-4x text-danger mb-3"></i>
+                    <h4>Your account is currently blocked</h4>
+                    <p class="text-muted"><?php echo htmlspecialchars($block_reason); ?></p>
+                </div>
+                <div class="alert alert-warning">
+                    <i class="fas fa-info-circle"></i> What you need to do:
+                    <ul class="mb-0 mt-2">
+                        <li>Complete your overdue tasks as soon as possible</li>
+                        <li>If your delay is justifiable, contact your supervisor</li>
+                        <li>Once resolved, you'll be able to access new tasks</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="modal-footer justify-content-center">
+                <a href="task.php" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left mr-1"></i> Back to Tasks
+                </a>
+                <a href="#" class="btn btn-primary" data-dismiss="modal">
+                    <i class="fas fa-eye mr-1"></i> View Task Details
+                </a>
             </div>
         </div>
     </div>
@@ -606,6 +664,36 @@ function getPriorityClass($priority)
     
     .status-info {
         padding: 10px 0;
+    }
+    
+    .blocked-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 100;
+    }
+    
+    .blocked-message {
+        background-color: #dc3545;
+        color: white;
+        padding: 15px 25px;
+        border-radius: 5px;
+        font-weight: bold;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+    }
+    
+    .blocked-message i {
+        margin-right: 10px;
+    }
+    
+    .task-content {
+        position: relative;
     }
 </style>
 
@@ -770,6 +858,24 @@ function getPriorityClass($priority)
                 $('.start-task-btn, .complete-task-btn').fadeOut();
             }
         }
+
+        // Show task blocked modal if needed
+        $(document).ready(function() {
+            <?php if ($is_blocked): ?>
+                // Show the modal when page loads
+                $('#taskBlockedModal').modal({
+                    backdrop: 'static',
+                    keyboard: false
+                });
+            
+                // Disable all interactive elements in the task
+                $('.task-action-btn').addClass('disabled').prop('disabled', true);
+                $('.task-action-btn').attr('title', 'You have overdue tasks. Complete them first.');
+            
+                // Show overlay on task content
+                $('.task-content').prepend('<div class="blocked-overlay"><div class="blocked-message"><i class="fas fa-lock"></i> Task locked due to overdue tasks</div></div>');
+            <?php endif; ?>
+        });
     });
 </script>
 

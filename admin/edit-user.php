@@ -51,6 +51,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         'status' => $_POST['status']
     );
 
+    // Add profile image if uploaded
+    if (isset($_FILES['profileImg']) && $_FILES['profileImg']['size'] > 0) {
+        $userData['profileImg'] = $_FILES['profileImg'];
+    }
+
     $response = updateUser($user_id, $userData);
     if ($response['success']) {
         // Store success message in session
@@ -124,23 +129,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                                     if (!empty($user['profile_img'])) {
                                         // Check multiple possible locations
                                         $possible_locations = [
+                                            '../uploads/profile_pictures/' . basename($user['profile_img']),
+                                            '../uploads/profile_pictures/' . $user['profile_img'],
                                             'assets/img/profile/' . $user['profile_img'],
-                                            'uploads/profile_images/' . $user['profile_img'],
                                             'profiles/' . $user['profile_img']
                                         ];
-                                        
+
                                         foreach ($possible_locations as $location) {
                                             if (file_exists($location)) {
-                                                $profile_img_path = '../' . $location;
+                                                $profile_img_path = $location;
                                                 break;
                                             }
                                         }
-                                        
+
                                         // If profile_img already contains a path prefix
-                                        if (strpos($user['profile_img'], '/') === 0 || 
-                                            strpos($user['profile_img'], 'assets/') === 0 ||
-                                            strpos($user['profile_img'], 'uploads/') === 0) {
-                                            $direct_path = '../' . ltrim($user['profile_img'], '/');
+                                        if (strpos($user['profile_img'], 'uploads/profile_pictures/') === 0) {
+                                            $direct_path = '../' . $user['profile_img'];
                                             if (file_exists($direct_path)) {
                                                 $profile_img_path = $direct_path;
                                             }
@@ -194,9 +198,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                                 <div class="tab-content">
                                     <!-- Details Tab -->
                                     <div class="active tab-pane" id="details">
-                                        <form id="editUserForm" method="POST">
+                                        <form id="editUserForm" method="POST" enctype="multipart/form-data">
                                             <input type="hidden" name="action" value="update">
                                             <h6 class="border-bottom pb-2 mb-3">Personal Information</h6>
+                                            <div class="row">
+                                                <div class="col-md-12 mb-3">
+                                                    <div class="form-group">
+                                                        <label for="profileImg">Profile Picture</label>
+                                                        <input type="file" class="form-control" id="profileImg"
+                                                            name="profileImg" accept="image/*">
+                                                        <small class="form-text text-muted">Upload a new profile picture
+                                                            (JPG, PNG, or GIF). Max size: 2MB</small>
+                                                    </div>
+                                                </div>
+                                            </div>
                                             <div class="row">
                                                 <div class="col-md-4">
                                                     <div class="form-group">

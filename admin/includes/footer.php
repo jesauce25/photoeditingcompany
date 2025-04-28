@@ -83,6 +83,8 @@
         $('.dropdown-menu a[data-notification-id]').on('click', function (e) {
             e.preventDefault();
             const notificationId = $(this).data('notification-id');
+            const notificationLink = $(this).attr('href');
+            const isValidLink = notificationLink && notificationLink !== '#';
 
             // Mark notification as read via AJAX
             $.ajax({
@@ -109,13 +111,26 @@
                                 $('#notification-bell .navbar-badge').text(currentCount);
                                 $('.dropdown-item.dropdown-header').text(currentCount + ' Notifications');
                             }
+
+                            // Navigate to the link if it's valid
+                            if (isValidLink) {
+                                window.location.href = notificationLink;
+                            }
                         }
                     } catch (error) {
                         console.error('Error parsing AJAX response:', error);
+                        // Navigate even if there's an error parsing the response
+                        if (isValidLink) {
+                            window.location.href = notificationLink;
+                        }
                     }
                 },
                 error: function (xhr, status, error) {
                     console.error('AJAX request failed:', status, error);
+                    // Navigate even if the AJAX request fails
+                    if (isValidLink) {
+                        window.location.href = notificationLink;
+                    }
                 }
             });
         });

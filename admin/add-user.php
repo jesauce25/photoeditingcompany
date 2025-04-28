@@ -1,6 +1,6 @@
 <?php
-// Include role check
-require_once('includes/check_admin_role.php');
+// // Include role check
+// require_once('includes/check_admin_role.php');
 
 include("includes/header.php");
 ?>

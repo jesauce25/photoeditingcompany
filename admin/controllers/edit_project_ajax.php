@@ -560,35 +560,22 @@ if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQ
                 $new_filename = $original_filename;
                 $counter = 1;
 
-                while (file_exists($project_upload_dir . $new_filename)) {
-                    $new_filename = $base_name . "(" . $counter . ")." . $file_ext;
-                    $counter++;
-                }
+                // Skip file upload, only store the filename
+                $sql = "INSERT INTO tbl_project_images (project_id, image_path, file_type, file_size, status_image) 
+                       VALUES (?, ?, ?, ?, 'available')";
+                $stmt = $conn->prepare($sql);
 
-                // Move the uploaded file
-                if (move_uploaded_file($files['tmp_name'][$i], $project_upload_dir . $new_filename)) {
-                    // Insert into database - Note: no file_name column anymore
-                    $sql = "INSERT INTO tbl_project_images (project_id, image_path, file_type, file_size, status_image) 
-                           VALUES (?, ?, ?, ?, 'available')";
-                    $stmt = $conn->prepare($sql);
+                $file_type = $files['type'][$i];
+                $file_size = $files['size'][$i];
+                $image_path = $new_filename; // Store just the filename
 
-                    $file_type = $files['type'][$i];
-                    $file_size = $files['size'][$i];
-                    $image_path = $new_filename; // Store just the filename, not the full path
+                $stmt->bind_param("issi", $project_id, $image_path, $file_type, $file_size);
 
-                    $stmt->bind_param("issi", $project_id, $image_path, $file_type, $file_size);
-
-                    if ($stmt->execute()) {
-                        $uploaded_count++;
-                    } else {
-                        $failed_count++;
-                        $errors[] = "Database error for file {$original_filename}: " . $stmt->error;
-                        // Remove the file if database insertion fails
-                        @unlink($project_upload_dir . $new_filename);
-                    }
+                if ($stmt->execute()) {
+                    $uploaded_count++;
                 } else {
                     $failed_count++;
-                    $errors[] = "Failed to move uploaded file {$original_filename}";
+                    $errors[] = "Database error for file {$original_filename}: " . $stmt->error;
                 }
             }
 
@@ -926,49 +913,82 @@ if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQ
             break;
 
         case 'mark_delay_acceptable':
-            if (!isset($_POST['assignment_id'])) {
-                echo json_encode(['status' => 'error', 'message' => 'Missing assignment ID']);
+            // Validate assignment ID
+            if (!isset($_POST['assignment_id']) || empty($_POST['assignment_id'])) {
+                echo json_encode([
+                    'status' => 'error',
+                    'message' => 'Assignment ID is required'
+                ]);
                 exit;
             }
 
-            $assignmentId = intval($_POST['assignment_id']);
-
-            // Start transaction
-            $conn->begin_transaction();
+            $assignment_id = $_POST['assignment_id'];
 
             try {
-                // Update the delay_acceptable field in the assignment table
-                $updateQuery = "UPDATE tbl_project_assignments 
-                               SET delay_acceptable = 1, 
-                                   last_updated = NOW() 
-                               WHERE assignment_id = ?";
+                // Start transaction
+                $conn->begin_transaction();
 
-                $stmt = $conn->prepare($updateQuery);
-                $stmt->bind_param('i', $assignmentId);
+                // Update assignment to mark delay as acceptable
+                $sql = "UPDATE tbl_project_assignments 
+                        SET delay_acceptable = 1, 
+                            last_updated = NOW() 
+                        WHERE assignment_id = ?";
 
-                if (!$stmt->execute()) {
-                    throw new Exception('Failed to update assignment: ' . $conn->error);
+                $stmt = $conn->prepare($sql);
+                if (!$stmt) {
+                    throw new Exception("Error preparing statement: " . $conn->error);
                 }
 
-                // Log the action
-                logAjaxRequest('mark_delay_acceptable', [
-                    'assignment_id' => $assignmentId,
-                    'user_id' => $_SESSION['user_id'] ?? 0
-                ]);
+                $stmt->bind_param("i", $assignment_id);
+                $result = $stmt->execute();
 
-                // Commit transaction
-                $conn->commit();
+                if (!$result) {
+                    throw new Exception("Error executing query: " . $stmt->error);
+                }
 
-                echo json_encode([
-                    'status' => 'success',
-                    'message' => 'Delay has been marked as acceptable.'
-                ]);
+                // Check if update was successful
+                if ($stmt->affected_rows > 0) {
+                    // Get assignment details for response
+                    $get_assignment = "SELECT pa.*, p.project_title, u.first_name, u.last_name 
+                    FROM tbl_project_assignments pa
+                    JOIN tbl_projects p ON pa.project_id = p.project_id
+                    JOIN tbl_users u ON pa.user_id = u.user_id
+                    WHERE pa.assignment_id = ?";
+
+
+
+                    $stmt_details = $conn->prepare($get_assignment);
+                    $stmt_details->bind_param("i", $assignment_id);
+                    $stmt_details->execute();
+                    $result_details = $stmt_details->get_result();
+                    $assignment = $result_details->fetch_assoc();
+
+                    // Commit transaction
+                    $conn->commit();
+
+                    // Return success response
+                    echo json_encode([
+                        'status' => 'success',
+                        'message' => 'Delay marked as acceptable',
+                        'assignment' => $assignment
+                    ]);
+                } else {
+                    throw new Exception("Assignment not found or no changes made");
+                }
             } catch (Exception $e) {
                 // Rollback transaction on error
                 $conn->rollback();
-                echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+
+                // Log error
+                error_log("Error marking delay as acceptable: " . $e->getMessage());
+
+                // Return error response
+                echo json_encode([
+                    'status' => 'error',
+                    'message' => 'Failed to mark delay as acceptable: ' . $e->getMessage()
+                ]);
             }
-            break;
+            exit;
 
         case 'remove_assigned_images':
             if (!isset($_POST['assignment_id'])) {

@@ -1,4 +1,7 @@
 <?php
+// Start output buffering at the very beginning of the file
+ob_start();
+
 include("includes/header.php");
 require_once 'controllers/db_connection_passthrough.php';
 
@@ -74,7 +77,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['updateProfile'])) {
     $profile_img = $user['profile_img']; // Default to current profile image
 
     if (isset($_FILES['profileImage']) && $_FILES['profileImage']['size'] > 0) {
-        $target_dir = "../profiles/";
+        $target_dir = "../uploads/profile_pictures/";
         // Create directory if it doesn't exist
         if (!file_exists($target_dir)) {
             mkdir($target_dir, 0755, true);
@@ -85,7 +88,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['updateProfile'])) {
         $target_file = $target_dir . $profile_img_filename;
 
         if (move_uploaded_file($_FILES['profileImage']['tmp_name'], $target_file)) {
-            $profile_img = $profile_img_filename;
+            $profile_img = 'uploads/profile_pictures/' . $profile_img_filename;
         } else {
             $_SESSION['error_message'] = "Error uploading profile image";
         }
@@ -110,9 +113,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['updateProfile'])) {
             // Set success message
             $_SESSION['success_message'] = "Profile updated successfully!";
 
-            // Use ob_start to prevent headers already sent issue
-            ob_start();
-            // Refresh user data
+            // Redirect - will use the buffer flushing at the end
             header("Location: profile-settings.php");
             ob_end_flush();
             exit;
@@ -181,9 +182,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['updateSecurity'])) {
         }
     }
 
-    // Use ob_start to prevent headers already sent issue
-    ob_start();
-    // Redirect to refresh the page
+    // Redirect - will use the buffer flushing at the end
     header("Location: profile-settings.php");
     ob_end_flush();
     exit;
@@ -194,9 +193,9 @@ $profile_img_path = '../dist/img/user-default.jpg';
 if (!empty($user['profile_img'])) {
     // Check multiple possible locations
     $possible_locations = [
-        '../assets/img/profile/' . $user['profile_img'],
-        '../uploads/profile_images/' . $user['profile_img'],
-        '../profiles/' . $user['profile_img']
+        '../assets/img/profile/' . basename($user['profile_img']),
+        '../uploads/profile_pictures/' . basename($user['profile_img']),
+        '../profiles/' . basename($user['profile_img'])
     ];
 
     foreach ($possible_locations as $location) {
@@ -206,13 +205,12 @@ if (!empty($user['profile_img'])) {
         }
     }
 
-    // Direct path check
+    // Direct path check - for absolute paths stored in database
     if (
-        strpos($user['profile_img'], '/') === 0 ||
         strpos($user['profile_img'], 'assets/') === 0 ||
         strpos($user['profile_img'], 'uploads/') === 0
     ) {
-        $direct_path = '../' . ltrim($user['profile_img'], '/');
+        $direct_path = '../' . $user['profile_img'];
         if (file_exists($direct_path)) {
             $profile_img_path = $direct_path;
         }
@@ -464,6 +462,11 @@ if (!empty($user['profile_img'])) {
                 const targetId = this.getAttribute('data-target');
                 const passwordInput = document.getElementById(targetId);
 
+                // Skip toggling if the input is readonly or disabled
+                if (passwordInput.readOnly || passwordInput.disabled) {
+                    return;
+                }
+
                 // Toggle password visibility
                 if (passwordInput.type === 'password') {
                     passwordInput.type = 'text';
@@ -476,6 +479,20 @@ if (!empty($user['profile_img'])) {
                 }
             });
         });
+
+        // Special handling for the current password field
+        const currentPasswordInput = document.getElementById('currentPassword');
+        if (currentPasswordInput) {
+            // Allow editing the current password field
+            currentPasswordInput.readOnly = false;
+
+            // Clear placeholder value when focused
+            currentPasswordInput.addEventListener('focus', function () {
+                if (this.value === '••••••••') {
+                    this.value = '';
+                }
+            });
+        }
     });
 </script>
 </body>

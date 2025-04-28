@@ -40,7 +40,15 @@ if ($current_user_id > 0) {
 
     if ($result && $row = $result->fetch_assoc()) {
         if (!empty($row['profile_img'])) {
-            $user_profile_image = '../' . $row['profile_img'];
+            // Check if the path is already in the uploads directory or still in the old location
+            $profile_img = $row['profile_img'];
+            if (strpos($profile_img, 'assets/img/profile') !== false) {
+                // Old path - we'll continue to use it for now
+                $user_profile_image = '../' . $profile_img;
+            } else {
+                // Should be in the uploads directory
+                $user_profile_image = '../uploads/profile_pictures/' . basename($profile_img);
+            }
         }
     }
 }
@@ -172,30 +180,8 @@ if ($startedTasks > 0) {
 // Update notification count to include system notifications
 $notificationCount += count($systemNotifications);
 
-// Get notification counts for menu badges
-// New companies count (last 7 days)
-$newCompaniesCount = 0;
-$sqlCompanies = "SELECT COUNT(*) as count FROM tbl_companies WHERE date_created >= DATE_SUB(NOW(), INTERVAL 7 DAY)";
-$resultCompanies = $conn->query($sqlCompanies);
-if ($resultCompanies && $rowCompanies = $resultCompanies->fetch_assoc()) {
-    $newCompaniesCount = $rowCompanies['count'];
-}
 
-// New projects count (last 7 days)
-$newProjectsCount = 0;
-$sqlProjects = "SELECT COUNT(*) as count FROM tbl_projects WHERE date_created >= DATE_SUB(NOW(), INTERVAL 7 DAY)";
-$resultProjects = $conn->query($sqlProjects);
-if ($resultProjects && $rowProjects = $resultProjects->fetch_assoc()) {
-    $newProjectsCount = $rowProjects['count'];
-}
 
-// New users count (last 7 days)
-$newUsersCount = 0;
-$sqlUsers = "SELECT COUNT(*) as count FROM tbl_users WHERE date_added >= DATE_SUB(NOW(), INTERVAL 7 DAY)";
-$resultUsers = $conn->query($sqlUsers);
-if ($resultUsers && $rowUsers = $resultUsers->fetch_assoc()) {
-    $newUsersCount = $rowUsers['count'];
-}
 ?>
 <!-- Navbar -->
 <nav class="main-header navbar navbar-expand navbar-white navbar-light">
@@ -250,7 +236,30 @@ if ($resultUsers && $rowUsers = $resultUsers->fetch_assoc()) {
                 <?php endforeach; ?>
 
                 <?php foreach ($notifications as $notification): ?>
-                    <a href="#"
+                    <?php
+                    // Determine the link based on entity_type and entity_id
+                    $link = "#";
+                    if (!empty($notification['entity_type']) && !empty($notification['entity_id'])) {
+                        switch ($notification['entity_type']) {
+                            case 'project':
+                                $link = "view-project.php?id=" . $notification['entity_id'];
+                                break;
+                            case 'company':
+                                $link = "view-company.php?id=" . $notification['entity_id'];
+                                break;
+                            case 'user':
+                                $link = "view-user.php?id=" . $notification['entity_id'];
+                                break;
+                            case 'task':
+                            case 'assignment':
+                                $link = "task.php?id=" . $notification['entity_id'];
+                                break;
+                            default:
+                                $link = "#";
+                        }
+                    }
+                    ?>
+                    <a href="<?php echo $link; ?>"
                         class="dropdown-item <?php echo $notification['is_read'] ? 'text-muted' : 'font-weight-bold'; ?>"
                         data-notification-id="<?php echo $notification['notification_id']; ?>">
                         <?php
@@ -388,7 +397,6 @@ if ($resultUsers && $rowUsers = $resultUsers->fetch_assoc()) {
                         <p>
                             Company
                             <i class="fas fa-angle-left right"></i>
-                            <span class="badge badge-info right"><?php echo $newCompaniesCount; ?></span>
                         </p>
                     </a>
                     <ul class="nav nav-treeview">
@@ -413,7 +421,6 @@ if ($resultUsers && $rowUsers = $resultUsers->fetch_assoc()) {
                         <p>
                             Project
                             <i class="fas fa-angle-left right"></i>
-                            <span class="badge badge-info right"><?php echo $newProjectsCount; ?></span>
                         </p>
                     </a>
                     <ul class="nav nav-treeview">
@@ -445,7 +452,6 @@ if ($resultUsers && $rowUsers = $resultUsers->fetch_assoc()) {
                             <p>
                                 User Management
                                 <i class="fas fa-angle-left right"></i>
-                                <span class="badge badge-info right"><?php echo $newUsersCount; ?></span>
                             </p>
                         </a>
                         <ul class="nav nav-treeview">

@@ -14,8 +14,8 @@ if (isset($_GET['company_id']) && !empty($_GET['company_id'])) {
     $filters['company_id'] = $_GET['company_id'];
 }
 
-if (isset($_GET['status']) && !empty($_GET['status'])) {
-    $filters['status_project'] = $_GET['status'];
+if (isset($_GET['status_project']) && !empty($_GET['status_project'])) {
+    $filters['status_project'] = $_GET['status_project'];
 }
 
 if (isset($_GET['priority']) && !empty($_GET['priority'])) {
@@ -406,11 +406,14 @@ unset($_SESSION['success_message']);
                                         <select id="statusSelect" class="form-control form-control-sm mr-2"
                                             style="width: 150px; height: 100%;">
                                             <option value="">All Statuses</option>
-                                            <option value="pending" <?php echo (isset($_GET['status']) && $_GET['status'] == 'pending') ? 'selected' : ''; ?>>Pending</option>
-                                            <option value="in_progress" <?php echo (isset($_GET['status']) && $_GET['status'] == 'in_progress') ? 'selected' : ''; ?>>In Progress
+                                            <option value="pending" <?php echo (isset($_GET['status_project']) && $_GET['status_project'] == 'pending') ? 'selected' : ''; ?>>Pending
                                             </option>
-                                            <option value="review" <?php echo (isset($_GET['status']) && $_GET['status'] == 'review') ? 'selected' : ''; ?>>Review</option>
-                                            <option value="completed" <?php echo (isset($_GET['status']) && $_GET['status'] == 'completed') ? 'selected' : ''; ?>>Completed</option>
+                                            <option value="in_progress" <?php echo (isset($_GET['status_project']) && $_GET['status_project'] == 'in_progress') ? 'selected' : ''; ?>>In
+                                                Progress
+                                            </option>
+                                            <option value="review" <?php echo (isset($_GET['status_project']) && $_GET['status_project'] == 'review') ? 'selected' : ''; ?>>Review</option>
+                                            <option value="completed" <?php echo (isset($_GET['status_project']) && $_GET['status_project'] == 'completed') ? 'selected' : ''; ?>>Completed
+                                            </option>
                                         </select>
                                         <button id="applyFilter" class="btn btn-info btn-sm">
                                             <i class="fas fa-filter mr-1"></i> Filter

@@ -41,10 +41,15 @@ try {
             $users = [];
             while ($row = $result->fetch_assoc()) {
                 // Set default profile image if none exists
-                if (empty($row['profile_img']) || !file_exists("../profiles/" . $row['profile_img'])) {
-                    $row['profile_img'] = '../profiles/default.jpg';
+                if (empty($row['profile_img'])) {
+                    $row['profile_img'] = '../dist/img/user-default.jpg';
+                } else if (file_exists("../uploads/profile_pictures/" . basename($row['profile_img']))) {
+                    $row['profile_img'] = '../uploads/profile_pictures/' . basename($row['profile_img']);
+                } else if (strpos($row['profile_img'], 'uploads/profile_pictures/') !== false) {
+                    $row['profile_img'] = '../' . $row['profile_img'];
                 } else {
-                    $row['profile_img'] = '../profiles/' . $row['profile_img'];
+                    // Fallback to default if file doesn't exist
+                    $row['profile_img'] = '../dist/img/user-default.jpg';
                 }
 
                 $users[] = $row;

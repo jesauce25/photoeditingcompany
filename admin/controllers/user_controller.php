@@ -126,20 +126,10 @@ function updateUser($user_id, $userData)
         // Format birth date for database
         $birthDate = !empty($userData['birthDate']) ? date('Y-m-d', strtotime($userData['birthDate'])) : null;
 
-        // Update user details in tbl_users
-        $stmt = $conn->prepare("UPDATE tbl_users SET 
-            first_name = ?, 
-            mid_name = ?, 
-            last_name = ?, 
-            birth_date = ?, 
-            address = ?, 
-            contact_num = ?, 
-            email_address = ?, 
-            date_updated = NOW() 
-            WHERE user_id = ?");
-
-        $stmt->bind_param(
-            "sssssssi",
+        // Handle profile image upload if available
+        $profile_img_update = "";
+        $profile_img_param_types = "sssssssi"; // Default param types without profile image
+        $bind_params = [
             $userData['firstName'],
             $userData['midName'],
             $userData['lastName'],
@@ -148,7 +138,69 @@ function updateUser($user_id, $userData)
             $userData['contactNum'],
             $userData['emailAddress'],
             $user_id
-        );
+        ];
+
+        // If profile image is being updated
+        if (isset($userData['profileImg']) && $userData['profileImg']['error'] === UPLOAD_ERR_OK) {
+            $file = $userData['profileImg'];
+            $filename = $file['name'];
+            $tmp_name = $file['tmp_name'];
+            $file_ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+
+            // Check file extension
+            $allowed_ext = array('jpg', 'jpeg', 'png', 'gif');
+            if (!in_array($file_ext, $allowed_ext)) {
+                throw new Exception('Invalid file type. Only JPG, JPEG, PNG and GIF files are allowed.');
+            }
+
+            // Generate unique filename
+            $new_filename = uniqid('profile_') . '.' . $file_ext;
+            $upload_dir = '../uploads/profile_pictures/';
+
+            // Create directory if it doesn't exist
+            if (!file_exists($upload_dir)) {
+                mkdir($upload_dir, 0755, true);
+            }
+
+            $upload_path = $upload_dir . $new_filename;
+            $profile_img = 'uploads/profile_pictures/' . $new_filename;
+
+            // Move uploaded file
+            if (move_uploaded_file($tmp_name, $upload_path)) {
+                // Add profile_img to the SQL update
+                $profile_img_update = ", profile_img = ?";
+                $profile_img_param_types = "ssssssssi"; // Add 's' for the profile_img parameter
+                array_splice($bind_params, 7, 0, [$profile_img]); // Insert profile_img before user_id
+
+                // Delete old profile image if it exists
+                if (!empty($currentUser['profile_img'])) {
+                    $old_path = '../' . $currentUser['profile_img'];
+                    if (
+                        file_exists($old_path) &&
+                        strpos($old_path, '/uploads/profile_pictures/') !== false
+                    ) {
+                        @unlink($old_path);
+                    }
+                }
+            } else {
+                throw new Exception('Failed to upload profile image');
+            }
+        }
+
+        // Update user details in tbl_users
+        $stmt = $conn->prepare("UPDATE tbl_users SET 
+            first_name = ?, 
+            mid_name = ?, 
+            last_name = ?, 
+            birth_date = ?, 
+            address = ?, 
+            contact_num = ?, 
+            email_address = ? 
+            $profile_img_update,
+            date_updated = NOW() 
+            WHERE user_id = ?");
+
+        $stmt->bind_param($profile_img_param_types, ...$bind_params);
 
         if (!$stmt->execute()) {
             throw new Exception("Failed to update user details");
@@ -272,18 +324,33 @@ function formatUsersForDisplay($users)
         // Format full name
         $full_name = $user['first_name'] . ' ' . ($user['mid_name'] ? $user['mid_name'] . ' ' : '') . $user['last_name'];
 
-        // Format profile image path
-        $profile_img_path = '';
+        // Format profile image path - completely new approach
+        $profile_img_path = '../dist/img/user-default.jpg'; // Default fallback
+
         if (!empty($user['profile_img'])) {
-            // Check if file exists
-            $img_path = dirname(dirname(__FILE__)) . '/assets/img/profile/' . $user['profile_img'];
-            if (file_exists($img_path)) {
-                $profile_img_path = 'assets/img/profile/' . $user['profile_img'];
+            // Check if file exists in uploads directory
+            $profile_path = '../../uploads/profile_pictures/' . basename($user['profile_img']);
+            $direct_path = '../../' . $user['profile_img'];
+
+            // Debug logging
+            error_log("Checking profile image paths:");
+            error_log("Original path: " . $user['profile_img']);
+            error_log("Profile path: " . $profile_path);
+            error_log("Direct path: " . $direct_path);
+
+            // Try different path possibilities
+            if (file_exists($profile_path)) {
+                $profile_img_path = '../../uploads/profile_pictures/' . basename($user['profile_img']);
+                error_log("Using profile path: " . $profile_img_path);
+            } else if (file_exists($direct_path)) {
+                $profile_img_path = '../../' . $user['profile_img'];
+                error_log("Using direct path: " . $profile_img_path);
+            } else if (file_exists('../../' . 'uploads/profile_pictures/' . $user['profile_img'])) {
+                $profile_img_path = '../../uploads/profile_pictures/' . $user['profile_img'];
+                error_log("Using full uploads path: " . $profile_img_path);
             } else {
-                $profile_img_path = 'dist/img/user-default.jpg';
+                error_log("No valid path found, using default image");
             }
-        } else {
-            $profile_img_path = 'dist/img/user-default.jpg';
         }
 
         $formatted_users[] = [
@@ -390,11 +457,19 @@ function registerUser($userData)
 
             // Generate unique filename
             $new_filename = uniqid('profile_') . '.' . $file_ext;
-            $upload_path = dirname(dirname(__FILE__)) . '/assets/img/profile/' . $new_filename;
+            $upload_dir = '../uploads/profile_pictures/';
+
+            // Create directory if it doesn't exist
+            if (!file_exists($upload_dir)) {
+                mkdir($upload_dir, 0755, true);
+            }
+
+            $upload_path = $upload_dir . $new_filename;
+            $db_path = 'uploads/profile_pictures/' . $new_filename;
 
             // Move uploaded file
             if (move_uploaded_file($tmp_name, $upload_path)) {
-                $profile_img = $new_filename;
+                $profile_img = $db_path;
             } else {
                 throw new Exception('Failed to upload profile image');
             }

@@ -24,6 +24,7 @@ $companies = getCompaniesForDropdown();
 $search = isset($_GET['search']) ? trim($_GET['search']) : '';
 $filters = [];
 
+// Handle filters passed via GET parameters
 if (isset($_GET['company_id']) && !empty($_GET['company_id'])) {
     $filters['company_id'] = $_GET['company_id'];
 }
@@ -163,6 +164,9 @@ unset($_SESSION['success_message']);
                                         </select>
                                         <button id="applyFilter" class="btn btn-info btn-sm">
                                             <i class="fas fa-filter mr-1"></i> Filter
+                                        </button>
+                                        <button id="resetFilter" class="btn btn-secondary btn-sm ml-1">
+                                            <i class="fas fa-undo mr-1"></i> Reset
                                         </button>
                                     </div>
                                 </div>
@@ -468,7 +472,8 @@ unset($_SESSION['success_message']);
 </div>
 
 <script>
-    $(document).ready(function () {
+    document.addEventListener("DOMContentLoaded", function () {
+
         // Logging functions
         const logging = {
             debug: function (message, data = null) {
@@ -606,6 +611,16 @@ unset($_SESSION['success_message']);
             applyFilters();
         });
 
+        $('#resetFilter').click(function() {
+            logging.interaction('Reset filter button clicked');
+            // Clear all filter selects
+            $('#companySelect').val('');
+            $('#prioritySelect').val('');
+            $('#searchInput').val('');
+            // Reload page without filters
+            window.location.href = 'delayed-project-list.php';
+        });
+
         $('#searchButton').click(function () {
             logging.interaction('Search button clicked');
             applyFilters();
@@ -618,29 +633,61 @@ unset($_SESSION['success_message']);
             }
         });
 
+        // Enhanced filter functionality copied from project-list.php
         function applyFilters() {
+            console.log('=== Starting Filter Application ===');
             $('.loading-overlay').fadeIn();
+
             var company = $('#companySelect').val();
             var priority = $('#prioritySelect').val();
             var search = $('#searchInput').val();
 
-            logging.info('Applying filters', {
-                company: company,
-                priority: priority,
-                search: search
+            console.log('Current Filter Values:', {
+                'Company ID': company,
+                'Priority': priority,
+                'Search Term': search
             });
 
+            // Build the URL with all selected filters
             var url = 'delayed-project-list.php?';
             var params = [];
 
-            if (company) params.push('company_id=' + encodeURIComponent(company));
-            if (priority) params.push('priority=' + encodeURIComponent(priority));
-            if (search) params.push('search=' + encodeURIComponent(search));
+            if (company) {
+                params.push('company_id=' + encodeURIComponent(company));
+                console.log('Adding company filter:', company);
+            }
+            if (priority) {
+                params.push('priority=' + encodeURIComponent(priority));
+                console.log('Adding priority filter:', priority);
+            }
+            if (search) {
+                params.push('search=' + encodeURIComponent(search));
+                console.log('Adding search filter:', search);
+            }
 
-            url += params.join('&');
-
-            window.location.href = url;
+            if (params.length > 0) {
+                url += params.join('&');
+                console.log('Final URL to navigate:', url);
+                // Use a timeout to ensure UI remains responsive
+                setTimeout(function () {
+                    window.location.href = url;
+                }, 100);
+            } else {
+                console.log('No filters applied, reloading base page');
+                // Use a timeout to ensure UI remains responsive
+                setTimeout(function () {
+                    window.location.href = 'delayed-project-list.php';
+                }, 100);
+            }
         }
+
+        // Monitor select changes for debugging
+        $('#companySelect, #prioritySelect').on('change', function () {
+            console.log('Select changed:', {
+                'Element': $(this).attr('id'),
+                'New Value': $(this).val()
+            });
+        });
 
         // Delete functionality
         $(document).on('click', '.delete-btn', function () {

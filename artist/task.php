@@ -12,6 +12,8 @@ error_log("Task.php - Role: " . ($_SESSION['role'] ?? 'not set'));
 // Include necessary files
 require_once '../includes/db_connection.php';
 require_once 'includes/auth_check.php';
+require_once 'includes/task_block_check.php';
+require_once 'includes/helper_functions.php';
 
 // Get the current user's ID from session
 $user_id = $_SESSION['user_id'] ?? 0;
@@ -22,6 +24,12 @@ if (!$user_id) {
   header("Location: ../login.php");
   exit;
 }
+
+// Check for overdue tasks
+$blockCheck = checkArtistOverdueTasks($user_id);
+$has_overdue_tasks = $blockCheck['blocked'];
+$overdue_reason = $blockCheck['reason'];
+$overdue_tasks = $blockCheck['overdue_tasks'] ?? [];
 
 // Initialize empty array for tasks
 $tasks = [];
@@ -183,6 +191,33 @@ include("includes/header.php");
                 </div>
               <?php endif; ?>
 
+              <?php if ($has_overdue_tasks): ?>
+              <div class="alert alert-danger">
+                <div class="d-flex align-items-center">
+                  <i class="fas fa-exclamation-triangle fa-2x mr-3"></i>
+                  <div>
+                    <h5 class="alert-heading mb-1">Your account is currently restricted</h5>
+                    <p class="mb-1"><?php echo htmlspecialchars($overdue_reason); ?></p>
+                    <p class="mb-0 small">You can still view and work on your existing tasks, but new tasks will be locked until you complete your overdue ones.</p>
+                  </div>
+                </div>
+                <?php if (!empty($overdue_tasks)): ?>
+                <hr>
+                <p class="mb-1"><strong>Overdue tasks:</strong></p>
+                <ul class="mb-0">
+                  <?php foreach ($overdue_tasks as $overdue): ?>
+                  <li>
+                    <a href="view-task.php?id=<?php echo $overdue['assignment_id']; ?>" class="text-danger">
+                      <?php echo htmlspecialchars($overdue['project_title']); ?> (<?php echo htmlspecialchars($overdue['role_task']); ?>)
+                      - Due: <?php echo date('M d, Y', strtotime($overdue['deadline'])); ?>
+                    </a>
+                  </li>
+                  <?php endforeach; ?>
+                </ul>
+                <?php endif; ?>
+              </div>
+              <?php endif; ?>
+
               <div class="table-responsive">
                 <table id="taskTable" class="table table-bordered table-hover">
                   <thead>
@@ -200,142 +235,88 @@ include("includes/header.php");
                   <tbody>
                     <?php if (empty($tasks)): ?>
                       <tr>
-                        <td colspan="8" class="text-center">No tasks assigned</td>
+                        <td colspan="8" class="text-center">No tasks assigned to you yet</td>
                       </tr>
                     <?php else: ?>
-                      <?php foreach ($tasks as $task): ?>
-                        <tr>
+                      <?php foreach ($tasks as $task): 
+                          // Check if the task is overdue
+                          $is_task_overdue = strtotime($task['deadline']) < time();
+                          
+                          // If artist has overdue tasks, check if this is one of them or is delay acceptable
+                          $is_task_locked = false;
+                          $delay_acceptable = isset($task['delay_acceptable']) && $task['delay_acceptable'] == '1';
+                          
+                          if ($has_overdue_tasks && !$is_task_overdue && !$delay_acceptable) {
+                              $is_task_locked = true;
+                          }
+                          
+                          // Status and priority classes
+                          $statusClass = getStatusClass($task['status_assignee']);
+                          $priorityClass = getPriorityClass($task['priority']);
+                      ?>
+                        <tr class="<?php echo $is_task_overdue ? 'table-danger' : ''; ?>">
                           <td class="d-none"><?php echo $task['assignment_id']; ?></td>
                           <td>
-                            <div class="task-details">
+                            <div class="project-info">
                               <div class="project-title">
-                                <?php echo htmlspecialchars($task['project_title'] ?? 'Untitled Project'); ?>
+                                <?php echo htmlspecialchars($task['project_title']); ?>
+                                <?php if ($is_task_locked): ?>
+                                <span class="ml-1 text-danger" title="This task is locked due to overdue tasks">
+                                  <i class="fas fa-lock"></i>
+                                </span>
+                                <?php endif; ?>
                               </div>
-                              <div class="company-info">
-                                <i class="fas fa-building mr-1"></i>
-                                <?php echo htmlspecialchars($task['company_name'] ?? 'No Company'); ?>
+                              <div class="project-client">
+                                <i class="fas fa-building mr-1"></i> <?php echo htmlspecialchars($task['company_name'] ?? 'N/A'); ?>
                               </div>
                             </div>
                           </td>
                           <td>
-                            <span
-                              class="project-status status-<?php echo strtolower($task['status_assignee'] ?? 'unknown'); ?>">
-                              <?php if (($task['status_assignee'] ?? '') == 'in_progress'): ?>
-                                <i class="fas fa-spinner fa-spin mr-1"></i>
-                              <?php elseif (($task['status_assignee'] ?? '') == 'pending'): ?>
-                                <i class="fas fa-hourglass-start mr-1"></i>
-                              <?php elseif (($task['status_assignee'] ?? '') == 'finish'): ?>
-                                <i class="fas fa-check mr-1"></i>
-                                Finished
-                              <?php elseif (($task['status_assignee'] ?? '') == 'qa'): ?>
-                                <i class="fas fa-clipboard-check mr-1"></i>
-                                In QA
-                              <?php elseif (($task['status_assignee'] ?? '') == 'completed'): ?>
-                                <i class="fas fa-check-circle mr-1"></i>
-                                Completed
-                              <?php elseif (($task['status_assignee'] ?? '') == 'delayed'): ?>
-                                <i class="fas fa-exclamation-triangle mr-1"></i>
-                              <?php else: ?>
-                                <i class="fas fa-question-circle mr-1"></i>
-                              <?php endif; ?>
-                              <?php if (!in_array($task['status_assignee'] ?? '', ['finish', 'qa', 'completed'])): ?>
-                                <?php echo ucfirst(str_replace('_', ' ', $task['status_assignee'] ?? 'unknown')); ?>
-                              <?php endif; ?>
+                            <span class="badge badge-<?php echo $statusClass; ?>">
+                              <?php echo ucfirst(str_replace('_', ' ', $task['status_assignee'])); ?>
                             </span>
                             <div class="mt-1">
-                              <span class="priority-badge priority-<?php echo strtolower($task['priority'] ?? 'normal'); ?>"
-                                title="<?php echo ucfirst($task['priority'] ?? 'Normal'); ?> Priority"></span>
-                              <small><?php echo ucfirst($task['priority'] ?? 'Normal'); ?> Priority</small>
-                            </div>
-                          </td>
-                          <td>
-                            <div class="deadline-text">
-                              <i class="far fa-calendar-alt mr-1"></i>
-                              <?php echo date('M d, Y', strtotime($task['date_arrived'] ?? date('Y-m-d'))); ?>
-                            </div>
-                            <small class="text-muted">
-                              <i class="fas fa-history mr-1"></i>
-                              <?php
-                              $date_arrived = new DateTime($task['date_arrived'] ?? date('Y-m-d'));
-                              $now = new DateTime();
-                              $interval = $date_arrived->diff($now);
-                              if ($interval->days == 0) {
-                                echo 'Today';
-                              } elseif ($interval->days == 1) {
-                                echo 'Yesterday';
-                              } else {
-                                echo $interval->days . ' days ago';
-                              }
-                              ?>
-                            </small>
-                          </td>
-                          <td>
-                            <div class="total-images-display">
-                              <div class="total-count">
-                                <i class="fas fa-images mr-1"></i> Project:
-                                <span class="badge badge-info"><?php echo $task['total_images'] ?? 0; ?></span>
-                              </div>
-                              <div class="total-count mt-1">
-                                <i class="fas fa-tasks mr-1"></i> Assigned:
-                                <span class="badge badge-primary"><?php echo $task['assigned_image_count'] ?? 0; ?></span>
-                              </div>
-                            </div>
-                          </td>
-                          <td>
-                            <div class="deadline-info">
-                              <div>
-                                <i class="far fa-calendar mr-1"></i> Project:
-                                <span class="badge badge-secondary">
-                                  <?php echo date('M d, Y', strtotime($task['project_deadline'] ?? date('Y-m-d'))); ?>
-                                </span>
-                              </div>
-                              <div class="mt-1">
-                                <i class="far fa-clock mr-1"></i> Task:
-                                <span class="badge badge-warning">
-                                  <?php echo date('M d, Y', strtotime($task['deadline'] ?? date('Y-m-d'))); ?>
-                                </span>
-                              </div>
-                              <?php
-                              $deadline = new DateTime($task['deadline'] ?? date('Y-m-d'));
-                              $now = new DateTime();
-                              $days_left = $now->diff($deadline)->format("%R%a");
-
-                              if ($days_left < 0) {
-                                echo '<small class="deadline-warning text-danger">';
-                                echo '<i class="fas fa-exclamation-triangle mr-1"></i> Overdue by ' . abs($days_left) . ' days';
-                                echo '</small>';
-                              } elseif ($days_left == 0) {
-                                echo '<small class="deadline-warning text-warning">';
-                                echo '<i class="fas fa-exclamation-circle mr-1"></i> Due today';
-                                echo '</small>';
-                              } elseif ($days_left <= 3) {
-                                echo '<small class="deadline-warning text-warning">';
-                                echo '<i class="fas fa-exclamation-triangle mr-1"></i> ' . $days_left . ' days left';
-                                echo '</small>';
-                              } else {
-                                echo '<small class="deadline-info text-info">';
-                                echo '<i class="fas fa-info-circle mr-1"></i> ' . $days_left . ' days left';
-                                echo '</small>';
-                              }
-                              ?>
-                            </div>
-                          </td>
-                          <td>
-                            <div class="role-badge">
-                              <span class="badge badge-info p-2">
-                                <i class="fas fa-paint-brush mr-1"></i>
-                                <?php echo htmlspecialchars($task['role_task'] ?? 'Not Assigned'); ?>
+                              <span class="badge badge-<?php echo $priorityClass; ?>">
+                                <?php echo ucfirst($task['priority']); ?>
                               </span>
                             </div>
                           </td>
+                          <td><?php echo date('M d, Y', strtotime($task['date_arrived'])); ?></td>
                           <td>
-                            <div class="action-buttons text-center">
-                              <a href="view-task.php?id=<?php echo $task['assignment_id'] ?? 0; ?>"
-                                class="btn btn-info btn-sm" title="View Task">
-                                <i class="fas fa-eye"></i>
-                              </a>
-
+                            <div class="task-count">
+                              <div class="images-count">
+                                <i class="fas fa-images mr-1"></i>
+                                <span><?php echo $task['assigned_image_count'] ?? 0; ?> / <?php echo $task['assigned_images']; ?></span>
+                              </div>
                             </div>
+                          </td>
+                          <td>
+                            <div class="deadlines">
+                              <div class="project-deadline">
+                                <strong>Project:</strong> <?php echo date('M d, Y', strtotime($task['project_deadline'])); ?>
+                              </div>
+                              <div class="task-deadline <?php echo (strtotime($task['deadline']) < time()) ? 'text-danger' : ''; ?>">
+                                <strong>Task:</strong> <?php echo date('M d, Y', strtotime($task['deadline'])); ?>
+                                <?php if (strtotime($task['deadline']) < time()): ?>
+                                  <span class="badge badge-danger ml-1">Overdue</span>
+                                <?php endif; ?>
+                              </div>
+                            </div>
+                          </td>
+                          <td>
+                            <span class="badge badge-info">
+                              <?php echo htmlspecialchars($task['role_task']); ?>
+                            </span>
+                          </td>
+                          <td class="text-center">
+                            <a href="view-task.php?id=<?php echo $task['assignment_id']; ?>" 
+                               class="btn btn-info btn-sm <?php echo $is_task_locked ? 'task-locked' : ''; ?>"
+                               <?php if ($is_task_locked): ?>
+                               title="This task is locked due to overdue tasks. Complete your overdue tasks first."
+                               <?php endif; ?>>
+                              <i class="fas <?php echo $is_task_locked ? 'fa-lock' : 'fa-eye'; ?> mr-1"></i>
+                              <?php echo $is_task_locked ? 'Locked' : 'View'; ?>
+                            </a>
                           </td>
                         </tr>
                       <?php endforeach; ?>
@@ -350,6 +331,41 @@ include("includes/header.php");
     </section>
   </div>
 </div>
+
+<style>
+  /* Task table styling */
+  .project-title {
+    font-weight: bold;
+    font-size: 1rem;
+  }
+
+  .company-info {
+    font-size: 0.8rem;
+    opacity: 0.8;
+  }
+
+  .deadline-warning {
+    display: block;
+    margin-top: 5px;
+  }
+
+  .task-locked {
+    background-color: #6c757d;
+    border-color: #6c757d;
+    cursor: not-allowed;
+  }
+
+  .task-count {
+    font-size: 1rem;
+    font-weight: bold;
+    color: #343a40;
+  }
+  
+  /* Override DataTables styling */
+  .dataTables_wrapper .dataTables_filter {
+    margin-bottom: 15px;
+  }
+</style>
 
 <script>
   $(document).ready(function () {

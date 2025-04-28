@@ -1,6 +1,9 @@
 <?php
 include("includes/header.php");
+
+
 ?>
+
 <style>
     .loading-overlay {
         position: absolute;

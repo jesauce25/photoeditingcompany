@@ -437,14 +437,11 @@ function getAssignmentStatusClass($status)
                                                             $deadline_status = '';
                                                             $badge_class = '';
 
-                                                            if ($deadline_date == $today) {
-                                                                $deadline_status = 'Today';
-                                                                $badge_class = 'badge-warning';
-                                                            } else if ($deadline_date < $today) {
+                                                            if ($today > $deadline_date) {
                                                                 // Calculate days overdue
-                                                                $interval = $today->diff($deadline_date);
+                                                                $interval = $deadline_date->diff($today);
                                                                 $days_overdue = $interval->days;
-                                                                $deadline_status = 'Overdue by ' . $days_overdue . ($days_overdue > 1 ? ' days' : ' day');
+                                                                $deadline_status = 'Overdue by ' . $days_overdue . ' day' . ($days_overdue != 1 ? 's' : '');
                                                                 $badge_class = 'badge-danger';
                                                             } else {
                                                                 // Calculate days remaining
@@ -467,6 +464,11 @@ function getAssignmentStatusClass($status)
                                                                 <span class="badge <?php echo $badge_class; ?> ml-2">
                                                                     <?php echo $deadline_status; ?>
                                                                 </span>
+
+                                                                <?php if ($today > $deadline_date && !empty($assignment['delay_acceptable'])): ?>
+                                                                    <span class="ml-2 badge badge-info"><i class="fas fa-check"></i>
+                                                                        Delay Accepted</span>
+                                                                <?php endif; ?>
                                                             </div>
                                                         </td>
                                                     </tr>
@@ -655,25 +657,13 @@ function getAssignmentStatusClass($status)
 
                                 // Add assignment information if available
                                 if (data.assignment) {
-                                    const assignmentData = data.assignment;
-                                    const deadlineDate = assignmentData.deadline ? new Date(assignmentData.deadline) : null;
-                                    const formattedDeadline = deadlineDate ? deadlineDate.toLocaleDateString() : 'Not set';
-
-                                    assignmentInfo = `
-                                    <div class="alert alert-info mb-3">
-                                        <h5>Assignment Details</h5>
-                                        <p><strong>Assignee:</strong> ${assignmentData.full_name || 'Unknown'}</p>
-                                        <p><strong>Role/Task:</strong> ${assignmentData.role_task || 'Not specified'}</p>
-                                        <p><strong>Status:</strong> ${assignmentData.status_assignee || 'Pending'}</p>
-                                        <p><strong>Deadline:</strong> ${formattedDeadline}</p>
-                                    </div>
-                                    `;
+                                    // Skip assignment details as requested
+                                    assignmentInfo = '';
                                 }
 
                                 if (data.images && data.images.length > 0) {
                                     // Create a table for image details
                                     imagesHtml = `
-                                    ${assignmentInfo}
                                     <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
                                         <table class="table table-bordered table-hover table-sm" id="assigned-images-table">
                                             <thead class="thead-light sticky-top" style="position: sticky; top: 0; z-index: 1;">
@@ -722,25 +712,29 @@ function getAssignmentStatusClass($status)
                                     </div>
                                     `;
                                 } else {
-                                    imagesHtml = assignmentInfo + '<div class="alert alert-info">No images assigned to this team member.</div>';
+                                    imagesHtml = '<div class="alert alert-info text-center">No images assigned to this team member.</div>';
                                 }
 
-                                // Create and show modal with SweetAlert2
+                                // In the success function of the AJAX call where the modal is created
                                 Swal.fire({
                                     title: `<i class="fas fa-images mr-2"></i>Assigned Images (${data.images ? data.images.length : 0})`,
                                     html: imagesHtml,
-                                    width: '80%',
+                                    width: '90%',  // Change to 90% instead of 100% to add some margin
                                     confirmButtonText: 'Close',
                                     confirmButtonColor: '#3085d6',
                                     showCloseButton: true,
                                     customClass: {
-                                        container: 'swal-wide',
+                                        container: 'swal-centered-container',
                                         popup: 'swal-large-content'
                                     }
                                 });
 
-                                // Add custom style for large content
-                                $('<style>.swal-large-content { max-height: 80vh; overflow-y: auto; } .cursor-pointer { cursor: pointer; }</style>').appendTo('head');
+                                // Add this custom style right after the Swal.fire call
+                                $('<style>' +
+                                    '.swal-centered-container { display: flex !important; justify-content: center !important; align-items: center !important; }' +
+                                    '.swal2-popup { margin: 0 auto !important; max-width: 1200px !important; }' +  // Added max-width for very large screens
+                                    '.swal-large-content { max-height: 80vh !important; overflow-y: auto !important; }' +
+                                    '</style>').appendTo('head');
                             } else {
                                 Swal.fire({
                                     icon: 'error',
@@ -773,6 +767,9 @@ function getAssignmentStatusClass($status)
                     }
                 });
             });
+
+
+
         }
     });
 </script>

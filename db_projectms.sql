@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Apr 23, 2025 at 03:03 AM
+-- Generation Time: Apr 26, 2025 at 08:47 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -79,8 +79,24 @@ INSERT INTO `tbl_companies` (`company_id`, `company_name`, `address`, `country`,
 (16, 'test', 'test1', 'USA', 'test@gmail.com', 'test', '', '2025-03-31', '2025-04-08 01:39:50', '2025-04-15 02:36:09'),
 (17, 'Emall', 'test', 'Philippines', 'emall@gmail.com', 'Paulo', 'uploads/company_logos/company_1744596907_67fc6fab1e9ba.jpg', '2025-04-14', '2025-04-14 02:15:07', NULL),
 (18, 'DOTA1', '1231', 'USA', 'dota@gmail.com', 'gabin', 'uploads/company_logos/company_1744683091_67fdc053229a8.png', '2025-04-16', '2025-04-15 02:11:31', '2025-04-15 02:35:39'),
-(19, '1231', '123112s', 'Australia', '123@gmail.com', '123', 'uploads/company_logos/company_1744684473_67fdc5b91d9e9.jpg', '2025-04-02', '2025-04-15 02:34:33', '2025-04-15 02:36:15'),
-(26, 'sad', '', '', '', '', NULL, '0000-00-00', '2025-04-17 00:40:31', NULL);
+(19, '1231', '123112s', 'Australia', '123@gmail.com', '123', 'uploads/company_logos/company_1744684473_67fdc5b91d9e9.jpg', '2025-04-02', '2025-04-15 02:34:33', '2025-04-15 02:36:15');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `tbl_notifications`
+--
+
+CREATE TABLE `tbl_notifications` (
+  `notification_id` int(11) NOT NULL,
+  `user_id` int(11) DEFAULT NULL,
+  `message` varchar(255) NOT NULL,
+  `type` varchar(50) NOT NULL,
+  `is_read` tinyint(1) DEFAULT 0,
+  `entity_id` int(11) DEFAULT NULL,
+  `entity_type` varchar(50) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -108,8 +124,10 @@ CREATE TABLE `tbl_projects` (
 --
 
 INSERT INTO `tbl_projects` (`project_id`, `project_title`, `company_id`, `description`, `date_arrived`, `deadline`, `priority`, `status_project`, `total_images`, `created_by`, `date_created`, `date_updated`) VALUES
-(50, 'testdeadline', 18, '', '2025-04-02', '2025-04-23', 'medium', 'completed', 5, 1, '2025-04-22 05:12:31', '2025-04-22 05:14:47'),
-(51, '123', 15, '', '2025-04-16', '2025-04-24', 'medium', 'completed', 3, 1, '2025-04-22 05:22:30', '2025-04-23 00:58:48');
+(56, 'HASGDJASHDKGASJDHAS', 17, '', '2025-04-08', '2025-04-24', 'medium', 'in_progress', 4, 1, '2025-04-24 00:12:54', '2025-04-26 05:12:57'),
+(57, 'completedtest', 16, '', '2025-04-07', '2025-04-27', 'medium', 'in_progress', 3, 1, '2025-04-24 00:25:39', '2025-04-26 03:06:25'),
+(58, '123', 15, '', '2025-04-17', '2025-04-25', 'medium', 'in_progress', 2, 1, '2025-04-26 02:05:00', '2025-04-26 03:02:55'),
+(59, 'res', 17, '', '2025-04-09', '2025-04-30', 'medium', 'pending', 3, 1, '2025-04-26 02:38:33', '2025-04-26 05:29:49');
 
 -- --------------------------------------------------------
 
@@ -127,16 +145,20 @@ CREATE TABLE `tbl_project_assignments` (
   `assigned_date` timestamp NOT NULL DEFAULT current_timestamp(),
   `last_updated` timestamp NULL DEFAULT NULL ON UPDATE current_timestamp(),
   `updated_by` int(11) DEFAULT NULL,
-  `deadline` date DEFAULT NULL
+  `deadline` date DEFAULT NULL,
+  `delay_acceptable` varchar(50) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `tbl_project_assignments`
 --
 
-INSERT INTO `tbl_project_assignments` (`assignment_id`, `project_id`, `user_id`, `role_task`, `assigned_images`, `status_assignee`, `assigned_date`, `last_updated`, `updated_by`, `deadline`) VALUES
-(224, 50, 12, 'Final', 1, 'completed', '2025-04-22 05:12:58', '2025-04-22 05:14:47', NULL, '2025-04-01'),
-(225, 51, 18, 'Retouch', 1, 'pending', '2025-04-22 05:22:50', '2025-04-23 00:58:59', NULL, '2025-04-29');
+INSERT INTO `tbl_project_assignments` (`assignment_id`, `project_id`, `user_id`, `role_task`, `assigned_images`, `status_assignee`, `assigned_date`, `last_updated`, `updated_by`, `deadline`, `delay_acceptable`) VALUES
+(5, 56, 18, 'Final', 2, 'completed', '2025-04-26 00:19:54', '2025-04-26 02:01:44', NULL, '2025-05-03', ''),
+(13, 56, 12, 'Retouch', 1, 'pending', '2025-04-26 01:27:55', '2025-04-26 04:17:37', NULL, '2025-04-22', '1'),
+(14, 58, 12, 'Color Correction', 1, 'pending', '2025-04-26 03:02:55', '2025-04-26 03:02:55', NULL, '2025-05-03', ''),
+(15, 57, 18, 'Color Correction', 1, 'pending', '2025-04-26 03:06:25', '2025-04-26 03:06:25', NULL, '2025-05-03', ''),
+(16, 56, 18, 'Clipping Path', 1, 'pending', '2025-04-26 04:19:27', '2025-04-26 04:54:54', NULL, '2025-03-02', '');
 
 -- --------------------------------------------------------
 
@@ -162,14 +184,18 @@ CREATE TABLE `tbl_project_images` (
 --
 
 INSERT INTO `tbl_project_images` (`image_id`, `project_id`, `image_path`, `image_role`, `file_type`, `file_size`, `upload_date`, `status_image`, `assignment_id`, `estimated_time`) VALUES
-(449, 50, 'Screenshot (94).png', '', 'image/png', 924401, '2025-04-22 05:12:31', '', 224, NULL),
-(450, 50, 'Screenshot (95).png', '', 'image/png', 336943, '2025-04-22 05:12:31', 'available', NULL, NULL),
-(451, 50, 'Screenshot (96).png', '', 'image/png', 234933, '2025-04-22 05:12:31', 'available', NULL, NULL),
-(452, 50, 'Screenshot (97).png', '', 'image/png', 1109405, '2025-04-22 05:12:31', 'available', NULL, NULL),
-(453, 50, 'Screenshot (98).png', '', 'image/png', 1675078, '2025-04-22 05:12:31', 'available', NULL, NULL),
-(454, 51, 'Screenshot 2025-01-29 143903.png', '', 'image/png', 3354, '2025-04-22 05:22:30', '', 225, NULL),
-(455, 51, 'Screenshot 2025-01-30 134711.png', '', 'image/png', 5286, '2025-04-22 05:22:30', 'available', NULL, NULL),
-(456, 51, 'Screenshot 2025-01-31 135148.png', '', 'image/png', 47941, '2025-04-22 05:22:30', 'available', NULL, NULL);
+(6, 56, 'betterpicheadshot-1_1gqyq53.png', 'Final', 'image/png', 704801, '2025-04-26 00:19:09', '', 5, 5),
+(7, 56, 'necktie.jpg', 'Final', 'image/jpeg', 267900, '2025-04-26 00:19:09', '', 5, 12),
+(8, 56, 'ref.png', 'Clipping Path', 'image/png', 1112476, '2025-04-26 00:19:09', '', 16, 1),
+(9, 57, 'betterpicheadshot-1_1gqyq53.png', 'Color Correction', 'image/png', 704801, '2025-04-26 00:50:08', '', 15, NULL),
+(10, 57, 'necktie.jpg', '', 'image/jpeg', 267900, '2025-04-26 00:50:08', 'available', NULL, NULL),
+(11, 57, 'ref.png', '', 'image/png', 1112476, '2025-04-26 00:50:08', 'available', NULL, NULL),
+(12, 58, 'betterpic-export-19ac3af0-bf21_1wtngxi.jpg', 'Color Correction', 'image/jpeg', 135330, '2025-04-26 02:05:00', '', 14, NULL),
+(13, 58, 'betterpic-export-19ac3af0-bf21_soerem.jpg', '', 'image/jpeg', 139882, '2025-04-26 02:05:00', 'available', NULL, NULL),
+(14, 56, 'Capture001.png', '', 'image/png', 345427, '2025-04-26 02:49:26', 'available', NULL, NULL),
+(15, 59, 'RobloxScreenShot20230810_181245628.png', '', 'image/png', 1006669, '2025-04-26 05:29:49', 'available', NULL, NULL),
+(16, 59, 'RobloxScreenShot20230812_162658984.png', '', 'image/png', 1530246, '2025-04-26 05:29:49', 'available', NULL, NULL),
+(17, 59, 'RobloxScreenShot20230815_131356993.png', '', 'image/png', 1192847, '2025-04-26 05:29:49', 'available', NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -225,6 +251,13 @@ ALTER TABLE `tbl_companies`
   ADD PRIMARY KEY (`company_id`);
 
 --
+-- Indexes for table `tbl_notifications`
+--
+ALTER TABLE `tbl_notifications`
+  ADD PRIMARY KEY (`notification_id`),
+  ADD KEY `user_id` (`user_id`);
+
+--
 -- Indexes for table `tbl_projects`
 --
 ALTER TABLE `tbl_projects`
@@ -266,28 +299,44 @@ ALTER TABLE `tbl_companies`
   MODIFY `company_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=27;
 
 --
+-- AUTO_INCREMENT for table `tbl_notifications`
+--
+ALTER TABLE `tbl_notifications`
+  MODIFY `notification_id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT for table `tbl_projects`
 --
 ALTER TABLE `tbl_projects`
-  MODIFY `project_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=52;
+  MODIFY `project_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=60;
 
 --
 -- AUTO_INCREMENT for table `tbl_project_assignments`
 --
 ALTER TABLE `tbl_project_assignments`
-  MODIFY `assignment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=226;
+  MODIFY `assignment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
 
 --
 -- AUTO_INCREMENT for table `tbl_project_images`
 --
 ALTER TABLE `tbl_project_images`
-  MODIFY `image_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=457;
+  MODIFY `image_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
 
 --
 -- AUTO_INCREMENT for table `tbl_users`
 --
 ALTER TABLE `tbl_users`
   MODIFY `user_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=20;
+
+--
+-- Constraints for dumped tables
+--
+
+--
+-- Constraints for table `tbl_notifications`
+--
+ALTER TABLE `tbl_notifications`
+  ADD CONSTRAINT `tbl_notifications_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `tbl_users` (`user_id`) ON DELETE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

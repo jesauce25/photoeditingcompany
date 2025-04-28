@@ -46,23 +46,22 @@ include("includes/header.php");
                                         if (!empty($user['profile_img'])) {
                                             // Check multiple possible locations
                                             $possible_locations = [
+                                                '../uploads/profile_pictures/' . basename($user['profile_img']),
+                                                '../uploads/profile_pictures/' . $user['profile_img'],
                                                 'assets/img/profile/' . $user['profile_img'],
-                                                'uploads/profile_images/' . $user['profile_img'],
                                                 'profiles/' . $user['profile_img']
                                             ];
                                             
                                             foreach ($possible_locations as $location) {
                                                 if (file_exists($location)) {
-                                                    $profile_img_path = '../' . $location;
+                                                    $profile_img_path = $location;
                                                     break;
                                                 }
                                             }
                                             
                                             // If profile_img already contains a path prefix
-                                            if (strpos($user['profile_img'], '/') === 0 || 
-                                                strpos($user['profile_img'], 'assets/') === 0 ||
-                                                strpos($user['profile_img'], 'uploads/') === 0) {
-                                                $direct_path = '../' . ltrim($user['profile_img'], '/');
+                                            if (strpos($user['profile_img'], 'uploads/profile_pictures/') === 0) {
+                                                $direct_path = '../' . $user['profile_img'];
                                                 if (file_exists($direct_path)) {
                                                     $profile_img_path = $direct_path;
                                                 }
@@ -231,32 +230,16 @@ include("includes/header.php");
                             } 
                             // Option 3: Check different possible locations
                             else {
-                                // Try multiple possible locations
-                                const possiblePaths = [
-                                    '../uploads/profile_images/' + response.user.profile_img,
-                                    '../assets/img/profile/' + response.user.profile_img,
-                                    '../profiles/' + response.user.profile_img
-                                ];
-                                
-                                // Start with default image
-                                profileImgPath = '../dist/img/user-default.jpg';
-                                
-                                // Check each path
-                                for (const path of possiblePaths) {
-                                    const img = new Image();
-                                    img.onload = function() {
-                                        $('#profileImage').attr('src', path);
-                                        console.log('Found profile image at: ' + path);
-                                    };
-                                    img.src = path;
-                                }
+                                // Use the profile_img as is, server should have provided the correct path
+                                profileImgPath = '../uploads/profile_pictures/' + response.user.profile_img;
+                                console.log('Using profile path:', profileImgPath);
                             }
                         } else {
                             profileImgPath = '../dist/img/user-default.jpg';
                         }
                         
-                        // Set default image which will be overridden if any of the paths work
-                        $('#profileImage').attr('src', profileImgPath);
+                        // Set the profile image - target the correct element with class profile-user-img
+                        $('.profile-user-img').attr('src', profileImgPath);
 
                         // Set user status with appropriate badge color
                         const statusBadgeClass = response.user.status === 'Active' ? 'badge-success' : 'badge-danger';
