@@ -1,4 +1,7 @@
 <?php
+// Start output buffering to prevent header issues
+ob_start();
+
 // Start session if not already started
 if (session_status() === PHP_SESSION_NONE) {
   session_start();
@@ -44,8 +47,7 @@ try {
   // Fetch assignment details and associated project
   $query = "SELECT pa.*, p.project_title, p.project_id, p.description, 
                       p.deadline as project_deadline, p.total_images,
-                      p.company_id, p.client_name, p.designer, p.date_arrived,
-                      p.priority, c.company_name, c.company_logo
+                      p.company_id, p.priority, p.date_arrived, c.company_name
               FROM tbl_project_assignments pa
               JOIN tbl_projects p ON pa.project_id = p.project_id
               LEFT JOIN tbl_companies c ON p.company_id = c.company_id
@@ -104,46 +106,6 @@ try {
     $error_message = $e->getMessage();
 }
 
-// Function to get status display class
-function getStatusClass($status)
-{
-    switch ($status) {
-        case 'pending':
-            return 'warning';
-        case 'in_progress':
-            return 'primary';
-        case 'finish':
-            return 'info';
-        case 'qa':
-        case 'review':
-            return 'info';
-        case 'approved':
-            return 'success';
-        case 'completed':
-            return 'success';
-        case 'delayed':
-            return 'danger';
-        default:
-            return 'secondary';
-    }
-}
-
-// Function to get priority display class
-function getPriorityClass($priority)
-{
-    switch (strtolower($priority)) {
-        case 'high':
-            return 'danger';
-        case 'medium':
-            return 'warning';
-        case 'low':
-            return 'success';
-        case 'urgent':
-            return 'dark';
-        default:
-            return 'secondary';
-    }
-}
 ?>
 
 <div class="wrapper">

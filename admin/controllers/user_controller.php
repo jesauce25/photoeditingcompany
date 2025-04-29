@@ -296,12 +296,36 @@ function updateUserStatus($user_id, $status)
             throw new Exception("Invalid status value");
         }
 
-        // Update status in tbl_accounts
-        $stmt = $conn->prepare("UPDATE tbl_accounts SET status = ? WHERE user_id = ?");
-        $stmt->bind_param("si", $status, $user_id);
+        // Check if we're unblocking a user
+        $isUnblocking = false;
+        $stmt = $conn->prepare("SELECT status FROM tbl_accounts WHERE user_id = ?");
+        $stmt->bind_param("i", $user_id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $currentStatus = $result->fetch_assoc();
+
+        if ($currentStatus && $currentStatus['status'] === 'Blocked' && $status === 'Active') {
+            $isUnblocking = true;
+        }
+
+        // Prepare the query with last_unblocked_at if unblocking
+        if ($isUnblocking) {
+            $stmt = $conn->prepare("UPDATE tbl_accounts SET status = ?, last_unblocked_at = NOW() WHERE user_id = ?");
+            $stmt->bind_param("si", $status, $user_id);
+        } else {
+            $stmt = $conn->prepare("UPDATE tbl_accounts SET status = ? WHERE user_id = ?");
+            $stmt->bind_param("si", $status, $user_id);
+        }
 
         if (!$stmt->execute()) {
             throw new Exception("Failed to update user status");
+        }
+
+        // Also update the is_locked status for all tasks if unblocking
+        if ($isUnblocking) {
+            $unlockStmt = $conn->prepare("UPDATE tbl_project_assignments SET is_locked = 0 WHERE user_id = ?");
+            $unlockStmt->bind_param("i", $user_id);
+            $unlockStmt->execute();
         }
 
         return array('success' => true, 'message' => 'User status updated successfully');

@@ -1,4 +1,7 @@
 <?php
+// Start output buffering to prevent header issues
+ob_start();
+
 // Start session if not already started
 if (session_status() === PHP_SESSION_NONE) {
   session_start();
@@ -41,6 +44,7 @@ try {
   // Fetch tasks assigned to the current user
   $query = "SELECT pa.*, p.project_title, c.company_name, p.deadline as project_deadline, 
               p.date_arrived, p.priority, p.status_project, p.total_images,
+              pa.is_locked, pa.is_first_overdue,
               COUNT(pi.image_id) as assigned_image_count
               FROM tbl_project_assignments pa
               JOIN tbl_projects p ON pa.project_id = p.project_id
@@ -192,10 +196,10 @@ include("includes/header.php");
               <?php endif; ?>
 
               <?php if (isset($_SESSION['error_message'])): ?>
-                  <div class="alert alert-danger">
-                    <i class="fas fa-exclamation-circle mr-2"></i> <?php echo $_SESSION['error_message']; ?>
-                  </div>
-                  <?php unset($_SESSION['error_message']); ?>
+                <div class="alert alert-danger">
+                  <i class="fas fa-exclamation-circle mr-2"></i> <?php echo $_SESSION['error_message']; ?>
+                </div>
+                <?php unset($_SESSION['error_message']); ?>
               <?php endif; ?>
 
               <?php if ($has_overdue_tasks): ?>
@@ -251,13 +255,8 @@ include("includes/header.php");
                         // Check if the task is overdue
                         $is_task_overdue = strtotime($task['deadline']) < time();
 
-                        // If artist has overdue tasks, check if this is one of them or is delay acceptable
-                        $is_task_locked = false;
-                        $delay_acceptable = isset($task['delay_acceptable']) && $task['delay_acceptable'] == '1';
-
-                        if ($has_overdue_tasks && !$is_task_overdue && !$delay_acceptable) {
-                          $is_task_locked = true;
-                        }
+                        // Use is_locked flag directly from the database
+                        $is_task_locked = isset($task['is_locked']) && $task['is_locked'] == 1;
 
                         // Status and priority classes
                         $statusClass = getStatusClass($task['status_assignee']);
@@ -272,6 +271,12 @@ include("includes/header.php");
                                 <?php if ($is_task_locked): ?>
                                   <span class="ml-1 text-danger" title="This task is locked due to overdue tasks">
                                     <i class="fas fa-lock"></i>
+                                  </span>
+                                <?php endif; ?>
+                                <?php if (isset($task['is_first_overdue']) && $task['is_first_overdue'] == 1): ?>
+                                  <span class="ml-1 text-warning"
+                                    title="This is your highest priority overdue task. Please complete this task first.">
+                                    <i class="fas fa-exclamation-circle"></i> First Overdue
                                   </span>
                                 <?php endif; ?>
                               </div>
@@ -325,7 +330,7 @@ include("includes/header.php");
                             <?php if ($is_task_locked): ?>
                               <button type="button" class="btn btn-secondary btn-sm task-locked" data-toggle="modal"
                                 data-target="#accessBlockedModal"
-                                data-reason="<?php echo htmlspecialchars($overdue_reason); ?>">
+                                data-reason="Please complete your earliest overdue task before accessing other tasks.">
                                 <i class="fas fa-lock mr-1"></i> Locked
                               </button>
                             <?php else: ?>
@@ -375,6 +380,17 @@ include("includes/header.php");
     font-size: 1rem;
     font-weight: bold;
     color: #343a40;
+  }
+
+  /* First overdue task styling */
+  .first-overdue-indicator {
+    background-color: #fff3cd;
+    color: #856404;
+    padding: 2px 5px;
+    border-radius: 3px;
+    font-weight: bold;
+    display: inline-block;
+    margin-left: 5px;
   }
 
   /* Override DataTables styling */

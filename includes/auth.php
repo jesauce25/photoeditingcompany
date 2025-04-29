@@ -41,7 +41,7 @@ function authenticate($username, $password)
                                       u.first_name, u.last_name 
                                FROM tbl_accounts a
                                LEFT JOIN tbl_users u ON a.user_id = u.user_id
-                               WHERE a.username = ? AND a.status = 'Active'");
+                               WHERE a.username = ?");
 
         if (!$stmt) {
             error_log("Prepare statement failed: " . $conn->error);
@@ -64,7 +64,7 @@ function authenticate($username, $password)
                                   u.first_name, u.last_name 
                            FROM tbl_accounts a
                            LEFT JOIN tbl_users u ON a.user_id = u.user_id
-                           WHERE a.username = ? AND a.status = 'Active'");
+                           WHERE a.username = ?");
 
     if (!$stmt) {
         error_log("Prepare statement failed: " . $conn->error);
