@@ -1,0 +1,9 @@
+[2025-05-03 08:32:36] Registration attempt started
+Data: {"username":"is","email":"12333@gmail.com"}
+------------------------------------
+[2025-05-03 08:32:36] Profile image processing
+Data: {"filename":"Screenshot 2025-04-25 104333.png","size":107539,"type":"image\/png","error_code":0}
+------------------------------------
+[2025-05-03 08:32:36] Registration successful
+Data: {"success":true,"message":"User registered successfully"}
+------------------------------------

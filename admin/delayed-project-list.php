@@ -341,8 +341,8 @@ unset($_SESSION['success_message']);
                                                         $assignees = getProjectAssignee($project['project_id']);
                                                         if (!empty($assignees)) {
                                                             $totalAssignees = count($assignees);
-                                                            $displayedAssignees = array_slice($assignees, 0, 5);
-                                                            $remaining = $totalAssignees - 5;
+                                                            $displayedAssignees = array_slice($assignees, 0, 3);
+                                                            $remaining = $totalAssignees - 3;
 
                                                             echo '<div class="assignee-container">';
 
@@ -381,6 +381,7 @@ unset($_SESSION['success_message']);
                                                                 echo '</div>';
                                                             }
 
+                                                            // Only show "+x more" if there are additional assignees
                                                             if ($remaining > 0) {
                                                                 echo '<div class="assignee-more"><i class="fas fa-user-plus"></i> +' . $remaining . ' more</div>';
                                                             }
@@ -611,7 +612,7 @@ unset($_SESSION['success_message']);
             applyFilters();
         });
 
-        $('#resetFilter').click(function() {
+        $('#resetFilter').click(function () {
             logging.interaction('Reset filter button clicked');
             // Clear all filter selects
             $('#companySelect').val('');

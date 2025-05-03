@@ -29,6 +29,47 @@ $success_message = isset($_SESSION['success_message']) ? $_SESSION['success_mess
 unset($_SESSION['success_message']);
 ?>
 <style>
+    /* Add additional styling on top of AdminLTE */
+    .project-details-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 5px 10px;
+        background-color: #f8f9fa;
+        border-radius: 5px;
+        margin-right: 5px;
+        margin-bottom: 5px;
+        font-size: 0.85rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .project-details-badge i {
+        margin-right: 5px;
+    }
+
+    .priority-badge {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        margin-right: 5px;
+    }
+
+    .priority-low {
+        background-color: #28a745;
+    }
+
+    .priority-medium {
+        background-color: #17a2b8;
+    }
+
+    .priority-high {
+        background-color: #ffc107;
+    }
+
+    .priority-urgent {
+        background-color: #dc3545;
+    }
+
     .project-status {
         display: inline-block;
         padding: 5px 10px;
@@ -62,28 +103,149 @@ unset($_SESSION['success_message']);
         color: #721c24;
     }
 
-    .priority-badge {
-        display: inline-block;
-        width: 10px;
-        height: 10px;
+    .total-images-display {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #007bff, #00bcd4);
+        padding: 6px 10px;
+        border-radius: 6px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        font-size: 0.9rem;
+    }
+
+    .total-count {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        color: white;
+        font-weight: 600;
+    }
+
+    .total-count i {
+        font-size: 1rem;
+    }
+
+    .total-count span {
+        font-size: 1rem;
+    }
+
+    /* Assignee styling - horizontal layout */
+    .assignee-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        align-items: center;
+    }
+
+    .assignee-item {
+        display: flex;
+        align-items: center;
+        background-color: #f8f9fa;
+        border-radius: 20px;
+        padding: 4px 10px;
+        margin-bottom: 3px;
+        border: 1px solid #e9ecef;
+        transition: all 0.2s;
+    }
+
+    .assignee-item:hover {
+        background-color: #e9ecef;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .assignee-avatar {
+        width: 24px;
+        height: 24px;
+        background-color: #6c757d;
+        color: white;
         border-radius: 50%;
-        margin-right: 5px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.7rem;
+        margin-right: 6px;
     }
 
-    .priority-low {
-        background-color: #28a745;
+    /* Enhanced style for the assignee-more indicator */
+    .assignee-more {
+        background-color: #e9ecef !important;
+        border-radius: 20px !important;
+        padding: 4px 10px !important;
+        color: #6c757d !important;
+        font-size: 0.85rem !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        border: 1px solid #ced4da !important;
+        margin-top: 3px !important;
+        font-weight: 500 !important;
+        clear: both !important;
     }
 
-    .priority-medium {
-        background-color: #17a2b8;
+    .assignee-more i {
+        margin-right: 4px !important;
     }
 
-    .priority-high {
-        background-color: #ffc107;
+    /* Animation for alerts */
+    .auto-fade-alert {
+        animation: fadeInAlert 0.5s ease-in-out;
     }
 
-    .priority-urgent {
-        background-color: #dc3545;
+    @keyframes fadeInAlert {
+        from {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* Loading overlay */
+    .loading-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(255, 255, 255, 0.7);
+        display: none;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+        border-radius: 0.25rem;
+    }
+
+    .loading-spinner {
+        width: 40px;
+        height: 40px;
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #3498db;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+        0% {
+            transform: rotate(0deg);
+        }
+
+        100% {
+            transform: rotate(360deg);
+        }
+    }
+
+    /* Custom styles for overdue indicators */
+    .project-overdue {
+        background-color: rgba(255, 0, 0, 0.1) !important;
+    }
+
+    /* Projects due tomorrow */
+    .project-tomorrow {
+        background-color: #fff3cd !important;
+        /* Light orange/yellow background */
     }
 
     .assignee-avatar {
@@ -125,23 +287,6 @@ unset($_SESSION['success_message']);
         border-radius: 15px;
         font-size: 0.85rem;
         font-weight: 500;
-    }
-
-    /* Animation for alerts */
-    .auto-fade-alert {
-        animation: fadeInAlert 0.5s ease-in-out;
-    }
-
-    @keyframes fadeInAlert {
-        from {
-            opacity: 0;
-            transform: translateY(-20px);
-        }
-
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
     }
 
     /* Improved filter styles */
@@ -190,8 +335,6 @@ unset($_SESSION['success_message']);
         color: #007bff;
     }
 
-
-
     /* Total Images UI */
     .total-images-display {
         display: flex;
@@ -220,59 +363,6 @@ unset($_SESSION['success_message']);
         font-size: 1rem;
     }
 
-
-
-    /* Assignee styling - horizontal layout */
-    .assignee-container {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 6px;
-        align-items: center;
-    }
-
-    .assignee-item {
-        display: flex;
-        align-items: center;
-        background-color: #f8f9fa;
-        border-radius: 20px;
-        padding: 4px 10px;
-        margin-bottom: 3px;
-        border: 1px solid #e9ecef;
-        transition: all 0.2s;
-    }
-
-    .assignee-item:hover {
-        background-color: #e9ecef;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    }
-
-    .assignee-avatar {
-        width: 24px;
-        height: 24px;
-        background-color: #6c757d;
-        color: white;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 0.7rem;
-        margin-right: 6px;
-    }
-
-    .assignee-more {
-        background-color: #e9ecef;
-        border-radius: 20px;
-        padding: 4px 10px;
-        color: #6c757d;
-        font-size: 0.8rem;
-        display: inline-flex;
-        align-items: center;
-    }
-
-    .assignee-more i {
-        margin-right: 4px;
-    }
-
     /* Project row highlighting */
     .project-overdue {
         background-color: rgba(255, 37, 37, 0.59) !important;
@@ -286,7 +376,6 @@ unset($_SESSION['success_message']);
     .project-tomorrow {
         background-color: #fff3cd !important;
     }
-
 
     /* When printing, ensure colors are visible */
     @media print {
@@ -609,8 +698,9 @@ unset($_SESSION['success_message']);
                                                             echo '</div>';
                                                         }
 
+                                                        // Only show "+x more" if there are additional assignees
                                                         if ($remaining > 0) {
-                                                            echo '<div class="assignee-more"><i class="fas fa-user-plus"></i> +' . $remaining . ' more</div>';
+                                                            echo '<div class="assignee-more" style="display: inline-flex !important; background-color: #e9ecef !important; border-radius: 20px !important; padding: 4px 10px !important; color: #6c757d !important; border: 1px solid #ced4da !important;"><i class="fas fa-user-plus"></i> +' . $remaining . ' more</div>';
                                                         }
 
                                                         echo '</div>';

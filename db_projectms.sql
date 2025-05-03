@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Apr 29, 2025 at 03:45 AM
+-- Generation Time: May 03, 2025 at 09:00 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -24,6 +24,31 @@ SET time_zone = "+00:00";
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `activity_logs`
+--
+
+CREATE TABLE `activity_logs` (
+  `log_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `activity_type` varchar(50) NOT NULL,
+  `entity_id` int(11) NOT NULL,
+  `entity_type` varchar(50) NOT NULL,
+  `details` text DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `activity_logs`
+--
+
+INSERT INTO `activity_logs` (`log_id`, `user_id`, `activity_type`, `entity_id`, `entity_type`, `details`, `created_at`) VALUES
+(1, 20, 'task_hidden', 74, 'assignment', 'Assignment ID: 74 hidden', '2025-04-30 05:19:56'),
+(2, 12, 'task_hidden', 80, 'assignment', 'Assignment ID: 80 hidden', '2025-05-01 01:06:26'),
+(3, 12, 'task_hidden', 79, 'assignment', 'Assignment ID: 79 hidden', '2025-05-01 01:06:28');
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `tbl_accounts`
 --
 
@@ -34,6 +59,8 @@ CREATE TABLE `tbl_accounts` (
   `password` varchar(255) NOT NULL,
   `role` varchar(50) NOT NULL,
   `status` varchar(20) NOT NULL,
+  `has_overdue_tasks` tinyint(1) DEFAULT 0,
+  `is_protected` tinyint(1) NOT NULL DEFAULT 0,
   `date_added` timestamp NOT NULL DEFAULT current_timestamp(),
   `last_unblocked_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -42,16 +69,35 @@ CREATE TABLE `tbl_accounts` (
 -- Dumping data for table `tbl_accounts`
 --
 
-INSERT INTO `tbl_accounts` (`account_id`, `user_id`, `username`, `password`, `role`, `status`, `date_added`, `last_unblocked_at`) VALUES
-(1, 1, 'admin', 'admin', 'Admin', 'Active', '2025-03-15 02:16:10', NULL),
-(3, 3, 'superadmin', 'superadmin123', 'Admin', 'Active', '2025-04-01 01:16:55', NULL),
-(10, 11, 'manager', '$2y$10$K0wyTVi15t46N3Ke5lptUuzmQhDTeaXEPxOIFN1zqzB', 'Project Manager', 'Active', '2025-04-07 03:42:45', NULL),
-(11, 12, 'art', '$2y$10$ra3.faagk/2YIKnwhTPDQu3EkCaD7zj0pGpfnBbrYcp', 'Graphic Artist', 'Blocked', '2025-04-07 03:45:26', '2025-04-29 01:23:22'),
-(17, 18, 'test', '$2y$10$I4okCgbWa7sW9ILM.dlH8OBeBKzzO8lEHhV/7UNpYEsmmkEMB5ppy', 'Graphic Artist', 'Active', '2025-04-21 01:03:46', NULL),
-(18, 19, 'admin1', '$2y$10$FsXHYlI4fPENMuU2Pqs/qeG1Xbygx2xAnxzYcn7KwdakeBSc/dbQa', 'Admin', 'Active', '2025-04-21 04:20:59', NULL),
-(19, 20, 'paulo', '$2y$10$qJcV5TaCKmSounwxuNMTBOKKDhCgvCXLahvGDGtbybi7YQFod3zbe', 'Graphic Artist', 'Active', '2025-04-26 07:18:58', NULL),
-(21, 22, 'a', '$2y$10$bI00Hg2dh3DKnJHiJRwyruWtaXpANy9Wque/Bw3JajT4WjREKC7OW', 'Project Manager', 'Active', '2025-04-26 07:47:12', NULL),
-(22, 23, 's', '$2y$10$G0ROnH30b9cSW8QOTh.vAOvVUc5SpCtNXIecZ9/q6q3llIbcjzM6e', 'Project Manager', 'Active', '2025-04-26 08:06:45', NULL);
+INSERT INTO `tbl_accounts` (`account_id`, `user_id`, `username`, `password`, `role`, `status`, `has_overdue_tasks`, `is_protected`, `date_added`, `last_unblocked_at`) VALUES
+(1, 1, 'admin', 'admin', 'Admin', 'Active', 0, 0, '2025-03-15 02:16:10', NULL),
+(3, 3, 'superadmin', 'superadmin123', 'Admin', 'Active', 0, 0, '2025-04-01 01:16:55', NULL),
+(10, 11, 'manager', '$2y$10$K0wyTVi15t46N3Ke5lptUuzmQhDTeaXEPxOIFN1zqzB', 'Project Manager', 'Active', 0, 0, '2025-04-07 03:42:45', NULL),
+(11, 12, 'art', '$2y$10$ra3.faagk/2YIKnwhTPDQu3EkCaD7zj0pGpfnBbrYcp', 'Graphic Artist', 'Active', 0, 1, '2025-04-07 03:45:26', '2025-05-04 05:46:43'),
+(17, 18, 'test', '$2y$10$I4okCgbWa7sW9ILM.dlH8OBeBKzzO8lEHhV/7UNpYEsmmkEMB5ppy', 'Graphic Artist', 'Active', 0, 0, '2025-04-21 01:03:46', NULL),
+(18, 19, 'admin1', '$2y$10$FsXHYlI4fPENMuU2Pqs/qeG1Xbygx2xAnxzYcn7KwdakeBSc/dbQa', 'Admin', 'Active', 0, 0, '2025-04-21 04:20:59', NULL),
+(19, 20, 'paulo', '$2y$10$qJcV5TaCKmSounwxuNMTBOKKDhCgvCXLahvGDGtbybi7YQFod3zbe', 'Graphic Artist', 'Active', 0, 1, '2025-04-26 07:18:58', '2025-05-04 06:02:20'),
+(21, 22, 'a', '$2y$10$bI00Hg2dh3DKnJHiJRwyruWtaXpANy9Wque/Bw3JajT4WjREKC7OW', 'Project Manager', 'Active', 0, 0, '2025-04-26 07:47:12', NULL),
+(22, 23, 's', '$2y$10$G0ROnH30b9cSW8QOTh.vAOvVUc5SpCtNXIecZ9/q6q3llIbcjzM6e', 'Project Manager', 'Active', 0, 0, '2025-04-26 08:06:45', NULL),
+(23, 24, 'is', '$2y$10$3oI66G8/CjcBlssKETT4fuEgQpDVCyuSbwU/zS19uVWOx91n6eo22', 'Graphic Artist', 'Active', 0, 1, '2025-05-03 06:32:36', '2025-05-03 00:59:03');
+
+--
+-- Triggers `tbl_accounts`
+--
+DELIMITER $$
+CREATE TRIGGER `enforce_blocked_status` BEFORE UPDATE ON `tbl_accounts` FOR EACH ROW BEGIN
+    -- If has_overdue_tasks=1 and user doesn't have protection, force Blocked
+    IF NEW.has_overdue_tasks = 1 AND NEW.is_protected = 0 THEN
+        SET NEW.status = 'Blocked';
+    END IF;
+    
+    -- If protected or has_overdue_tasks=0, ensure status is Active
+    IF NEW.is_protected = 1 OR NEW.has_overdue_tasks = 0 THEN
+        SET NEW.status = 'Active';
+    END IF;
+END
+$$
+DELIMITER ;
 
 -- --------------------------------------------------------
 
@@ -126,7 +172,7 @@ CREATE TABLE `tbl_projects` (
 --
 
 INSERT INTO `tbl_projects` (`project_id`, `project_title`, `company_id`, `description`, `date_arrived`, `deadline`, `priority`, `status_project`, `total_images`, `created_by`, `date_created`, `date_updated`) VALUES
-(62, 'Emall company image', 17, '', '2025-04-07', '2025-05-01', 'medium', 'in_progress', 6, 1, '2025-04-28 02:00:34', '2025-04-29 01:24:24');
+(99, 'sad', 17, '', '2025-04-28', '2025-05-30', 'medium', 'in_progress', 6, 1, '2025-05-03 06:34:00', '2025-05-03 06:34:27');
 
 -- --------------------------------------------------------
 
@@ -147,19 +193,19 @@ CREATE TABLE `tbl_project_assignments` (
   `deadline` date DEFAULT NULL,
   `delay_acceptable` varchar(50) NOT NULL,
   `is_locked` tinyint(1) DEFAULT 0,
-  `is_first_overdue` tinyint(1) DEFAULT 0
+  `is_hidden` tinyint(1) NOT NULL,
+  `forgiven_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `tbl_project_assignments`
 --
 
-INSERT INTO `tbl_project_assignments` (`assignment_id`, `project_id`, `user_id`, `role_task`, `assigned_images`, `status_assignee`, `assigned_date`, `last_updated`, `updated_by`, `deadline`, `delay_acceptable`, `is_locked`, `is_first_overdue`) VALUES
-(19, 62, 12, 'Color Correction', 1, 'completed', '2025-04-28 02:01:03', '2025-04-28 02:23:13', NULL, '2025-04-30', '', 0, 0),
-(20, 62, 12, 'Color Correction', 1, 'in_progress', '2025-04-28 02:13:37', '2025-04-29 01:31:40', NULL, '2025-05-05', '', 1, 0),
-(21, 62, 12, 'Final', 1, 'in_progress', '2025-04-28 02:14:48', '2025-04-29 01:31:40', NULL, '2025-04-27', '1', 1, 0),
-(22, 62, 12, 'Retouch', 2, 'pending', '2025-04-28 02:33:16', '2025-04-29 01:31:40', NULL, '2025-04-13', '', 1, 0),
-(23, 62, 12, 'Final', 1, 'pending', '2025-04-29 01:24:24', '2025-04-29 01:24:24', NULL, '2025-04-27', '', 0, 0);
+INSERT INTO `tbl_project_assignments` (`assignment_id`, `project_id`, `user_id`, `role_task`, `assigned_images`, `status_assignee`, `assigned_date`, `last_updated`, `updated_by`, `deadline`, `delay_acceptable`, `is_locked`, `is_hidden`, `forgiven_at`) VALUES
+(195, 99, 24, 'Retouch', 1, 'finish', '2025-05-03 06:34:07', '2025-05-03 06:42:40', NULL, '2025-05-10', '', 0, 0, NULL),
+(196, 99, 24, 'Color Correction', 1, 'pending', '2025-05-03 06:34:11', '2025-05-03 06:58:03', NULL, '2025-05-06', '', 0, 0, NULL),
+(197, 99, 24, 'Final', 1, 'pending', '2025-05-03 06:34:23', '2025-05-03 06:58:03', NULL, '2025-05-10', '', 0, 0, NULL),
+(198, 99, 24, 'Clipping Path', 1, 'pending', '2025-05-03 06:34:27', '2025-05-03 06:58:03', NULL, '2025-05-10', '', 0, 0, NULL);
 
 -- --------------------------------------------------------
 
@@ -185,12 +231,12 @@ CREATE TABLE `tbl_project_images` (
 --
 
 INSERT INTO `tbl_project_images` (`image_id`, `project_id`, `image_path`, `image_role`, `file_type`, `file_size`, `upload_date`, `status_image`, `assignment_id`, `estimated_time`) VALUES
-(28, 62, 'Screenshot 2025-01-29 143903.png', 'Color Correction', 'image/png', 3354, '2025-04-28 02:00:34', '', 19, NULL),
-(29, 62, 'Screenshot 2025-01-30 134711.png', 'Color Correction', 'image/png', 5286, '2025-04-28 02:00:34', '', 20, NULL),
-(30, 62, 'Screenshot 2025-01-31 135148.png', 'Final', 'image/png', 47941, '2025-04-28 02:00:34', '', 21, NULL),
-(31, 62, 'Screenshot 2025-02-28 154342.png', 'Final', 'image/png', 1311818, '2025-04-28 02:32:59', '', 23, NULL),
-(32, 62, 'Screenshot 2025-02-28 154634.png', 'Retouch', 'image/png', 1295473, '2025-04-28 02:32:59', '', 22, NULL),
-(33, 62, 'Screenshot 2025-02-28 170333.png', 'Retouch', 'image/png', 935973, '2025-04-28 02:32:59', '', 22, NULL);
+(316, 99, 'Screenshot 2025-02-10 214129.png', 'Retouch', 'image/png', 72637, '2025-05-03 06:34:00', '', 195, NULL),
+(317, 99, 'Screenshot 2025-02-10 214400.png', 'Final', 'image/png', 121817, '2025-05-03 06:34:00', '', 197, NULL),
+(318, 99, 'Screenshot 2025-02-10 214557.png', '', 'image/png', 327780, '2025-05-03 06:34:00', 'available', NULL, NULL),
+(319, 99, 'Screenshot 2025-02-10 215410.png', '', 'image/png', 72184, '2025-05-03 06:34:00', 'available', NULL, NULL),
+(320, 99, 'Screenshot 2025-02-11 145825.png', 'Color Correction', 'image/png', 1528331, '2025-05-03 06:34:00', '', 196, NULL),
+(321, 99, 'Screenshot 2025-02-11 145839.png', 'Clipping Path', 'image/png', 1503442, '2025-05-03 06:34:00', '', 198, NULL);
 
 -- --------------------------------------------------------
 
@@ -228,11 +274,21 @@ INSERT INTO `tbl_users` (`user_id`, `first_name`, `mid_name`, `last_name`, `birt
 (19, 'admin1', '1', 'admin1', '2025-04-08 00:00:00', 'admin1', '1', 'admin1@gmail.com', 'profile_6805c7ab15b94.png', '0000-00-00 00:00:00', '2025-04-21 04:20:59', NULL, NULL),
 (20, 'Paulo', 'L', 'Abaquita', '2002-10-21 00:00:00', 'test', '123', 'paulolatayada21@gmail.com', 'profile_680c88e24f1b5.png', '0000-00-00 00:00:00', '2025-04-26 07:18:58', NULL, NULL),
 (22, 'a', 'a', 'a', '2025-04-08 00:00:00', 'a', '1', 'a@gmail.com', 'uploads/profile_pictures/profile_680c8f80282d3.png', '0000-00-00 00:00:00', '2025-04-26 07:47:12', NULL, NULL),
-(23, 'sad', 's', 'sad', '2025-03-31 00:00:00', 's', '12', 's@gmail.com', 'uploads/profile_pictures/profile_680edf20c393e.png', '2025-04-28 09:51:28', '2025-04-26 08:06:45', NULL, NULL);
+(23, 'sad', 's', 'sad', '2025-03-31 00:00:00', 's', '12', 's@gmail.com', 'uploads/profile_pictures/profile_680edf20c393e.png', '2025-04-28 09:51:28', '2025-04-26 08:06:45', NULL, NULL),
+(24, 'is', 'i', 'protected', '2025-04-27 00:00:00', '123', '123', '12333@gmail.com', 'uploads/profile_pictures/profile_6815b884880d2.png', '0000-00-00 00:00:00', '2025-05-03 06:32:36', NULL, NULL);
 
 --
 -- Indexes for dumped tables
 --
+
+--
+-- Indexes for table `activity_logs`
+--
+ALTER TABLE `activity_logs`
+  ADD PRIMARY KEY (`log_id`),
+  ADD KEY `user_id` (`user_id`),
+  ADD KEY `entity_id` (`entity_id`),
+  ADD KEY `entity_type` (`entity_type`);
 
 --
 -- Indexes for table `tbl_accounts`
@@ -283,10 +339,16 @@ ALTER TABLE `tbl_users`
 --
 
 --
+-- AUTO_INCREMENT for table `activity_logs`
+--
+ALTER TABLE `activity_logs`
+  MODIFY `log_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+
+--
 -- AUTO_INCREMENT for table `tbl_accounts`
 --
 ALTER TABLE `tbl_accounts`
-  MODIFY `account_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=23;
+  MODIFY `account_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=24;
 
 --
 -- AUTO_INCREMENT for table `tbl_companies`
@@ -304,25 +366,25 @@ ALTER TABLE `tbl_notifications`
 -- AUTO_INCREMENT for table `tbl_projects`
 --
 ALTER TABLE `tbl_projects`
-  MODIFY `project_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=63;
+  MODIFY `project_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=100;
 
 --
 -- AUTO_INCREMENT for table `tbl_project_assignments`
 --
 ALTER TABLE `tbl_project_assignments`
-  MODIFY `assignment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=24;
+  MODIFY `assignment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=199;
 
 --
 -- AUTO_INCREMENT for table `tbl_project_images`
 --
 ALTER TABLE `tbl_project_images`
-  MODIFY `image_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=34;
+  MODIFY `image_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=322;
 
 --
 -- AUTO_INCREMENT for table `tbl_users`
 --
 ALTER TABLE `tbl_users`
-  MODIFY `user_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=24;
+  MODIFY `user_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=25;
 
 --
 -- Constraints for dumped tables

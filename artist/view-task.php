@@ -667,7 +667,27 @@ try {
                 },
                 body: 'action=update_assignment_status&assignment_id=' + assignmentId + '&status=' + status
             })
-                .then(response => response.json())
+                .then(response => {
+                    // Check if the response is valid
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    
+                    // Try to detect PHP errors in the response
+                    return response.text().then(text => {
+                        try {
+                            // Check if the response starts with PHP error messages (often starts with <br> or <b>)
+                            if (text.trim().startsWith('<br') || text.trim().startsWith('<b>')) {
+                                throw new Error('Server returned an error: ' + text);
+                            }
+                            // Try to parse as JSON
+                            return JSON.parse(text);
+                        } catch (e) {
+                            console.error('Error parsing response:', text);
+                            throw new Error('Invalid JSON response from server: ' + e.message);
+                        }
+                    });
+                })
                 .then(data => {
                     if (data.status === 'success') {
                         // Update UI to reflect new status
@@ -693,7 +713,7 @@ try {
                 })
                 .catch(error => {
                     console.error('Error updating status:', error);
-                    $('#toastMessage').text('Error updating status. Please try again.');
+                    $('#toastMessage').text('Status update Error, Please try again');
                     $('#statusToast').toast('show');
                     
                     // Re-enable interactive elements

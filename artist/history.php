@@ -1,5 +1,47 @@
 <?php
 include("includes/header.php");
+
+// Make sure we have a database connection
+if (!isset($conn)) {
+  require_once '../includes/db_connection.php';
+}
+
+// Get the current user's ID from session
+$user_id = $_SESSION['user_id'] ?? 0;
+
+// Ensure we have a valid user ID
+if (!$user_id) {
+  error_log("Error: No valid user ID in session, redirecting to login");
+  header("Location: ../login.php");
+  exit;
+}
+
+// Fetch hidden tasks
+$tasks = [];
+
+try {
+  // Query to get hidden tasks
+  $query = "SELECT pa.*, p.project_title, c.company_name, p.deadline as project_deadline, 
+            p.date_arrived, p.priority, p.status_project, p.total_images,
+            (SELECT COUNT(pi.image_id) FROM tbl_project_images pi WHERE pi.assignment_id = pa.assignment_id) as assigned_image_count
+            FROM tbl_project_assignments pa
+            JOIN tbl_projects p ON pa.project_id = p.project_id
+            LEFT JOIN tbl_companies c ON p.company_id = c.company_id
+            WHERE pa.user_id = ? AND pa.status_assignee = 'completed' AND pa.is_hidden = 1
+            ORDER BY pa.last_updated DESC";
+
+  $stmt = $conn->prepare($query);
+  $stmt->bind_param("i", $user_id);
+  $stmt->execute();
+  $result = $stmt->get_result();
+  $tasks = $result->fetch_all(MYSQLI_ASSOC);
+
+  error_log("History.php - Found " . count($tasks) . " hidden tasks for user ID: $user_id");
+
+} catch (Exception $e) {
+  error_log("Error in artist/history.php: " . $e->getMessage());
+  $error_message = "There was an error loading your task history. Please contact support.";
+}
 ?>
 <style>
 
@@ -34,7 +76,7 @@ include("includes/header.php");
         <div class="card">
           <div class="card-header">
             <h3 class="card-title">
-              <i class="fas fa-history mr-2"></i>Completed Tasks History
+              <i class="fas fa-history mr-2"></i>Hidden Completed Tasks
             </h3>
           </div>
           <div class="card-body">
@@ -98,7 +140,8 @@ include("includes/header.php");
               <!-- Right Group: Search -->
               <div class="col-md-4">
                 <div class="search-box float-right">
-                  <input type="text" id="searchInput" class="form-control form-control-sm" placeholder="Search history...">
+                  <input type="text" id="searchInput" class="form-control form-control-sm"
+                    placeholder="Search history...">
                   <button class="btn">
                     <i class="fas fa-search"></i>
                   </button>
@@ -124,81 +167,74 @@ include("includes/header.php");
                   </tr>
                 </thead>
                 <tbody>
-                  <!-- Example data -->
-                  <tr class="table-success">
-                    <td>
-                      <div class="d-flex align-items-center">
-                        <div class="ml-2">
-                          <div class="project-title">Website Redesign</div>
-                          <div class="project-company">Technicore Solutions</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td>
-                      <span class="deadline-text">
-                        <i class="far fa-calendar-alt mr-1"></i> March 15, 2023
-                      </span>
-                    </td>
-                    <td>
-                      <span class="completion-date">
-                        <i class="fas fa-check-circle mr-1"></i> March 12, 2023
-                      </span>
-                    </td>
-                    <td>
-                      <span class="project-status status-completed">Completed</span>
-                      <small class="d-block text-muted">
-                        <i class="far fa-clock mr-1"></i> Completed 3 days early
-                      </small>
-                    </td>
-                    <td>
-                      <div class="action-buttons text-center">
-                        <a href="view-task.php?id=1" class="btn btn-info btn-sm" title="View Task">
-                          <i class="fas fa-eye"></i> View
-                        </a>
-                      </div>
-                    </td>
-                  </tr>
-                  <tr class="table-danger">
-                    <td>
-                      <div class="d-flex align-items-center">
-                        <div class="ml-2">
-                          <div class="project-title">Mobile App Development</div>
-                          <div class="project-company">Innovatech Inc.</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td>
-                      <span class="deadline-text">
-                        <i class="far fa-calendar-alt mr-1"></i> February 28, 2023
-                      </span>
-                    </td>
-                    <td>
-                      <span class="completion-date">
-                        <i class="fas fa-check-circle mr-1"></i> March 15, 2023
-
-
-                        <small class="d-block text-muted text-danger">
-                          <i class="fas fa-exclamation-circle mr-1"></i> 15 days overdue
-                        </small>
-                      </span>
-                    </td>
-                    <td>
-                      <span class="project-status status-completed">
-                        Completed
-                      </span>
-                      <small class="d-block text-muted text-danger">
-                        <i class="fas fa-exclamation-circle mr-1"></i> Delayed
-                      </small>
-                    </td>
-                    <td>
-                      <div class="action-buttons text-center">
-                        <a href="view-task.php?id=1" class="btn btn-info btn-sm" title="View Task">
-                          <i class="fas fa-eye"></i> View
-                        </a>
-                      </div>
-                    </td>
-                  </tr>
-
+                  <?php if (empty($tasks)): ?>
+                    <tr>
+                      <td colspan="5" class="text-center">No hidden tasks found</td>
+                    </tr>
+                  <?php else: ?>
+                    <?php foreach ($tasks as $task):
+                      // Check if the task was completed on time
+                      $was_overdue = strtotime($task['last_updated']) > strtotime($task['deadline']);
+                      $status_class = $was_overdue ? 'table-danger' : 'table-success';
+                      ?>
+                      <tr class="<?php echo $status_class; ?>">
+                        <td>
+                          <div class="d-flex align-items-center">
+                            <div class="ml-2">
+                              <div class="project-title"><?php echo htmlspecialchars($task['project_title']); ?></div>
+                              <div class="project-company"><?php echo htmlspecialchars($task['company_name'] ?? 'N/A'); ?>
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                        <td>
+                          <span class="deadline-text">
+                            <i class="far fa-calendar-alt mr-1"></i>
+                            <?php echo date('F d, Y', strtotime($task['deadline'])); ?>
+                          </span>
+                        </td>
+                        <td>
+                          <span class="completion-date">
+                            <i class="fas fa-check-circle mr-1"></i>
+                            <?php echo date('F d, Y', strtotime($task['last_updated'])); ?>
+                            <?php if ($was_overdue): ?>
+                              <small class="d-block text-muted text-danger">
+                                <i class="fas fa-exclamation-circle mr-1"></i>
+                                <?php
+                                $days_late = floor((strtotime($task['last_updated']) - strtotime($task['deadline'])) / (60 * 60 * 24));
+                                echo $days_late . ' day' . ($days_late > 1 ? 's' : '') . ' overdue';
+                                ?>
+                              </small>
+                            <?php else: ?>
+                              <small class="d-block text-muted">
+                                <i class="far fa-clock mr-1"></i> Completed on time
+                              </small>
+                            <?php endif; ?>
+                          </span>
+                        </td>
+                        <td>
+                          <span class="project-status status-completed">Completed</span>
+                          <small class="d-block text-muted <?php echo $was_overdue ? 'text-danger' : ''; ?>">
+                            <i
+                              class="<?php echo $was_overdue ? 'fas fa-exclamation-circle' : 'far fa-check-circle'; ?> mr-1"></i>
+                            <?php echo $was_overdue ? 'Delayed' : 'On Time'; ?>
+                          </small>
+                        </td>
+                        <td>
+                          <div class="action-buttons text-center">
+                            <a href="view-task.php?id=<?php echo $task['assignment_id']; ?>" class="btn btn-info btn-sm"
+                              title="View Task">
+                              <i class="fas fa-eye"></i> View
+                            </a>
+                            <button type="button" class="btn btn-warning btn-sm unhide-task-btn mt-1"
+                              data-id="<?php echo $task['assignment_id']; ?>">
+                              <i class="fas fa-eye mr-1"></i> Unhide
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    <?php endforeach; ?>
+                  <?php endif; ?>
                 </tbody>
               </table>
             </div>
@@ -212,27 +248,63 @@ include("includes/header.php");
 
 
   <script>
-    $(document).ready(function() {
+    $(document).ready(function () {
       // Initialize tooltips
       $('[data-toggle="tooltip"]').tooltip();
 
       // Search functionality
-      $('#searchInput').on('keyup', function() {
+      $('#searchInput').on('keyup', function () {
         var value = $(this).val().toLowerCase();
-        $('#historyTable tbody tr').filter(function() {
+        $('#historyTable tbody tr').filter(function () {
           $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1);
         });
       });
 
+      // Unhide task button
+      $(document).on('click', '.unhide-task-btn', function () {
+        var taskId = $(this).data('id');
+        var button = $(this);
+        var row = button.closest('tr');
+
+        if (confirm('Are you sure you want to unhide this task? It will be moved back to your Tasks page.')) {
+          $.ajax({
+            url: 'controllers/task_controller.php',
+            type: 'POST',
+            data: {
+              action: 'unhide_task',
+              assignment_id: taskId
+            },
+            dataType: 'json',
+            success: function (response) {
+              if (response.status === 'success') {
+                // Remove the row from the table
+                row.fadeOut(300, function () {
+                  $(this).remove();
+                });
+
+                // Show success message
+                toastr.success('Task has been unhidden and moved back to Tasks');
+              } else {
+                toastr.error('Error: ' + response.message);
+              }
+            },
+            error: function (xhr, status, error) {
+              console.error('AJAX Error:', error);
+              toastr.error('An error occurred while unhiding the task');
+            }
+          });
+        }
+      });
+
       // Filter functionality
-      $('#applyFilter').click(function() {
+      $('#applyFilter').click(function () {
         var month = $('#monthFilter').val();
         showLoading();
         // Simulate filtering delay
-        setTimeout(function() {
+        setTimeout(function () {
           if (month) {
             $('#historyTable tbody tr').hide();
-            $('#historyTable tbody tr').each(function() {
+            $('#historyTable tbody tr').each(function () {
               if ($(this).text().indexOf(month) > -1) {
                 $(this).show();
               }
@@ -244,34 +316,13 @@ include("includes/header.php");
         }, 600);
       });
 
-      // Export buttons functionality
-      $('.export-excel').click(function() {
-        alert('Exporting to Excel...');
-        // Implementation would go here
-      });
-
-      $('.export-pdf').click(function() {
-        alert('Exporting to PDF...');
-        // Implementation would go here
-      });
-
-      $('.export-print').click(function() {
-        window.print();
-      });
-
-      // View details functionality
-      $('.view-details').click(function() {
-        // In a real implementation, you would fetch the task details
-        // For now, we'll just show the modal with sample data
-      });
-
       // Loading indicator functions
       function showLoading() {
-        $('.loading-overlay').css('display', 'flex');
+        $('.loading-overlay').show();
       }
 
       function hideLoading() {
-        $('.loading-overlay').css('display', 'none');
+        $('.loading-overlay').hide();
       }
     });
   </script>

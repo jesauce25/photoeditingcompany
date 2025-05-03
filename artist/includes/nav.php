@@ -31,8 +31,6 @@ if ($user_id > 0) {
         <ul class="nav-links" id="navLinks">
             <div>
                 <a href="home.php" class="nav-logo">RAFAELBPO</a>
-
-
             </div>
 
             <li><a href="home.php">Home</a></li>
@@ -42,14 +40,17 @@ if ($user_id > 0) {
                 <div class="d-flex align-items-center ml-auto mr-3">
                     <!-- Notifications Dropdown Menu -->
                     <div class="nav-item dropdown mr-2">
-                        <span class="nav-link" data-toggle="dropdown" style="cursor: pointer; color: white;" id="notificationDropdown">
+                        <span class="nav-link" data-toggle="dropdown" style="cursor: pointer; color: white;"
+                            id="notificationDropdown">
                             <i class="far fa-bell"></i>
-                            <span class="badge badge-warning navbar-badge" id="notificationCount"><?php echo $unread_count > 0 ? $unread_count : ''; ?></span>
+                            <span class="badge badge-warning navbar-badge"
+                                id="notificationCount"><?php echo $unread_count > 0 ? $unread_count : ''; ?></span>
                         </span>
                         <div class="dropdown-menu dropdown-menu-lg dropdown-menu-right" id="notificationMenu">
-                            <span class="dropdown-item dropdown-header" id="notificationHeader"><?php echo $unread_count; ?> Notifications</span>
+                            <span class="dropdown-item dropdown-header"
+                                id="notificationHeader"><?php echo $unread_count; ?> Notifications</span>
                             <div class="dropdown-divider"></div>
-                            
+
                             <div id="notificationItems">
                                 <!-- Notifications will be loaded dynamically here -->
                                 <div class="dropdown-item text-center" id="notificationLoading">
@@ -59,7 +60,7 @@ if ($user_id > 0) {
                                     <i class="fas fa-check-circle mr-2"></i> No new notifications
                                 </div>
                             </div>
-                            
+
                             <div class="dropdown-divider"></div>
                             <a href="#" class="dropdown-item dropdown-footer" id="markAllRead">Mark All As Read</a>
                         </div>

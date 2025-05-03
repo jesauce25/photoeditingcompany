@@ -896,7 +896,8 @@ $projectProgress = getProjectProgressStats($project_id);
                                                                         <option value="">Select Team Member</option>
                                                                         <?php foreach ($graphicArtists as $artist): ?>
                                                                             <option value="<?php echo $artist['user_id']; ?>" <?php echo ($artist['user_id'] == $assignment['user_id']) ? 'selected' : ''; ?>>
-                                                                                <?php echo $artist['full_name']; ?>
+                                                                                <?php echo htmlspecialchars($artist['full_name'] . ' (' . $artist['role'] . ')'); ?>
+                                                                                <?php echo ($artist['status'] == 'Blocked') ? ' [Blocked]' : ''; ?>
                                                                             </option>
                                                                         <?php endforeach; ?>
                                                                     </select>
@@ -1193,6 +1194,7 @@ $projectProgress = getProjectProgressStats($project_id);
                             <?php foreach ($graphicArtists as $artist): ?>
                                 <option value="<?php echo $artist['user_id']; ?>">
                                     <?php echo htmlspecialchars($artist['full_name'] . ' (' . $artist['role'] . ')'); ?>
+                                    <?php echo ($artist['status'] == 'Blocked') ? ' [Blocked]' : ''; ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>

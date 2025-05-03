@@ -386,12 +386,12 @@ function getGraphicArtists()
     global $conn;
     $artists = [];
 
-    $sql = "SELECT a.account_id, a.user_id, a.username, a.role, 
+    $sql = "SELECT a.account_id, a.user_id, a.username, a.role, a.status,
             u.first_name, u.last_name, 
             CONCAT(u.first_name, ' ', u.last_name) AS full_name
             FROM tbl_accounts a
             JOIN tbl_users u ON a.user_id = u.user_id
-            WHERE a.role LIKE '%graphic%artist%' AND a.status = 'Active'
+            WHERE a.role LIKE '%graphic%artist%'
             ORDER BY u.first_name, u.last_name";
 
     $result = $conn->query($sql);
@@ -401,13 +401,12 @@ function getGraphicArtists()
             $artists[] = $row;
         }
     } else {
-        // Fallback to get all active users if no graphic artists found
-        $backupSql = "SELECT a.account_id, a.user_id, a.username, a.role, 
+        // Fallback to get all users if no graphic artists found
+        $backupSql = "SELECT a.account_id, a.user_id, a.username, a.role, a.status,
                 u.first_name, u.last_name, 
                 CONCAT(u.first_name, ' ', u.last_name) AS full_name
                 FROM tbl_accounts a
                 JOIN tbl_users u ON a.user_id = u.user_id
-                WHERE a.status = 'Active'
                 ORDER BY u.first_name, u.last_name";
 
         $backupResult = $conn->query($backupSql);

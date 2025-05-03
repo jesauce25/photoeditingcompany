@@ -23,6 +23,30 @@ if (file_exists('../../includes/db_connection.php')) {
     exit;
 }
 
+// Include task blocking code
+if (file_exists('../../artist/includes/task_block_check.php')) {
+    require_once '../../artist/includes/task_block_check.php';
+} elseif (file_exists('../artist/includes/task_block_check.php')) {
+    require_once '../artist/includes/task_block_check.php';
+}
+
+// Function to check if a transaction is in progress (compatibility function)
+function isInTransaction($conn)
+{
+    // Check if the inTransaction method exists (PHP 5.5.0+)
+    if (method_exists($conn, 'inTransaction')) {
+        return $conn->inTransaction();
+    }
+
+    // Fallback for older MySQL versions - attempt a dummy query
+    // If we're in transaction and there was an error, this won't commit automatically
+    $initialAutocommit = $conn->autocommit(false);
+    $inTransaction = !$initialAutocommit;
+    $conn->autocommit($initialAutocommit);
+
+    return $inTransaction;
+}
+
 // Check if session has started
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
@@ -40,15 +64,70 @@ function getAllUsers()
 
     try {
         // Modified query to use tbl_accounts instead of tbl_roles
-        $sql = "SELECT u.*, a.username, a.role as role_name, a.status
-                FROM tbl_users u 
-                JOIN tbl_accounts a ON u.user_id = a.user_id 
-                ORDER BY u.user_id DESC";
+        $sql = "SELECT u.*, a.username, a.role as role_name, a.status, a.has_overdue_tasks
+                    FROM tbl_users u
+                    JOIN tbl_accounts a ON u.user_id = a.user_id
+                    ORDER BY u.user_id DESC";
 
         $result = $conn->query($sql);
 
         if ($result) {
             while ($row = $result->fetch_assoc()) {
+                // For graphic artists, enforce block state if they have overdue tasks
+                if ($row['role_name'] === 'Graphic Artist') {
+                    error_log("ADMIN LIST: Checking artist ID " . $row['user_id'] . " - Current status: '{$row['status']}', has_overdue_tasks: {$row['has_overdue_tasks']}");
+
+                    if (function_exists('forceBlockUserByOverdue')) {
+                        // Use the new direct approach
+                        $blockResult = forceBlockUserByOverdue($row['user_id']);
+                        error_log("ADMIN LIST: Block check for artist ID " . $row['user_id'] .
+                            ": Has overdue: " . ($blockResult['has_overdue'] ? 'YES' : 'NO') .
+                            ", Status updated: " . ($blockResult['status_updated'] ? 'YES' : 'NO'));
+
+                        // If the artist has overdue tasks but wasn't blocked, force it directly
+                        if ($blockResult['has_overdue'] && !$blockResult['status_updated']) {
+                            error_log("ADMIN LIST: Artist has overdue but status not updated - checking for admin protection");
+
+                            // Check if user has admin protection before forcing block
+                            $protectQuery = "SELECT last_unblocked_at FROM tbl_accounts WHERE user_id = ? AND last_unblocked_at > NOW()";
+                            $protectStmt = $conn->prepare($protectQuery);
+                            $protectStmt->bind_param("i", $row['user_id']);
+                            $protectStmt->execute();
+                            $hasProtection = $protectStmt->get_result()->num_rows > 0;
+
+                            if (!$hasProtection) {
+                                error_log("ADMIN LIST: No admin protection found - forcing block update");
+                                // Direct force query to ensure blocking happens only if not protected
+                                $forceQuery = "UPDATE tbl_accounts SET status = 'Blocked', has_overdue_tasks = 1 WHERE user_id = ?";
+                                $forceStmt = $conn->prepare($forceQuery);
+                                $forceStmt->bind_param("i", $row['user_id']);
+                                $forceResult = $forceStmt->execute();
+
+                                error_log("ADMIN LIST: Force update for artist ID " . $row['user_id'] . ": " .
+                                    ($forceResult ? 'SUCCESS' : 'FAILED'));
+                            } else {
+                                error_log("ADMIN LIST: Artist has admin protection - NOT forcing block");
+                            }
+                        }
+
+                        // Get current status from DB to update the row data
+                        $statusQuery = "SELECT status, has_overdue_tasks FROM tbl_accounts WHERE user_id = ?";
+                        $statusStmt = $conn->prepare($statusQuery);
+                        $statusStmt->bind_param("i", $row['user_id']);
+                        $statusStmt->execute();
+                        $userStatus = $statusStmt->get_result()->fetch_assoc();
+
+                        if ($userStatus) {
+                            $row['status'] = $userStatus['status'];
+                            $row['has_overdue_tasks'] = $userStatus['has_overdue_tasks'];
+                            error_log("ADMIN LIST: Updated artist data - Status: '{$row['status']}', has_overdue_tasks: {$row['has_overdue_tasks']}");
+                        }
+                    } else {
+                        error_log("ADMIN LIST: Function forceBlockUserByOverdue not found");
+                    }
+                }
+
+                // Add the row to the users array (with potentially updated status)
                 $users[] = $row;
             }
             $result->free();
@@ -63,6 +142,7 @@ function getAllUsers()
         throw $e;
     }
 }
+
 
 /**
  * Get user details by ID
@@ -280,58 +360,183 @@ function deleteUser($user_id)
 }
 
 /**
- * Update user status
- * 
+ * Update user status (Active/Blocked)
+ *
  * @param int $user_id User ID
  * @param string $status New status (Active/Blocked)
- * @return array Response with success status and message
+ * @return array Result array with success status and message
  */
 function updateUserStatus($user_id, $status)
 {
     global $conn;
 
-    try {
-        // Validate status
-        if (!in_array($status, ['Active', 'Blocked'])) {
-            throw new Exception("Invalid status value");
+    // Ensure user_id is treated as an integer to prevent SQL injection
+    $user_id = intval($user_id);
+
+    // Log initial state for debugging
+    error_log("updateUserStatus START: User ID: $user_id, New status: $status");
+
+    // Check if we're unblocking a user by querying current status
+    $current_query = "SELECT status, has_overdue_tasks, is_protected, last_unblocked_at FROM tbl_accounts WHERE user_id = $user_id";
+    $current_result = $conn->query($current_query);
+    $current_data = $current_result->fetch_assoc();
+    $current_status = $current_data ? $current_data['status'] : 'Unknown';
+    $has_overdue_tasks = $current_data ? $current_data['has_overdue_tasks'] : 0;
+    $is_protected = $current_data ? $current_data['is_protected'] : 0;
+    $current_unblock_time = $current_data && !empty($current_data['last_unblocked_at']) ? $current_data['last_unblocked_at'] : null;
+
+    $isUnblocking = ($current_status === 'Blocked' && $status === 'Active');
+    error_log("User current status: $current_status, has_overdue_tasks: $has_overdue_tasks, is_protected: $is_protected, isUnblocking: " . ($isUnblocking ? 'YES' : 'NO'));
+
+    if ($isUnblocking) {
+        error_log("UNBLOCKING USER ID: $user_id");
+
+        // Begin transaction to ensure all operations complete together
+        $conn->begin_transaction();
+
+        try {
+            // Calculate protection end time - 1 minute from now (for testing)
+            $now = new DateTime();
+            $protection_end = $now->add(new DateInterval('PT1M'));  // Changed from PT24H to PT1M (1 minute)
+            $protection_timestamp = $protection_end->format('Y-m-d H:i:s');
+
+            error_log("PROTECTION INFO: Setting protection until $protection_timestamp (1 MINUTE from now - TEST MODE)");
+
+            // STEP 0: Mark all existing overdue tasks as forgiven
+            // This will be used in the task_block_check to ignore these specific tasks
+            $today = date('Y-m-d');
+            $forgive_query = "UPDATE tbl_project_assignments 
+                             SET forgiven_at = NOW() 
+                             WHERE user_id = ? 
+                               AND status_assignee NOT IN ('completed', 'deleted')
+                               AND deadline < ?";
+
+            // Check if the forgiven_at column exists
+            $check_column = "SHOW COLUMNS FROM tbl_project_assignments LIKE 'forgiven_at'";
+            $column_exists = $conn->query($check_column)->num_rows > 0;
+
+            if ($column_exists) {
+                // Column exists, proceed with update
+                $forgive_stmt = $conn->prepare($forgive_query);
+                $forgive_stmt->bind_param("is", $user_id, $today);
+                $forgive_result = $forgive_stmt->execute();
+                $forgiven_count = $forgive_stmt->affected_rows;
+                error_log("OVERDUE FORGIVENESS: Marked $forgiven_count existing overdue tasks as forgiven for user $user_id");
+            } else {
+                // Column doesn't exist, log a warning
+                error_log("WARNING: forgiven_at column does not exist in tbl_project_assignments. Please run the SQL in admin/db_update_forgiven.sql");
+            }
+
+            // STEP 1: Update the account
+            $account_sql = "UPDATE tbl_accounts 
+                           SET status = 'Active', 
+                               has_overdue_tasks = 0, 
+                               is_protected = 1,
+                               last_unblocked_at = ?
+                           WHERE user_id = ?";
+
+            $account_stmt = $conn->prepare($account_sql);
+            $account_stmt->bind_param("si", $protection_timestamp, $user_id);
+            $account_result = $account_stmt->execute();
+            $affected_rows = $account_stmt->affected_rows;
+
+            if (!$account_result || $affected_rows === 0) {
+                throw new Exception("Failed to update account status: " . $conn->error);
+            }
+            error_log("ACCOUNT UPDATE RESULT: SUCCESS (Affected rows: $affected_rows)");
+
+            // STEP 2: Unlock all tasks 
+            $tasks_sql = "UPDATE tbl_project_assignments 
+                         SET is_locked = 0 
+                         WHERE user_id = ?";
+
+            $tasks_stmt = $conn->prepare($tasks_sql);
+            $tasks_stmt->bind_param("i", $user_id);
+            $task_result = $tasks_stmt->execute();
+            $tasks_affected = $tasks_stmt->affected_rows;
+
+            if (!$task_result) {
+                throw new Exception("Failed to unlock tasks: " . $conn->error);
+            }
+            error_log("TASK UNLOCK RESULT: SUCCESS (Affected: $tasks_affected)");
+
+            // STEP 3: VERIFY that everything was updated correctly
+            $check_sql = "SELECT status, has_overdue_tasks, last_unblocked_at, is_protected
+                          FROM tbl_accounts 
+                          WHERE user_id = ?";
+            $check_stmt = $conn->prepare($check_sql);
+            $check_stmt->bind_param("i", $user_id);
+            $check_stmt->execute();
+            $check_result = $check_stmt->get_result();
+            $account_data = $check_result->fetch_assoc();
+
+            $lock_check = "SELECT COUNT(*) as locked_count 
+                          FROM tbl_project_assignments 
+                          WHERE user_id = ? AND is_locked = 1";
+            $lock_stmt = $conn->prepare($lock_check);
+            $lock_stmt->bind_param("i", $user_id);
+            $lock_stmt->execute();
+            $lock_result = $lock_stmt->get_result();
+            $lock_data = $lock_result->fetch_assoc();
+
+            // Log the verification results
+            error_log("VERIFICATION: Status = " . $account_data['status'] .
+                ", has_overdue_tasks = " . $account_data['has_overdue_tasks'] .
+                ", is_protected = " . $account_data['is_protected'] .
+                ", locked_count = " . $lock_data['locked_count'] .
+                ", protection until = " . $account_data['last_unblocked_at']);
+
+            // Commit the transaction
+            $conn->commit();
+
+            // Check for overdue tasks (for informational purposes only)
+            $today = date('Y-m-d');
+            $overdue_check = "SELECT COUNT(*) as overdue_count
+                             FROM tbl_project_assignments
+                             WHERE user_id = ?
+                               AND status_assignee NOT IN ('completed', 'deleted')
+                               AND deadline < ?";
+            $overdue_stmt = $conn->prepare($overdue_check);
+            $overdue_stmt->bind_param("is", $user_id, $today);
+            $overdue_stmt->execute();
+            $overdue_result = $overdue_stmt->get_result()->fetch_assoc();
+            $overdue_count = $overdue_result ? $overdue_result['overdue_count'] : 0;
+
+            error_log("INFO: User ID $user_id had overdue tasks, but they have been marked as forgiven");
+
+            return array(
+                'success' => true,
+                'message' => "User unblocked successfully. Tasks have been unlocked and existing overdue tasks forgiven. Protection period set for 1 minute (until $protection_timestamp)."
+            );
+        } catch (Exception $e) {
+            // Roll back transaction on error
+            if ($conn->inTransaction()) {
+                $conn->rollback();
+            }
+            error_log("ERROR UNBLOCKING USER: " . $e->getMessage());
+            return array('success' => false, 'message' => "Failed to unblock user: " . $e->getMessage());
+        }
+    } else {
+        // ==============================================
+        // Regular status update (not unblocking)
+        // ==============================================
+        error_log("REGULAR STATUS UPDATE: User ID: $user_id, New status: $status");
+
+        // Use prepared statement for better security
+        $sql = "UPDATE tbl_accounts SET status = ? WHERE user_id = ?";
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param("si", $status, $user_id);
+        $result = $stmt->execute();
+
+        if (!$result) {
+            error_log("STATUS UPDATE FAILED: " . $conn->error);
+            return array('success' => false, 'message' => "Failed to update status: " . $conn->error);
         }
 
-        // Check if we're unblocking a user
-        $isUnblocking = false;
-        $stmt = $conn->prepare("SELECT status FROM tbl_accounts WHERE user_id = ?");
-        $stmt->bind_param("i", $user_id);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        $currentStatus = $result->fetch_assoc();
-
-        if ($currentStatus && $currentStatus['status'] === 'Blocked' && $status === 'Active') {
-            $isUnblocking = true;
-        }
-
-        // Prepare the query with last_unblocked_at if unblocking
-        if ($isUnblocking) {
-            $stmt = $conn->prepare("UPDATE tbl_accounts SET status = ?, last_unblocked_at = NOW() WHERE user_id = ?");
-            $stmt->bind_param("si", $status, $user_id);
-        } else {
-            $stmt = $conn->prepare("UPDATE tbl_accounts SET status = ? WHERE user_id = ?");
-            $stmt->bind_param("si", $status, $user_id);
-        }
-
-        if (!$stmt->execute()) {
-            throw new Exception("Failed to update user status");
-        }
-
-        // Also update the is_locked status for all tasks if unblocking
-        if ($isUnblocking) {
-            $unlockStmt = $conn->prepare("UPDATE tbl_project_assignments SET is_locked = 0 WHERE user_id = ?");
-            $unlockStmt->bind_param("i", $user_id);
-            $unlockStmt->execute();
-        }
-
-        return array('success' => true, 'message' => 'User status updated successfully');
-
-    } catch (Exception $e) {
-        return array('success' => false, 'message' => $e->getMessage());
+        return array(
+            'success' => true,
+            'message' => 'User status updated to ' . $status
+        );
     }
 }
 
@@ -546,7 +751,7 @@ function registerUser($userData)
 
     } catch (Exception $e) {
         // Rollback transaction on error
-        if (isset($conn) && $conn->ping()) {
+        if (isInTransaction($conn)) {
             $conn->rollback();
         }
         return array('success' => false, 'message' => $e->getMessage());

@@ -13,7 +13,23 @@ ini_set('display_errors', 1);
 require_once __DIR__ . '/db_connection_passthrough.php';
 require_once 'unified_project_controller.php';
 
-// Function to log AJAX requests for debugging
+// Function to check if a transaction is in progress (compatibility function)
+function isInTransaction($conn)
+{
+    // Check if the inTransaction method exists (PHP 5.5.0+)
+    if (method_exists($conn, 'inTransaction')) {
+        return $conn->inTransaction();
+    }
+
+    // Fallback for older MySQL versions - attempt a dummy query
+    // If we're in transaction and there was an error, this won't commit automatically
+    $initialAutocommit = $conn->autocommit(false);
+    $inTransaction = !$initialAutocommit;
+    $conn->autocommit($initialAutocommit);
+
+    return $inTransaction;
+}
+
 // Function to log AJAX requests for debugging
 function logAjaxRequest($action, $data = null, $files = null)
 {
@@ -329,7 +345,7 @@ if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQ
                 $conn->begin_transaction();
 
                 // Get the current assignment info
-                $assignmentQuery = "SELECT project_id, status_assignee FROM tbl_project_assignments WHERE assignment_id = ?";
+                $assignmentQuery = "SELECT project_id, status_assignee, user_id FROM tbl_project_assignments WHERE assignment_id = ?";
                 $stmt = $conn->prepare($assignmentQuery);
                 $stmt->bind_param('i', $assignmentId);
                 $stmt->execute();
@@ -341,6 +357,24 @@ if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQ
 
                 $assignmentData = $result->fetch_assoc();
                 $projectId = $assignmentData['project_id'];
+                $userId = $assignmentData['user_id'];
+
+                // If trying to set to 'in_progress', check if user already has a task in progress
+                if ($newStatus === 'in_progress') {
+                    $inProgressQuery = "SELECT assignment_id 
+                                       FROM tbl_project_assignments 
+                                       WHERE user_id = ? 
+                                         AND status_assignee = 'in_progress'
+                                         AND assignment_id != ?";
+                    $inProgressStmt = $conn->prepare($inProgressQuery);
+                    $inProgressStmt->bind_param('ii', $userId, $assignmentId);
+                    $inProgressStmt->execute();
+                    $inProgressResult = $inProgressStmt->get_result();
+
+                    if ($inProgressResult->num_rows > 0) {
+                        throw new Exception('The artist already has a task in progress. Only one task can be in progress at a time.');
+                    }
+                }
 
                 // Update the assignment status
                 $updateQuery = "UPDATE tbl_project_assignments SET status_assignee = ?, last_updated = NOW() WHERE assignment_id = ?";
@@ -369,7 +403,7 @@ if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQ
                 ]);
             } catch (Exception $e) {
                 // Rollback transaction on error
-                if ($conn->inTransaction()) {
+                if (isInTransaction($conn)) {
                     $conn->rollback();
                 }
                 echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
@@ -1239,7 +1273,7 @@ if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQ
                 ]);
             } catch (Exception $e) {
                 // Roll back transaction on error
-                if ($conn->inTransaction()) {
+                if (isInTransaction($conn)) {
                     $conn->rollback();
                 }
 

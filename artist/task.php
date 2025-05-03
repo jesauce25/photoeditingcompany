@@ -28,11 +28,106 @@ if (!$user_id) {
   exit;
 }
 
-// Check for overdue tasks
-$blockCheck = checkArtistOverdueTasks($user_id);
-$has_overdue_tasks = $blockCheck['blocked'];
-$overdue_reason = $blockCheck['reason'];
-$overdue_tasks = $blockCheck['overdue_tasks'] ?? [];
+// First check if user has admin protection (recently unblocked)
+$protectionQuery = "SELECT last_unblocked_at FROM tbl_accounts WHERE user_id = ?";
+$protectionStmt = $conn->prepare($protectionQuery);
+$protectionStmt->bind_param("i", $user_id);
+$protectionStmt->execute();
+$protectionResult = $protectionStmt->get_result();
+$protectionData = $protectionResult->fetch_assoc();
+
+$hasProtection = false;
+if ($protectionData && !empty($protectionData['last_unblocked_at'])) {
+  $unblockTime = new DateTime($protectionData['last_unblocked_at']);
+  $now = new DateTime();
+
+  if ($unblockTime > $now) {
+    $hasProtection = true;
+    $timeRemaining = $now->diff($unblockTime);
+    error_log("TASK PAGE: User ID $user_id has admin protection for " .
+      $timeRemaining->format('%h hours, %i minutes') .
+      " until " . $unblockTime->format('Y-m-d H:i:s'));
+
+    // If user has protection, ensure they are active and tasks are unlocked
+    $updateAccountQuery = "UPDATE tbl_accounts SET status = 'Active', has_overdue_tasks = 0 WHERE user_id = ?";
+    $updateAccountStmt = $conn->prepare($updateAccountQuery);
+    $updateAccountStmt->bind_param("i", $user_id);
+    $updateAccountStmt->execute();
+
+    $unlockTasksQuery = "UPDATE tbl_project_assignments SET is_locked = 0 WHERE user_id = ?";
+    $unlockTasksStmt = $conn->prepare($unlockTasksQuery);
+    $unlockTasksStmt->bind_param("i", $user_id);
+    $unlockTasksStmt->execute();
+  }
+}
+
+// Get current user status before blocking check
+$currentStatusQuery = "SELECT status, has_overdue_tasks FROM tbl_accounts WHERE user_id = ?";
+$currentStatusStmt = $conn->prepare($currentStatusQuery);
+$currentStatusStmt->bind_param("i", $user_id);
+$currentStatusStmt->execute();
+$beforeStatus = $currentStatusStmt->get_result()->fetch_assoc();
+
+error_log("TASK PAGE - BEFORE: User ID $user_id status: " .
+  ($beforeStatus ? "'{$beforeStatus['status']}', has_overdue_tasks: {$beforeStatus['has_overdue_tasks']}" : "unknown") .
+  ", Has protection: " . ($hasProtection ? "YES" : "NO"));
+
+// Only perform the block check if there's no protection period active
+if (!$hasProtection) {
+  // DIRECT APPROACH: Force check for overdue tasks and block/unblock as needed
+  // This ensures all three states are perfectly synchronized - no more issues!
+  $blockResult = forceBlockUserByOverdue($user_id);
+  $has_overdue_tasks = $blockResult['has_overdue'];
+
+  // Log the full result for debugging
+  error_log("TASK PAGE: Block check result: " . json_encode($blockResult));
+
+  // Check if status was actually updated
+  if ($blockResult['has_overdue'] && !$blockResult['status_updated']) {
+    // If we have overdue tasks but status wasn't updated, force it directly
+    error_log("TASK PAGE: Overdue detected but status not updated! Forcing status update...");
+    $forceQuery = "UPDATE tbl_accounts SET status = 'Blocked', has_overdue_tasks = 1 WHERE user_id = ?";
+    $forceStmt = $conn->prepare($forceQuery);
+    $forceStmt->bind_param("i", $user_id);
+    $forceResult = $forceStmt->execute();
+    error_log("TASK PAGE: Force update result: " . ($forceResult ? "SUCCESS" : "FAILED"));
+
+    // Also make sure tasks are locked, except for in_progress, finish, and completed tasks
+    error_log("TASK PAGE: Ensuring tasks are locked (except in_progress, finish, completed)...");
+    $lockTasksQuery = "UPDATE tbl_project_assignments 
+                      SET is_locked = 1 
+                      WHERE user_id = ? 
+                        AND status_assignee NOT IN ('completed', 'in_progress', 'finish')";
+    $lockTasksStmt = $conn->prepare($lockTasksQuery);
+    $lockTasksStmt->bind_param("i", $user_id);
+    $lockTasksResult = $lockTasksStmt->execute();
+    $tasksLocked = $lockTasksStmt->affected_rows;
+    error_log("TASK PAGE: Force lock tasks result: " . ($lockTasksResult ? "SUCCESS ($tasksLocked tasks locked)" : "FAILED"));
+  }
+} else {
+  // If user has protection, set has_overdue_tasks to 0 to prevent UI showing blocking message
+  $has_overdue_tasks = 0;
+  error_log("TASK PAGE: User has admin protection - skipping overdue checks - Protection remaining: " .
+    ($protectionData && !empty($protectionData['last_unblocked_at']) ?
+      (new DateTime($protectionData['last_unblocked_at']))->diff(new DateTime())->format('%h hours, %i minutes, %s seconds')
+      : 'unknown'));
+}
+
+// Get status AFTER blocking check to confirm changes
+$afterStatusQuery = "SELECT status, has_overdue_tasks FROM tbl_accounts WHERE user_id = ?";
+$afterStatusStmt = $conn->prepare($afterStatusQuery);
+$afterStatusStmt->bind_param("i", $user_id);
+$afterStatusStmt->execute();
+$afterStatus = $afterStatusStmt->get_result()->fetch_assoc();
+
+error_log("TASK PAGE - AFTER: User ID $user_id status: " .
+  ($afterStatus ? "'{$afterStatus['status']}', has_overdue_tasks: {$afterStatus['has_overdue_tasks']}" : "unknown") .
+  " - Has protection: " . ($hasProtection ? "YES" : "NO"));
+
+// Set overdue reason for display if needed
+$overdue_reason = $has_overdue_tasks ?
+  "You have overdue tasks. Please complete your current tasks before accessing others." :
+  "";
 
 // Initialize empty array for tasks
 $tasks = [];
@@ -44,14 +139,12 @@ try {
   // Fetch tasks assigned to the current user
   $query = "SELECT pa.*, p.project_title, c.company_name, p.deadline as project_deadline, 
               p.date_arrived, p.priority, p.status_project, p.total_images,
-              pa.is_locked, pa.is_first_overdue,
-              COUNT(pi.image_id) as assigned_image_count
+              pa.is_locked, 
+              (SELECT COUNT(pi.image_id) FROM tbl_project_images pi WHERE pi.assignment_id = pa.assignment_id) as assigned_image_count
               FROM tbl_project_assignments pa
               JOIN tbl_projects p ON pa.project_id = p.project_id
               LEFT JOIN tbl_companies c ON p.company_id = c.company_id
-              LEFT JOIN tbl_project_images pi ON pi.assignment_id = pa.assignment_id
-              WHERE pa.user_id = ? AND pa.status_assignee != 'deleted'
-              GROUP BY pa.assignment_id
+              WHERE pa.user_id = ? AND pa.status_assignee != 'deleted' AND (pa.is_hidden = 0 OR pa.is_hidden IS NULL)
               ORDER BY pa.deadline ASC";
 
   $stmt = $conn->prepare($query);
@@ -77,7 +170,7 @@ try {
   error_log("SQL Error: " . ($conn->error ?? 'None'));
 
   // Create a friendly error message for display
-  $error_message = "There was an error loading your tasks. Please contact support.";
+  $error_message = "There was an error loading your tasks. Please contact support. Error: " . $e->getMessage();
 }
 
 // Include header after processing to avoid redirect issues
@@ -202,35 +295,6 @@ include("includes/header.php");
                 <?php unset($_SESSION['error_message']); ?>
               <?php endif; ?>
 
-              <?php if ($has_overdue_tasks): ?>
-                <div class="alert alert-danger">
-                  <div class="d-flex align-items-center">
-                    <i class="fas fa-exclamation-triangle fa-2x mr-3"></i>
-                    <div>
-                      <h5 class="alert-heading mb-1">Your account is currently restricted</h5>
-                      <p class="mb-1"><?php echo htmlspecialchars($overdue_reason); ?></p>
-                      <p class="mb-0 small">You can still view and work on your existing tasks, but new tasks will be
-                        locked until you complete your overdue ones.</p>
-                    </div>
-                  </div>
-                  <?php if (!empty($overdue_tasks)): ?>
-                    <hr>
-                    <p class="mb-1"><strong>Overdue tasks:</strong></p>
-                    <ul class="mb-0">
-                      <?php foreach ($overdue_tasks as $overdue): ?>
-                        <li>
-                          <a href="view-task.php?id=<?php echo $overdue['assignment_id']; ?>" class="text-danger">
-                            <?php echo htmlspecialchars($overdue['project_title']); ?>
-                            (<?php echo htmlspecialchars($overdue['role_task']); ?>)
-                            - Due: <?php echo date('M d, Y', strtotime($overdue['deadline'])); ?>
-                          </a>
-                        </li>
-                      <?php endforeach; ?>
-                    </ul>
-                  <?php endif; ?>
-                </div>
-              <?php endif; ?>
-
               <div class="table-responsive">
                 <table id="taskTable" class="table table-bordered table-hover">
                   <thead>
@@ -273,12 +337,7 @@ include("includes/header.php");
                                     <i class="fas fa-lock"></i>
                                   </span>
                                 <?php endif; ?>
-                                <?php if (isset($task['is_first_overdue']) && $task['is_first_overdue'] == 1): ?>
-                                  <span class="ml-1 text-warning"
-                                    title="This is your highest priority overdue task. Please complete this task first.">
-                                    <i class="fas fa-exclamation-circle"></i> First Overdue
-                                  </span>
-                                <?php endif; ?>
+
                               </div>
                               <div class="project-client">
                                 <i class="fas fa-building mr-1"></i>
@@ -337,6 +396,12 @@ include("includes/header.php");
                               <a href="view-task.php?id=<?php echo $task['assignment_id']; ?>" class="btn btn-info btn-sm">
                                 <i class="fas fa-eye mr-1"></i> View
                               </a>
+                              <?php if ($task['status_assignee'] === 'completed'): ?>
+                                <button type="button" class="btn btn-secondary btn-sm hide-task-btn mt-1"
+                                  data-id="<?php echo $task['assignment_id']; ?>">
+                                  <i class="fas fa-eye-slash mr-1"></i> Hide
+                                </button>
+                              <?php endif; ?>
                             <?php endif; ?>
                           </td>
                         </tr>
@@ -399,8 +464,15 @@ include("includes/header.php");
   }
 </style>
 
+<?php include("includes/footer.php"); ?>
+
 <script>
+  // Debug jQuery loading
+  console.log("jQuery version: " + (typeof jQuery !== 'undefined' ? jQuery.fn.jquery : 'not loaded'));
+
   $(document).ready(function () {
+    console.log("jQuery document ready fired successfully");
+
     // Initialize DataTable
     var table = $('#taskTable').DataTable({
       "responsive": true,
@@ -484,6 +556,42 @@ include("includes/header.php");
           },
           error: function () {
             toastr.error('Error occurred while completing the task');
+          }
+        });
+      }
+    });
+
+    // Handle hide task button click
+    $(document).on('click', '.hide-task-btn', function () {
+      var taskId = $(this).data('id');
+      var button = $(this);
+      var row = button.closest('tr');
+
+      if (confirm('Are you sure you want to hide this task? It will be moved to your History page.')) {
+        $.ajax({
+          url: 'controllers/task_controller.php',
+          type: 'POST',
+          data: {
+            action: 'hide_task',
+            assignment_id: taskId
+          },
+          dataType: 'json',
+          success: function (response) {
+            if (response.status === 'success') {
+              // Remove the row from the table
+              row.fadeOut(300, function () {
+                $(this).remove();
+              });
+
+              // Show success message
+              toastr.success('Task has been hidden and moved to History');
+            } else {
+              toastr.error('Error: ' + response.message);
+            }
+          },
+          error: function (xhr, status, error) {
+            console.error('AJAX Error:', error);
+            toastr.error('An error occurred while hiding the task');
           }
         });
       }
@@ -598,12 +706,15 @@ include("includes/header.php");
 
 <script>
   // Handle showing the access blocked modal with the correct reason
-  $('#accessBlockedModal').on('show.bs.modal', function (event) {
-    var button = $(event.relatedTarget);
-    var reason = button.data('reason');
-    var modal = $(this);
-    modal.find('#blockReasonText').text(reason);
+  $(document).ready(function () {
+    $('#accessBlockedModal').on('show.bs.modal', function (event) {
+      var button = $(event.relatedTarget);
+      var reason = button.data('reason');
+      var modal = $(this);
+      modal.find('#blockReasonText').text(reason);
+    });
   });
 </script>
+</body>
 
-<?php include("includes/footer.php"); ?>
+</html>
