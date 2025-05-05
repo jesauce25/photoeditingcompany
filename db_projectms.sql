@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: May 03, 2025 at 09:00 AM
+-- Generation Time: May 05, 2025 at 03:11 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -44,7 +44,9 @@ CREATE TABLE `activity_logs` (
 INSERT INTO `activity_logs` (`log_id`, `user_id`, `activity_type`, `entity_id`, `entity_type`, `details`, `created_at`) VALUES
 (1, 20, 'task_hidden', 74, 'assignment', 'Assignment ID: 74 hidden', '2025-04-30 05:19:56'),
 (2, 12, 'task_hidden', 80, 'assignment', 'Assignment ID: 80 hidden', '2025-05-01 01:06:26'),
-(3, 12, 'task_hidden', 79, 'assignment', 'Assignment ID: 79 hidden', '2025-05-01 01:06:28');
+(3, 12, 'task_hidden', 79, 'assignment', 'Assignment ID: 79 hidden', '2025-05-01 01:06:28'),
+(4, 25, 'task_hidden', 203, 'assignment', 'Assignment ID: 203 hidden', '2025-05-05 00:23:31'),
+(5, 25, 'task_hidden', 204, 'assignment', 'Assignment ID: 204 hidden', '2025-05-05 00:23:34');
 
 -- --------------------------------------------------------
 
@@ -73,13 +75,12 @@ INSERT INTO `tbl_accounts` (`account_id`, `user_id`, `username`, `password`, `ro
 (1, 1, 'admin', 'admin', 'Admin', 'Active', 0, 0, '2025-03-15 02:16:10', NULL),
 (3, 3, 'superadmin', 'superadmin123', 'Admin', 'Active', 0, 0, '2025-04-01 01:16:55', NULL),
 (10, 11, 'manager', '$2y$10$K0wyTVi15t46N3Ke5lptUuzmQhDTeaXEPxOIFN1zqzB', 'Project Manager', 'Active', 0, 0, '2025-04-07 03:42:45', NULL),
-(11, 12, 'art', '$2y$10$ra3.faagk/2YIKnwhTPDQu3EkCaD7zj0pGpfnBbrYcp', 'Graphic Artist', 'Active', 0, 1, '2025-04-07 03:45:26', '2025-05-04 05:46:43'),
-(17, 18, 'test', '$2y$10$I4okCgbWa7sW9ILM.dlH8OBeBKzzO8lEHhV/7UNpYEsmmkEMB5ppy', 'Graphic Artist', 'Active', 0, 0, '2025-04-21 01:03:46', NULL),
 (18, 19, 'admin1', '$2y$10$FsXHYlI4fPENMuU2Pqs/qeG1Xbygx2xAnxzYcn7KwdakeBSc/dbQa', 'Admin', 'Active', 0, 0, '2025-04-21 04:20:59', NULL),
-(19, 20, 'paulo', '$2y$10$qJcV5TaCKmSounwxuNMTBOKKDhCgvCXLahvGDGtbybi7YQFod3zbe', 'Graphic Artist', 'Active', 0, 1, '2025-04-26 07:18:58', '2025-05-04 06:02:20'),
 (21, 22, 'a', '$2y$10$bI00Hg2dh3DKnJHiJRwyruWtaXpANy9Wque/Bw3JajT4WjREKC7OW', 'Project Manager', 'Active', 0, 0, '2025-04-26 07:47:12', NULL),
 (22, 23, 's', '$2y$10$G0ROnH30b9cSW8QOTh.vAOvVUc5SpCtNXIecZ9/q6q3llIbcjzM6e', 'Project Manager', 'Active', 0, 0, '2025-04-26 08:06:45', NULL),
-(23, 24, 'is', '$2y$10$3oI66G8/CjcBlssKETT4fuEgQpDVCyuSbwU/zS19uVWOx91n6eo22', 'Graphic Artist', 'Active', 0, 1, '2025-05-03 06:32:36', '2025-05-03 00:59:03');
+(23, 24, 'is', '$2y$10$3oI66G8/CjcBlssKETT4fuEgQpDVCyuSbwU/zS19uVWOx91n6eo22', 'Graphic Artist', 'Active', 0, 0, '2025-05-03 06:32:36', '2025-05-03 01:14:57'),
+(24, 25, 'art', '$2y$10$XvQwPSi2APVKD6K/ckO.M.CHtyHxG4J./fK6f5dhHz/Whwox2..q2', 'Graphic Artist', 'Active', 0, 0, '2025-05-05 00:12:50', '2025-05-04 18:25:15'),
+(25, 26, 'test', '$2y$10$s6Ym1SwPjlJY36n6Ldh6KeL83T.w6ot.s9b.PycV4xWxrjOm22I6e', 'Graphic Artist', 'Active', 0, 0, '2025-05-05 00:13:36', NULL);
 
 --
 -- Triggers `tbl_accounts`
@@ -172,7 +173,8 @@ CREATE TABLE `tbl_projects` (
 --
 
 INSERT INTO `tbl_projects` (`project_id`, `project_title`, `company_id`, `description`, `date_arrived`, `deadline`, `priority`, `status_project`, `total_images`, `created_by`, `date_created`, `date_updated`) VALUES
-(99, 'sad', 17, '', '2025-04-28', '2025-05-30', 'medium', 'in_progress', 6, 1, '2025-05-03 06:34:00', '2025-05-03 06:34:27');
+(101, '123', 27, '', '2025-04-27', '2025-05-05', 'medium', 'in_progress', 9, 1, '2025-05-05 00:14:32', '2025-05-05 00:59:19'),
+(102, 'test for tommorow to see the overdue deadline', 19, '', '2025-04-27', '2025-05-05', 'medium', 'in_progress', 11, 1, '2025-05-05 00:34:41', '2025-05-05 00:54:14');
 
 -- --------------------------------------------------------
 
@@ -202,10 +204,15 @@ CREATE TABLE `tbl_project_assignments` (
 --
 
 INSERT INTO `tbl_project_assignments` (`assignment_id`, `project_id`, `user_id`, `role_task`, `assigned_images`, `status_assignee`, `assigned_date`, `last_updated`, `updated_by`, `deadline`, `delay_acceptable`, `is_locked`, `is_hidden`, `forgiven_at`) VALUES
-(195, 99, 24, 'Retouch', 1, 'finish', '2025-05-03 06:34:07', '2025-05-03 06:42:40', NULL, '2025-05-10', '', 0, 0, NULL),
-(196, 99, 24, 'Color Correction', 1, 'pending', '2025-05-03 06:34:11', '2025-05-03 06:58:03', NULL, '2025-05-06', '', 0, 0, NULL),
-(197, 99, 24, 'Final', 1, 'pending', '2025-05-03 06:34:23', '2025-05-03 06:58:03', NULL, '2025-05-10', '', 0, 0, NULL),
-(198, 99, 24, 'Clipping Path', 1, 'pending', '2025-05-03 06:34:27', '2025-05-03 06:58:03', NULL, '2025-05-10', '', 0, 0, NULL);
+(203, 101, 25, 'Retouch', 1, 'completed', '2025-05-05 00:16:29', '2025-05-05 00:23:31', NULL, '2025-05-12', '', 0, 1, NULL),
+(204, 101, 25, 'Retouch', 1, 'completed', '2025-05-05 00:16:32', '2025-05-05 00:53:07', NULL, '2025-05-01', '1', 0, 1, '2025-05-05 00:20:51'),
+(205, 101, 25, 'Clipping Path', 1, 'pending', '2025-05-05 00:16:37', '2025-05-05 00:24:15', NULL, '2025-04-29', '', 0, 0, '2025-05-05 00:24:15'),
+(206, 101, 25, 'Retouch', 1, 'pending', '2025-05-05 00:16:40', '2025-05-05 00:24:15', NULL, '2025-05-12', '', 0, 0, NULL),
+(207, 101, 25, 'Final', 1, 'pending', '2025-05-05 00:16:47', '2025-05-05 00:24:15', NULL, '2025-05-12', '', 0, 0, NULL),
+(208, 102, 26, 'Retouch', 1, 'in_progress', '2025-05-05 00:34:58', '2025-05-05 00:36:32', NULL, '2025-05-12', '', 0, 0, NULL),
+(209, 102, 26, 'Retouch', 1, 'pending', '2025-05-05 00:35:03', '2025-05-05 00:36:52', NULL, '2025-05-05', '', 0, 0, NULL),
+(210, 102, 26, 'Retouch', 8, 'pending', '2025-05-05 00:35:09', '2025-05-05 00:38:59', NULL, '2025-05-06', '', 0, 0, NULL),
+(211, 102, 26, 'Color Correction', 1, 'pending', '2025-05-05 00:35:15', '2025-05-05 00:35:15', NULL, '2025-05-12', '', 0, 0, NULL);
 
 -- --------------------------------------------------------
 
@@ -223,20 +230,35 @@ CREATE TABLE `tbl_project_images` (
   `upload_date` timestamp NOT NULL DEFAULT current_timestamp(),
   `status_image` enum('available','assigned','in_progress','completed') NOT NULL DEFAULT 'available',
   `assignment_id` int(11) DEFAULT NULL,
-  `estimated_time` int(255) DEFAULT NULL
+  `estimated_time` int(255) DEFAULT NULL,
+  `redo` varchar(50) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `tbl_project_images`
 --
 
-INSERT INTO `tbl_project_images` (`image_id`, `project_id`, `image_path`, `image_role`, `file_type`, `file_size`, `upload_date`, `status_image`, `assignment_id`, `estimated_time`) VALUES
-(316, 99, 'Screenshot 2025-02-10 214129.png', 'Retouch', 'image/png', 72637, '2025-05-03 06:34:00', '', 195, NULL),
-(317, 99, 'Screenshot 2025-02-10 214400.png', 'Final', 'image/png', 121817, '2025-05-03 06:34:00', '', 197, NULL),
-(318, 99, 'Screenshot 2025-02-10 214557.png', '', 'image/png', 327780, '2025-05-03 06:34:00', 'available', NULL, NULL),
-(319, 99, 'Screenshot 2025-02-10 215410.png', '', 'image/png', 72184, '2025-05-03 06:34:00', 'available', NULL, NULL),
-(320, 99, 'Screenshot 2025-02-11 145825.png', 'Color Correction', 'image/png', 1528331, '2025-05-03 06:34:00', '', 196, NULL),
-(321, 99, 'Screenshot 2025-02-11 145839.png', 'Clipping Path', 'image/png', 1503442, '2025-05-03 06:34:00', '', 198, NULL);
+INSERT INTO `tbl_project_images` (`image_id`, `project_id`, `image_path`, `image_role`, `file_type`, `file_size`, `upload_date`, `status_image`, `assignment_id`, `estimated_time`, `redo`) VALUES
+(329, 101, 'Screenshot (94) - Copy.png', 'Retouch', 'image/png', 924401, '2025-05-05 00:14:32', '', 203, NULL, ''),
+(330, 101, 'Screenshot (94).png', 'Retouch', 'image/png', 924401, '2025-05-05 00:14:32', '', 206, NULL, ''),
+(331, 101, 'Screenshot (95).png', '', 'image/png', 336943, '2025-05-05 00:14:32', 'available', NULL, NULL, ''),
+(332, 101, 'Screenshot (96).png', '', 'image/png', 234933, '2025-05-05 00:14:32', 'available', NULL, NULL, ''),
+(333, 101, 'Screenshot (97).png', 'Retouch', 'image/png', 1109405, '2025-05-05 00:14:32', '', 204, NULL, ''),
+(334, 101, 'Screenshot (98).png', 'Final', 'image/png', 1675078, '2025-05-05 00:14:32', '', 207, NULL, ''),
+(335, 101, 'Screenshot (99).png', '', 'image/png', 1023400, '2025-05-05 00:14:32', 'available', NULL, NULL, ''),
+(336, 101, 'Screenshot (100) - Copy.png', '', 'image/png', 3098084, '2025-05-05 00:14:32', 'available', NULL, NULL, ''),
+(337, 101, 'Screenshot (100).png', 'Clipping Path', 'image/png', 3098084, '2025-05-05 00:14:32', '', 205, NULL, ''),
+(338, 102, 'Screenshot 2025-02-10 214129.png', 'Retouch', 'image/png', 72637, '2025-05-05 00:34:41', '', 208, NULL, ''),
+(339, 102, 'Screenshot 2025-02-10 214400.png', 'Retouch', 'image/png', 121817, '2025-05-05 00:34:41', '', 210, NULL, ''),
+(340, 102, 'Screenshot 2025-02-10 214557.png', 'Retouch', 'image/png', 327780, '2025-05-05 00:34:41', '', 210, NULL, ''),
+(341, 102, 'Screenshot 2025-02-10 215410.png', 'Retouch', 'image/png', 72184, '2025-05-05 00:34:41', '', 210, NULL, ''),
+(342, 102, 'Screenshot 2025-02-11 145825.png', 'Retouch', 'image/png', 1528331, '2025-05-05 00:34:41', '', 209, NULL, ''),
+(343, 102, 'Screenshot 2025-02-11 145839.png', 'Retouch', 'image/png', 1503442, '2025-05-05 00:34:41', '', 210, NULL, ''),
+(344, 102, 'Screenshot 2025-02-11 163358.png', 'Retouch', 'image/png', 112733, '2025-05-05 00:34:41', '', 210, NULL, ''),
+(345, 102, 'Screenshot 2025-02-13 090507.png', 'Color Correction', 'image/png', 153997, '2025-05-05 00:34:41', '', 211, NULL, ''),
+(346, 102, 'Screenshot 2025-02-13 090637.png', 'Retouch', 'image/png', 658610, '2025-05-05 00:34:41', '', 210, NULL, ''),
+(347, 102, 'Screenshot 2025-02-13 111005.png', 'Retouch', 'image/png', 174536, '2025-05-05 00:34:41', '', 210, NULL, ''),
+(348, 102, 'Screenshot 2025-02-13 111039.png', 'Retouch', 'image/png', 408912, '2025-05-05 00:34:41', '', 210, NULL, '');
 
 -- --------------------------------------------------------
 
@@ -269,13 +291,12 @@ INSERT INTO `tbl_users` (`user_id`, `first_name`, `mid_name`, `last_name`, `birt
 (2, 'Artist', 'User', 'Account', '1990-01-01 00:00:00', '123 Artist Street, Graphic City', '09123456789', 'artist@example.com', 'default.jpg', '2025-04-07 10:16:05', '2025-04-01 01:16:55', NULL, NULL),
 (3, 'Super', 'User', 'Admin', '1980-10-20 00:00:00', '789 Super Street, Admin City', '09345678901', 'superadmin@example.com', 'default.jpg', '2025-04-01 09:16:55', '2025-04-01 01:16:55', NULL, NULL),
 (11, 'manager', 'm', 'manageer', '2025-04-02 00:00:00', '123', '12', 'manager@gmail.com', 'profile_67f349b526afd.png', '0000-00-00 00:00:00', '2025-04-07 03:42:45', NULL, NULL),
-(12, 'art', 'a', 'artst', '2025-03-31 00:00:00', '13', '123', 'art@gmail.com', 'uploads/profile_pictures/profile_680f072b1378a.png', '2025-04-28 12:42:23', '2025-04-07 03:45:26', NULL, NULL),
-(18, 'test', 't', 'test', '2025-04-08 00:00:00', '123', '123', '123@gmail.com', 'profile_68059971e74f4.png', '0000-00-00 00:00:00', '2025-04-21 01:03:45', NULL, NULL),
 (19, 'admin1', '1', 'admin1', '2025-04-08 00:00:00', 'admin1', '1', 'admin1@gmail.com', 'profile_6805c7ab15b94.png', '0000-00-00 00:00:00', '2025-04-21 04:20:59', NULL, NULL),
-(20, 'Paulo', 'L', 'Abaquita', '2002-10-21 00:00:00', 'test', '123', 'paulolatayada21@gmail.com', 'profile_680c88e24f1b5.png', '0000-00-00 00:00:00', '2025-04-26 07:18:58', NULL, NULL),
 (22, 'a', 'a', 'a', '2025-04-08 00:00:00', 'a', '1', 'a@gmail.com', 'uploads/profile_pictures/profile_680c8f80282d3.png', '0000-00-00 00:00:00', '2025-04-26 07:47:12', NULL, NULL),
 (23, 'sad', 's', 'sad', '2025-03-31 00:00:00', 's', '12', 's@gmail.com', 'uploads/profile_pictures/profile_680edf20c393e.png', '2025-04-28 09:51:28', '2025-04-26 08:06:45', NULL, NULL),
-(24, 'is', 'i', 'protected', '2025-04-27 00:00:00', '123', '123', '12333@gmail.com', 'uploads/profile_pictures/profile_6815b884880d2.png', '0000-00-00 00:00:00', '2025-05-03 06:32:36', NULL, NULL);
+(24, 'is', 'i', 'protected', '2025-04-27 00:00:00', '123', '123', '12333@gmail.com', 'uploads/profile_pictures/profile_6815b884880d2.png', '0000-00-00 00:00:00', '2025-05-03 06:32:36', NULL, NULL),
+(25, 'art', 'a', 'art', '2025-04-28 00:00:00', '123', '123', '123@gmail.com', 'uploads/profile_pictures/profile_6818028213764.png', '0000-00-00 00:00:00', '2025-05-05 00:12:50', NULL, NULL),
+(26, 'test', 't', 'test', '2025-04-27 00:00:00', '123', '123', '123311231@gmail.com', 'uploads/profile_pictures/profile_681802b05a2d5.png', '0000-00-00 00:00:00', '2025-05-05 00:13:36', NULL, NULL);
 
 --
 -- Indexes for dumped tables
@@ -342,13 +363,13 @@ ALTER TABLE `tbl_users`
 -- AUTO_INCREMENT for table `activity_logs`
 --
 ALTER TABLE `activity_logs`
-  MODIFY `log_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `log_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT for table `tbl_accounts`
 --
 ALTER TABLE `tbl_accounts`
-  MODIFY `account_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=24;
+  MODIFY `account_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=26;
 
 --
 -- AUTO_INCREMENT for table `tbl_companies`
@@ -366,25 +387,25 @@ ALTER TABLE `tbl_notifications`
 -- AUTO_INCREMENT for table `tbl_projects`
 --
 ALTER TABLE `tbl_projects`
-  MODIFY `project_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=100;
+  MODIFY `project_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=103;
 
 --
 -- AUTO_INCREMENT for table `tbl_project_assignments`
 --
 ALTER TABLE `tbl_project_assignments`
-  MODIFY `assignment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=199;
+  MODIFY `assignment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=212;
 
 --
 -- AUTO_INCREMENT for table `tbl_project_images`
 --
 ALTER TABLE `tbl_project_images`
-  MODIFY `image_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=322;
+  MODIFY `image_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=349;
 
 --
 -- AUTO_INCREMENT for table `tbl_users`
 --
 ALTER TABLE `tbl_users`
-  MODIFY `user_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=25;
+  MODIFY `user_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=27;
 
 --
 -- Constraints for dumped tables

@@ -44,7 +44,66 @@ try {
 }
 ?>
 <style>
+  /* Fix for content scrolling */
+  html,
+  body {
+    height: 100%;
+    overflow: auto;
+  }
 
+  .main-container {
+    min-height: 100%;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .content-wrapper {
+    min-height: calc(100vh - 50px);
+    height: auto;
+    overflow-y: auto;
+    padding-bottom: 60px;
+  }
+
+  /* Make table responsive but not cut off */
+  .table-responsive {
+    overflow-x: auto;
+    max-height: none;
+  }
+
+  /* Loading overlay styling */
+  .loading-overlay {
+    display: none;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(255, 255, 255, 0.7);
+    z-index: 1000;
+  }
+
+  .loading-spinner {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 40px;
+    height: 40px;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #3498db;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    0% {
+      transform: translate(-50%, -50%) rotate(0deg);
+    }
+
+    100% {
+      transform: translate(-50%, -50%) rotate(360deg);
+    }
+  }
 </style>
 
 <div class="main-container">
@@ -247,6 +306,7 @@ try {
   </div>
 
 
+  <?php include("includes/footer.php"); ?>
   <script>
     $(document).ready(function () {
       // Initialize tooltips
@@ -326,5 +386,3 @@ try {
       }
     });
   </script>
-
-  <?php include("includes/footer.php"); ?>

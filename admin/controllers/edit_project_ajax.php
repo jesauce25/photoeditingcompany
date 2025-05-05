@@ -410,6 +410,67 @@ if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQ
             }
             break;
 
+        case 'update_image_redo':
+            $image_id = isset($_POST['image_id']) ? intval($_POST['image_id']) : 0;
+            $redo_value = isset($_POST['redo_value']) ? $_POST['redo_value'] : '0';
+
+            // Convert to proper value for database (ensure 1 or 0)
+            $redo_value = ($redo_value == '1' || $redo_value == 1) ? '1' : '0';
+
+            if (!$image_id) {
+                echo json_encode(['status' => 'error', 'message' => 'Invalid image ID']);
+                exit;
+            }
+
+            // Log the action for debugging
+            error_log("Updating image redo status - ID: $image_id, Value: $redo_value");
+
+            // Update the redo status in the database
+            $updateSql = "UPDATE tbl_project_images SET redo = ? WHERE image_id = ?";
+            $updateStmt = $conn->prepare($updateSql);
+
+            if (!$updateStmt) {
+                echo json_encode(['status' => 'error', 'message' => 'Error preparing statement: ' . $conn->error]);
+                exit;
+            }
+
+            $updateStmt->bind_param("si", $redo_value, $image_id);
+
+            if (!$updateStmt->execute()) {
+                echo json_encode(['status' => 'error', 'message' => 'Error executing statement: ' . $updateStmt->error]);
+                exit;
+            }
+
+            // Check if update was successful
+            if ($updateStmt->affected_rows > 0 || $conn->affected_rows > 0) {
+                echo json_encode([
+                    'status' => 'success',
+                    'message' => $redo_value == '1' ? 'Image marked for redo' : 'Redo status removed',
+                    'new_redo_value' => $redo_value,
+                    'image_id' => $image_id
+                ]);
+            } else {
+                // Check if the record already had that value
+                $checkSql = "SELECT redo FROM tbl_project_images WHERE image_id = ?";
+                $checkStmt = $conn->prepare($checkSql);
+                $checkStmt->bind_param("i", $image_id);
+                $checkStmt->execute();
+                $checkResult = $checkStmt->get_result();
+                $current = $checkResult->fetch_assoc();
+
+                if ($current && $current['redo'] == $redo_value) {
+                    echo json_encode([
+                        'status' => 'success',
+                        'message' => 'No change needed, value already set to ' . $redo_value,
+                        'new_redo_value' => $redo_value,
+                        'image_id' => $image_id
+                    ]);
+                } else {
+                    echo json_encode(['status' => 'error', 'message' => 'No rows updated or image not found']);
+                }
+            }
+            break;
+
         case 'update_project_status':
             $project_id = intval($_POST['project_id'] ?? 0);
             $status = $_POST['status'] ?? '';
@@ -681,7 +742,7 @@ if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQ
             if ($assignment_id > 0) {
                 // Get images assigned to this assignment
                 $sql = "SELECT i.image_id, i.image_path, i.status_image, i.file_type, i.upload_date,
-                              i.image_role, i.estimated_time,
+                              i.image_role, i.estimated_time, i.redo,
                               u.first_name, u.last_name
                        FROM tbl_project_images i
                        LEFT JOIN tbl_project_assignments pa ON i.assignment_id = pa.assignment_id
@@ -725,7 +786,7 @@ if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQ
             } else {
                 // Get all assigned images for the project
                 $sql = "SELECT i.image_id, i.image_path, i.status_image, i.file_type, i.upload_date,
-                              i.image_role, i.estimated_time, i.assignment_id,
+                              i.image_role, i.estimated_time, i.assignment_id, i.redo,
                               pa.role_task, pa.status_assignee,
                               u.first_name, u.last_name, CONCAT(u.first_name, ' ', u.last_name) as team_name
                        FROM tbl_project_images i

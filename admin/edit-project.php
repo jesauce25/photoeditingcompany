@@ -1119,7 +1119,6 @@ $projectProgress = getProjectProgressStats($project_id);
         </section>
     </div>
 
-    <!-- Footer -->
     <?php include("includes/footer.php"); ?>
 </div>
 
@@ -1226,6 +1225,8 @@ $projectProgress = getProjectProgressStats($project_id);
 
 <!-- JavaScript for AJAX interactions -->
 <script>
+
+
     // Project ID from PHP
     const projectId = <?php echo $project_id; ?>;
     console.log("Project ID is:", projectId);
@@ -2131,14 +2132,14 @@ $projectProgress = getProjectProgressStats($project_id);
                             if (data.images && data.images.length > 0) {
                                 // Create a table for image details
                                 imagesHtml = `
-                                <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
-                                    <table class="table table-bordered table-hover table-sm" id="assigned-images-table">
-                                        <thead class="thead-light sticky-top" style="position: sticky; top: 0; z-index: 1;">
+                                <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
+                                    <table class="table table-bordered table-hover" id="assigned-images-table">
+                                        <thead class="thead-light" style="position: sticky; top: 0; z-index: 10;">
                                             <tr>
-                                                <th>Image Name</th>
-                                                <th>Estimated Time</th>
-                                                <th>Role</th>
-                                                <th>Actions</th>
+                                                <th style="width: 25%">Image Name</th>
+                                                <th style="width: 35%">Estimated Time</th>
+                                                <th style="width: 20%">Role</th>
+                                                <th style="width: 20%">Actions</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -2164,15 +2165,16 @@ $projectProgress = getProjectProgressStats($project_id);
 
                                     // Create a row for each image with editable fields
                                     imagesHtml += `
-                                        <tr data-image-id="${image.image_id}">
-                                            <td>
+                                        <tr data-image-id="${image.image_id}" ${image.redo === '1' ? 'class="table-danger"' : ''} style="vertical-align: middle;">
+                                            <td class="align-middle">
                                                 <a href="${imageUrl}" target="_blank" class="image-preview-link">
                                                     ${fileName}
                                                 </a>
+                                                ${image.redo === '1' ? '<span class="badge badge-danger ml-2">Redo Required</span>' : ''}
                                             </td>
                                             <td>
-                                                <div class="row">
-                                                    <div class="col-5">
+                                                <div class="row no-gutters">
+                                                    <div class="col-md-6 pr-2">
                                                         <div class="input-group">
                                                             <input type="number" 
                                                                 class="form-control estimated-hours-input" 
@@ -2185,7 +2187,7 @@ $projectProgress = getProjectProgressStats($project_id);
                                                             </div>
                                                         </div>
                                                     </div>
-                                                    <div class="col-5">
+                                                    <div class="col-md-6">
                                                         <div class="input-group">
                                                             <input type="number" 
                                                                 class="form-control estimated-minutes-input" 
@@ -2201,7 +2203,7 @@ $projectProgress = getProjectProgressStats($project_id);
                                                     </div>
                                                 </div>
                                             </td>
-                                            <td>
+                                            <td class="align-middle">
                                                 <select class="form-control image-role-select"
                                                         ${!statusEditable ? 'disabled' : ''}
                                                         data-image-id="${image.image_id}">
@@ -2212,12 +2214,20 @@ $projectProgress = getProjectProgressStats($project_id);
                                                     <option value="Final" ${imageRole === 'Final' ? 'selected' : ''}>Final</option>
                                                 </select>
                                             </td>
-                                            <td>
+                                            <td class="align-middle">
                                                 ${statusEditable ? `
-                                                <button type="button" class="btn btn-sm btn-danger remove-image-from-assignment" 
-                                                        data-image-id="${image.image_id}">
-                                                    <i class="fas fa-trash"></i> Remove
-                                                </button>` :
+                                                <div class="btn-group">
+                                                    <button type="button" class="btn btn-sm btn-danger remove-image-from-assignment" 
+                                                            data-image-id="${image.image_id}">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                    <button type="button" class="btn btn-sm ${image.redo === '1' ? 'btn-danger' : 'btn-warning'} mark-redo-btn ml-1" 
+                                                            data-image-id="${image.image_id}"
+                                                            data-redo="${image.redo === '1' ? '0' : '1'}"
+                                                            title="${image.redo === '1' ? 'Cancel Redo Request' : 'Mark for Redo'}">
+                                                        <i class="fas ${image.redo === '1' ? 'fa-times' : 'fa-redo-alt'}"></i> ${image.redo === '1' ? 'Cancel Redo' : 'Redo'}
+                                                    </button>
+                                                </div>` :
                                             `<span class="badge badge-info">Locked</span>`}
                                             </td>
                                         </tr>
@@ -2245,7 +2255,7 @@ $projectProgress = getProjectProgressStats($project_id);
                             // Create and show modal
                             const modalHtml = `
                                 <div class="modal fade" id="viewAssignedImagesModal" tabindex="-1" role="dialog">
-                                    <div class="modal-dialog modal-xl" role="document">
+                                    <div class="modal-dialog modal-xl" style="max-width: 90%; margin: 10px auto;" role="document">
                                         <div class="modal-content">
                                             <div class="modal-header bg-primary text-white">
                                                 <h5 class="modal-title">
@@ -2284,6 +2294,27 @@ $projectProgress = getProjectProgressStats($project_id);
                             // Make sure the modal is removed from the DOM when hidden to prevent duplicates
                             $('#viewAssignedImagesModal').on('hidden.bs.modal', function () {
                                 $(this).remove();
+                            });
+
+                            // Log redo information and ensure button states are correct
+                            data.images.forEach(image => {
+                                console.log(`Image ${image.image_id} redo status: ${image.redo}`);
+                                const redoBtn = $(`.mark-redo-btn[data-image-id="${image.image_id}"]`);
+                                if (image.redo === '1') {
+                                    // Ensure "Cancel Redo" state
+                                    redoBtn.removeClass('btn-warning').addClass('btn-danger');
+                                    redoBtn.data('redo', '0');
+                                    redoBtn.attr('data-redo', '0');
+                                    redoBtn.attr('title', 'Cancel Redo Request');
+                                    redoBtn.html('<i class="fas fa-times"></i> Cancel Redo');
+                                } else {
+                                    // Ensure "Redo" state
+                                    redoBtn.removeClass('btn-danger').addClass('btn-warning');
+                                    redoBtn.data('redo', '1');
+                                    redoBtn.attr('data-redo', '1');
+                                    redoBtn.attr('title', 'Mark for Redo');
+                                    redoBtn.html('<i class="fas fa-redo-alt"></i> Redo');
+                                }
                             });
 
                             // Now let's handle the new single save button for all image details
@@ -3379,9 +3410,295 @@ $projectProgress = getProjectProgressStats($project_id);
                 }
             });
         });
+
+        // Handle mark for redo button
+        $(document).on('click', '.mark-redo-btn', function () {
+            const imageId = $(this).data('image-id');
+            const redoValue = $(this).data('redo');
+            const button = $(this);
+
+            // Show confirmation based on action type
+            const confirmMessage = redoValue === '1'
+                ? 'Are you sure you want to mark this image for redo?'
+                : 'Cancel redo request for this image?';
+
+            if (confirm(confirmMessage)) {
+                // Update button UI to show loading state
+                const originalHtml = button.html();
+                button.html('<i class="fas fa-spinner fa-spin"></i> Updating...');
+                button.prop('disabled', true);
+
+                // Make AJAX call to update redo status
+                $.ajax({
+                    url: 'controllers/edit_project_ajax.php',
+                    type: 'POST',
+                    data: {
+                        action: 'update_image_redo',
+                        image_id: imageId,
+                        redo_value: redoValue
+                    },
+                    success: function (response) {
+                        try {
+                            const data = JSON.parse(response);
+
+                            if (data.status === 'success') {
+                                toastr.success(data.message || 'Image updated successfully');
+
+                                // Update button appearance based on new state
+                                if (redoValue === '1') {
+                                    button.removeClass('btn-warning').addClass('btn-outline-warning');
+                                    button.html('<i class="fas fa-redo"></i> Cancel Redo');
+                                    button.data('redo', '0');
+                                    button.attr('data-redo', '0');
+                                    button.attr('title', 'Cancel Redo Request');
+                                } else {
+                                    button.removeClass('btn-outline-warning').addClass('btn-warning');
+                                    button.html('<i class="fas fa-redo"></i> Redo');
+                                    button.data('redo', '1');
+                                    button.attr('data-redo', '1');
+                                    button.attr('title', 'Mark for Redo');
+                                }
+                            } else {
+                                toastr.error(data.message || 'Error updating image');
+                                button.html(originalHtml);
+                            }
+                        } catch (e) {
+                            console.error('Error parsing response:', e);
+                            toastr.error('Error processing server response');
+                            button.html(originalHtml);
+                        }
+
+                        button.prop('disabled', false);
+                    },
+                    error: function (xhr, status, error) {
+                        console.error('AJAX Error:', xhr, status, error);
+                        toastr.error('Server error while updating image');
+                        button.html(originalHtml);
+                        button.prop('disabled', false);
+                    }
+                });
+            }
+        });
     });
 </script>
 
+<!-- Custom code to fix jQuery issues and redo button -->
+<script>
+    // Wait for the DOM to be fully loaded
+    document.addEventListener('DOMContentLoaded', function () {
+        // Make sure jQuery is available
+        if (typeof jQuery === 'undefined') {
+            console.error('jQuery is not loaded! Please check your includes.');
+            return;
+        }
 
+        // Now that we know jQuery is available, we can use it
+        jQuery(function ($) {
+            console.log('Fix script loaded for redo functionality');
 
-<?php include("includes/footer.php"); ?>
+            // Handle mark-redo-btn click event
+            $(document).on('click', '.mark-redo-btn', function () {
+                const imageId = $(this).data('image-id');
+                const redoValue = $(this).data('redo');
+                const button = $(this);
+
+                // Show confirmation based on action type
+                const confirmMessage = redoValue === '1' || redoValue === 1
+                    ? 'Are you sure you want to mark this image for redo?'
+                    : 'Cancel redo request for this image?';
+
+                if (confirm(confirmMessage)) {
+                    // Update button UI to show loading state
+                    button.html('<i class="fas fa-spinner fa-spin"></i>');
+                    button.prop('disabled', true);
+
+                    // Make AJAX call to update redo status
+                    $.ajax({
+                        url: 'controllers/edit_project_ajax.php',
+                        type: 'POST',
+                        data: {
+                            action: 'update_image_redo',
+                            image_id: imageId,
+                            redo_value: redoValue
+                        },
+                        success: function (response) {
+                            try {
+                                const data = JSON.parse(response);
+
+                                if (data.status === 'success') {
+                                    toastr.success(data.message || 'Image updated successfully');
+
+                                    // Update button appearance and data attributes based on new state
+                                    if (redoValue === '1' || redoValue === 1) {
+                                        // Going from normal to redo state
+                                        button.removeClass('btn-warning').addClass('btn-danger');
+                                        button.data('redo', '0');
+                                        button.attr('data-redo', '0');
+                                        button.html('<i class="fas fa-spinner fa-spin"></i> Cancel Redo');
+                                        button.attr('title', 'Cancel Redo Request');
+                                    } else {
+                                        // Going from redo to normal state
+                                        button.removeClass('btn-danger').addClass('btn-warning');
+                                        button.data('redo', '1');
+                                        button.attr('data-redo', '1');
+                                        button.html('<i class="fas fa-redo-alt"></i> Redo');
+                                        button.attr('title', 'Mark for Redo');
+                                    }
+                                } else {
+                                    toastr.error(data.message || 'Error updating image');
+                                    // Restore button to previous state
+                                    if (redoValue === '1' || redoValue === 1) {
+                                        button.html('<i class="fas fa-redo-alt"></i> Redo');
+                                    } else {
+                                        button.html('<i class="fas fa-spinner fa-spin"></i> Cancel Redo');
+                                    }
+                                }
+                            } catch (e) {
+                                console.error('Error parsing response:', e);
+                                toastr.error('Error processing server response');
+                                // Restore button to previous state
+                                if (redoValue === '1' || redoValue === 1) {
+                                    button.html('<i class="fas fa-redo-alt"></i> Redo');
+                                } else {
+                                    button.html('<i class="fas fa-spinner fa-spin"></i> Cancel Redo');
+                                }
+                            }
+
+                            button.prop('disabled', false);
+                        },
+                        error: function (xhr, status, error) {
+                            console.error('AJAX Error:', xhr, status, error);
+                            toastr.error('Server error while updating image');
+                            // Restore button to previous state
+                            if (redoValue === '1' || redoValue === 1) {
+                                button.html('<i class="fas fa-redo-alt"></i> Redo');
+                            } else {
+                                button.html('<i class="fas fa-spinner fa-spin"></i> Cancel Redo');
+                            }
+                            button.prop('disabled', false);
+                        }
+                    });
+                }
+            });
+        });
+    });
+</script>
+
+<!-- Fix for Redo Button Functionality -->
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Wait a short time to ensure jQuery and other libraries are fully loaded
+        setTimeout(function () {
+            if (typeof jQuery !== 'undefined') {
+                initRedoFunctionality();
+            } else {
+                console.error("jQuery not loaded - redo functionality cannot be initialized");
+            }
+        }, 500);
+
+        function initRedoFunctionality() {
+            console.log("Initializing redo functionality...");
+
+            // Use jQuery's noConflict mode to avoid conflicts
+            jQuery(function ($) {
+                // Handle redo button clicks with new event handler
+                $(document).off('click', '.mark-redo-btn').on('click', '.mark-redo-btn', function (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+
+                    const button = $(this);
+                    const imageId = button.data('image-id');
+                    const redoValue = button.data('redo');
+
+                    console.log(`Redo button clicked: image_id=${imageId}, redo_value=${redoValue}`);
+
+                    // Confirmation dialog
+                    const confirmMessage = redoValue === '1' || redoValue === 1
+                        ? 'Are you sure you want to mark this image for redo?'
+                        : 'Cancel redo request for this image?';
+
+                    if (!confirm(confirmMessage)) {
+                        return;
+                    }
+
+                    // Show loading state
+                    const originalHtml = button.html();
+                    button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i>');
+
+                    // AJAX call to update redo status
+                    $.ajax({
+                        url: 'controllers/edit_project_ajax.php',
+                        type: 'POST',
+                        data: {
+                            action: 'update_image_redo',
+                            image_id: imageId,
+                            redo_value: redoValue
+                        },
+                        success: function (response) {
+                            try {
+                                const data = typeof response === 'string' ? JSON.parse(response) : response;
+
+                                if (data.status === 'success') {
+                                    // Update the row styling
+                                    const row = button.closest('tr');
+
+                                    if (redoValue === '1' || redoValue === 1) {
+                                        // Adding redo status
+                                        row.addClass('table-danger');
+
+                                        // Add redo badge if it doesn't exist
+                                        if (row.find('.badge-danger:contains("Redo Required")').length === 0) {
+                                            row.find('td:first').append('<span class="badge badge-danger ml-2">Redo Required</span>');
+                                        }
+
+                                        // Update button
+                                        button.removeClass('btn-warning').addClass('btn-danger');
+                                        button.data('redo', '0');
+                                        button.attr('data-redo', '0');
+                                        button.attr('title', 'Cancel Redo Request');
+                                        button.html('<i class="fas fa-times"></i> Cancel Redo');
+                                    } else {
+                                        // Removing redo status
+                                        row.removeClass('table-danger');
+
+                                        // Remove redo badge
+                                        row.find('.badge-danger:contains("Redo Required")').remove();
+
+                                        // Update button
+                                        button.removeClass('btn-danger').addClass('btn-warning');
+                                        button.data('redo', '1');
+                                        button.attr('data-redo', '1');
+                                        button.attr('title', 'Mark for Redo');
+                                        button.html('<i class="fas fa-redo-alt"></i> Redo');
+                                    }
+
+                                    // Show success message
+                                    toastr.success(data.message || 'Redo status updated successfully');
+                                } else {
+                                    // Show error and restore button
+                                    toastr.error(data.message || 'Failed to update redo status');
+                                    button.html(originalHtml);
+                                }
+                            } catch (e) {
+                                console.error('Error parsing server response:', e, response);
+                                toastr.error('Error processing server response');
+                                button.html(originalHtml);
+                            }
+
+                            // Re-enable button
+                            button.prop('disabled', false);
+                        },
+                        error: function (xhr, status, error) {
+                            console.error('AJAX Request Failed:', status, error);
+                            toastr.error('Server error: ' + (error || 'Unknown error'));
+                            button.html(originalHtml);
+                            button.prop('disabled', false);
+                        }
+                    });
+                });
+
+                console.log("Redo functionality initialized successfully");
+            });
+        }
+    });
+</script>
