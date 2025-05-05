@@ -316,8 +316,14 @@ include("includes/header.php");
                       </tr>
                     <?php else: ?>
                       <?php foreach ($tasks as $task):
-                        // Check if the task is overdue
-                        $is_task_overdue = strtotime($task['deadline']) < time();
+                        // Check if the task is overdue, due today, or due tomorrow
+                        $today = date('Y-m-d');
+                        $tomorrow = date('Y-m-d', strtotime('+1 day'));
+                        $task_deadline = date('Y-m-d', strtotime($task['deadline']));
+
+                        $is_task_overdue = strtotime($task_deadline) < strtotime($today);
+                        $is_task_due_today = ($task_deadline == $today);
+                        $is_task_due_tomorrow = ($task_deadline == $tomorrow);
 
                         // Use is_locked flag directly from the database
                         $is_task_locked = isset($task['is_locked']) && $task['is_locked'] == 1;
@@ -325,8 +331,18 @@ include("includes/header.php");
                         // Status and priority classes
                         $statusClass = getStatusClass($task['status_assignee']);
                         $priorityClass = getPriorityClass($task['priority']);
+
+                        // Set row background color
+                        $rowClass = '';
+                        if ($is_task_overdue) {
+                          $rowClass = 'table-danger';
+                        } elseif ($is_task_due_today) {
+                          $rowClass = 'table-danger'; // Red background for due today
+                        } elseif ($is_task_due_tomorrow) {
+                          $rowClass = 'table-warning'; // Orange background for due tomorrow
+                        }
                         ?>
-                        <tr class="<?php echo $is_task_overdue ? 'table-danger' : ''; ?>">
+                        <tr class="<?php echo $rowClass; ?>">
                           <td class="d-none"><?php echo $task['assignment_id']; ?></td>
                           <td>
                             <div class="project-info">
@@ -372,10 +388,14 @@ include("includes/header.php");
                                 <?php echo date('M d, Y', strtotime($task['project_deadline'])); ?>
                               </div>
                               <div
-                                class="task-deadline <?php echo (strtotime($task['deadline']) < time()) ? 'text-danger' : ''; ?>">
+                                class="task-deadline <?php echo ($is_task_overdue) ? 'text-danger' : ($is_task_due_today ? 'text-danger' : ''); ?>">
                                 <strong>Task:</strong> <?php echo date('M d, Y', strtotime($task['deadline'])); ?>
-                                <?php if (strtotime($task['deadline']) < time()): ?>
+                                <?php if ($is_task_overdue): ?>
                                   <span class="badge badge-danger ml-1">Overdue</span>
+                                <?php elseif ($is_task_due_today): ?>
+                                  <span class="badge badge-warning ml-1">Deadline Today</span>
+                                <?php elseif ($is_task_due_tomorrow): ?>
+                                  <span class="badge badge-warning ml-1">Due Tomorrow</span>
                                 <?php endif; ?>
                               </div>
                             </div>

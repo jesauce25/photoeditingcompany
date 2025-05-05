@@ -341,12 +341,10 @@ unset($_SESSION['success_message']);
                                                         $assignees = getProjectAssignee($project['project_id']);
                                                         if (!empty($assignees)) {
                                                             $totalAssignees = count($assignees);
-                                                            $displayedAssignees = array_slice($assignees, 0, 3);
-                                                            $remaining = $totalAssignees - 3;
 
                                                             echo '<div class="assignee-container">';
 
-                                                            foreach ($displayedAssignees as $assignee) {
+                                                            foreach ($assignees as $assignee) {
                                                                 $initials = substr($assignee['first_name'], 0, 1) . substr($assignee['last_name'], 0, 1);
 
                                                                 // Check if this assignee has an overdue task
@@ -379,11 +377,6 @@ unset($_SESSION['success_message']);
                                                                 echo '<div class="assignee-avatar ' . $avatar_class . '">' . strtoupper($initials) . '</div>';
                                                                 echo '<span>' . htmlspecialchars($assignee['first_name']) . '</span>';
                                                                 echo '</div>';
-                                                            }
-
-                                                            // Only show "+x more" if there are additional assignees
-                                                            if ($remaining > 0) {
-                                                                echo '<div class="assignee-more"><i class="fas fa-user-plus"></i> +' . $remaining . ' more</div>';
                                                             }
 
                                                             echo '</div>';

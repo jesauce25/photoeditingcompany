@@ -685,12 +685,10 @@ unset($_SESSION['success_message']);
                                                     $assignees = getProjectAssignee($project['project_id']);
                                                     if (!empty($assignees)) {
                                                         $totalAssignees = count($assignees);
-                                                        $displayedAssignees = array_slice($assignees, 0, 3);
-                                                        $remaining = $totalAssignees - 3;
 
                                                         echo '<div class="assignee-container">';
 
-                                                        foreach ($displayedAssignees as $assignee) {
+                                                        foreach ($assignees as $assignee) {
                                                             $initials = substr($assignee['first_name'] ?? '', 0, 1) . substr($assignee['last_name'] ?? '', 0, 1);
                                                             echo '<div class="assignee-item">';
                                                             echo '<div class="assignee-avatar">' . strtoupper($initials) . '</div>';
@@ -698,16 +696,14 @@ unset($_SESSION['success_message']);
                                                             echo '</div>';
                                                         }
 
-                                                        // Only show "+x more" if there are additional assignees
-                                                        if ($remaining > 0) {
-                                                            echo '<div class="assignee-more" style="display: inline-flex !important; background-color: #e9ecef !important; border-radius: 20px !important; padding: 4px 10px !important; color: #6c757d !important; border: 1px solid #ced4da !important;"><i class="fas fa-user-plus"></i> +' . $remaining . ' more</div>';
-                                                        }
 
                                                         echo '</div>';
                                                     } else {
                                                         echo '<span class="text-muted">Not assigned</span>';
                                                     }
                                                     ?>
+
+
                                                 </td>
                                                 <td>
                                                     <div class="action-buttons text-center">
