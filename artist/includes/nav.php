@@ -39,7 +39,7 @@ if ($user_id > 0) {
             <li class="dropdown">
                 <div class="d-flex align-items-center ml-auto mr-3">
                     <!-- Notifications Dropdown Menu -->
-                    <div class="nav-item dropdown mr-2">
+                    <!-- <div class="nav-item dropdown mr-2">
                         <span class="nav-link" data-toggle="dropdown" style="cursor: pointer; color: white;"
                             id="notificationDropdown">
                             <i class="far fa-bell"></i>
@@ -51,9 +51,9 @@ if ($user_id > 0) {
                                 id="notificationHeader"><?php echo $unread_count; ?> Notifications</span>
                             <div class="dropdown-divider"></div>
 
-                            <div id="notificationItems">
-                                <!-- Notifications will be loaded dynamically here -->
-                                <div class="dropdown-item text-center" id="notificationLoading">
+                            <div id="notificationItems"> -->
+                    <!-- Notifications will be loaded dynamically here -->
+                    <!-- <div class="dropdown-item text-center" id="notificationLoading">
                                     <i class="fas fa-spinner fa-spin mr-2"></i> Loading notifications...
                                 </div>
                                 <div class="dropdown-item text-center d-none" id="noNotifications">
@@ -64,7 +64,7 @@ if ($user_id > 0) {
                             <div class="dropdown-divider"></div>
                             <a href="#" class="dropdown-item dropdown-footer" id="markAllRead">Mark All As Read</a>
                         </div>
-                    </div>
+                    </div> -->
 
                     <!-- Settings Dropdown Menu -->
                     <div class="nav-item dropdown">

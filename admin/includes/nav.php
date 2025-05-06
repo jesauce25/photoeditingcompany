@@ -215,7 +215,7 @@ $notificationCount += count($systemNotifications);
             </div>
         </li>
         <!-- Notifications Dropdown Menu -->
-        <li class="nav-item dropdown">
+        <!-- <li class="nav-item dropdown">
             <a class="nav-link" data-toggle="dropdown" href="#" id="notification-bell">
                 <i class="far fa-bell"></i>
                 <?php if ($notificationCount > 0): ?>
@@ -314,7 +314,7 @@ $notificationCount += count($systemNotifications);
                 <?php endforeach; ?>
                 <a href="#" class="dropdown-item dropdown-footer" id="clear-notifications">Clear All Notifications</a>
             </div>
-        </li>
+        </li> -->
         <li class="nav-item">
             <a class="nav-link" data-widget="fullscreen" href="#" role="button">
                 <i class="fas fa-expand-arrows-alt"></i>

@@ -32,6 +32,27 @@
     <!-- mycss -->
     <link rel="stylesheet" href="dist/mycss/loadingscreen.css">
     <link rel="stylesheet" href="dist/mycss/loginandforgotpassword.css">
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css">
+    <!-- DataTables CSS -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.10.22/css/dataTables.bootstrap4.min.css">
+
+
+
+
+    <!-- custome css -->
+    <link rel="stylesheet" href="artist/assets/css/home/home.css" />
+    <link rel="stylesheet" href="artist/assets/css/index/loadingscreen/loadingscreen.css" />
+    <link rel="stylesheet" href="artist/assets/css/nav/nav.css" />
+    <link rel="stylesheet" href="artist/assets/css/backgroundblur/backgroundblur.css" />
+
+    <link rel="stylesheet" href="artist/assets/css/nav/nav.css" />
+    <link rel="stylesheet" href="artist/assets/css/backgroundblur/backgroundblur.css" />
+    <link rel="stylesheet" href="artist/assets/css/history/history.css" />
+    <link rel="stylesheet" href="artist/assets/css/profile-settings/profile-settings.css" />
     <!-- Gsap -->
     <script src="gsap-public/minified/gsap.min.js"></script>
 

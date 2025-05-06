@@ -6,7 +6,7 @@ session_start();
 if (isset($_SESSION['user_logged_in']) && $_SESSION['user_logged_in'] === true) {
     // Get role from session
     $role = $_SESSION['role'] ?? '';
-    
+
     // Redirect based on role
     if ($role === 'admin' || $role === 'Admin' || $role === 'Project Manager') {
         header("Location: admin/home.php");
@@ -18,5 +18,5 @@ if (isset($_SESSION['user_logged_in']) && $_SESSION['user_logged_in'] === true) 
 }
 
 // If not logged in or role not recognized, redirect to login page
-header("Location: login.php");
+header("Location: project-status.php");
 exit;

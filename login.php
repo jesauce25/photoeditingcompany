@@ -15,7 +15,7 @@ if (isLoggedIn()) {
     // Use role from session to determine redirect
     $role = $_SESSION['role'] ?? '';
     error_log("User already logged in with role: $role - redirecting appropriately");
-    
+
     if ($role === 'admin' || $role === 'Admin' || $role === 'Project Manager') {
         header("Location: admin/home.php");
         exit;
@@ -42,10 +42,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         if ($user) {
             // Create user session
             createUserSession($user);
-            
+
             // Log session and role for debugging
             error_log("User authenticated successfully - Role: " . $_SESSION['role']);
-            
+
             // Redirect based on role
             redirectBasedOnRole();
         } else {
@@ -78,6 +78,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
 include("includes/header.php");
 ?>
+<?php include("includes/nav.php"); ?>
 
 <body>
     <div class="background"></div>

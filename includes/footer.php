@@ -56,9 +56,26 @@
 <script src="dist/myjs/backgroundblur.js"></script>
 <script src="dist/myjs/loadingscreen.js"></script>
 
+
+
+
+
+
+<!-- Bootstrap & jQuery JS -->
+<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+<!-- DataTables JS -->
+<script src="https://cdn.datatables.net/1.10.22/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.10.22/js/dataTables.bootstrap4.min.js"></script>
+
+
+
+
 <!-- Custom JavaScript for dynamic filters -->
 <script>
-    $(document).ready(function() {
+    $(document).ready(function () {
         // Initialize DataTable
         var table = $('#companyTable').DataTable({
             "responsive": true,
@@ -68,29 +85,29 @@
             "searching": false, // This disables the search feature
             "dom": 'Brtip', // Changed from 'Bfrtip' to 'Brtip' to remove one pagination
             "buttons": [{
-                    extend: 'excel',
-                    text: 'Excel',
-                    exportOptions: {
-                        columns: [0, 1, 2, 3, 4, 5]
-                    },
-                    className: 'hidden-button'
+                extend: 'excel',
+                text: 'Excel',
+                exportOptions: {
+                    columns: [0, 1, 2, 3, 4, 5]
                 },
-                {
-                    extend: 'pdf',
-                    text: 'PDF',
-                    exportOptions: {
-                        columns: [0, 1, 2, 3, 4, 5]
-                    },
-                    className: 'hidden-button'
+                className: 'hidden-button'
+            },
+            {
+                extend: 'pdf',
+                text: 'PDF',
+                exportOptions: {
+                    columns: [0, 1, 2, 3, 4, 5]
                 },
-                {
-                    extend: 'print',
-                    text: 'Print',
-                    exportOptions: {
-                        columns: [0, 1, 2, 3, 4, 5]
-                    },
-                    className: 'hidden-button'
-                }
+                className: 'hidden-button'
+            },
+            {
+                extend: 'print',
+                text: 'Print',
+                exportOptions: {
+                    columns: [0, 1, 2, 3, 4, 5]
+                },
+                className: 'hidden-button'
+            }
             ],
 
         });
@@ -99,15 +116,15 @@
         $('.hidden-button').hide();
 
         // Custom export buttons
-        $('.export-excel').on('click', function() {
+        $('.export-excel').on('click', function () {
             table.button('.buttons-excel').trigger();
         });
 
-        $('.export-pdf').on('click', function() {
+        $('.export-pdf').on('click', function () {
             table.button('.buttons-pdf').trigger();
         });
 
-        $('.export-print').on('click', function() {
+        $('.export-print').on('click', function () {
             table.button('.buttons-print').trigger();
         });
 
@@ -117,17 +134,17 @@
         initializeFilters();
 
         // Filter type change handler
-        $('#filterType').change(function() {
+        $('#filterType').change(function () {
             updateFilterVisibility();
         });
 
         // Date filter type change handler
-        $('#dateFilterType').change(function() {
+        $('#dateFilterType').change(function () {
             updateDateFilterVisibility();
         });
 
         // Apply filter button click handler
-        $('#applyFilter').click(function() {
+        $('#applyFilter').click(function () {
             applyCurrentFilter();
         });
 
@@ -218,7 +235,7 @@
         }
 
         // Delete button click handler
-        $(document).on('click', '.delete-btn', function() {
+        $(document).on('click', '.delete-btn', function () {
             var companyId = $(this).data('id');
             var companyName = $(this).data('name');
 
@@ -228,7 +245,7 @@
         });
 
         // Confirm delete button click handler
-        $('#confirmDelete').click(function() {
+        $('#confirmDelete').click(function () {
             var companyId = $(this).data('id');
 
             // Here you would make an AJAX call to delete the company
@@ -247,7 +264,7 @@
         });
 
         // Email button click handler
-        $(document).on('click', '.email-btn', function() {
+        $(document).on('click', '.email-btn', function () {
             var email = $(this).data('email');
             $('#emailTo').val(email);
             $('#emailSubject').val('');
@@ -256,7 +273,7 @@
         });
 
         // Send email button click handler
-        $('#sendEmail').click(function() {
+        $('#sendEmail').click(function () {
             var emailTo = $('#emailTo').val();
             var subject = $('#emailSubject').val();
             var body = $('#emailBody').val();
