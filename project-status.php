@@ -100,8 +100,8 @@ if (!empty($overdue_filter)) {
     }
 }
 
-// Order by most recent first
-$query .= " ORDER BY p.date_arrived DESC";
+// Order by project_id in ascending order (first projects at top)
+$query .= " ORDER BY p.project_id ASC";
 
 $stmt = $conn->prepare($query);
 
@@ -177,7 +177,7 @@ $projects = $result->fetch_all(MYSQLI_ASSOC);
         display: flex;
         justify-content: center;
         align-items: center;
-        font-size: 12px;
+        font-size: 1rem;
         margin-right: 5px;
         margin-bottom: 3px;
     }
@@ -196,11 +196,11 @@ $projects = $result->fetch_all(MYSQLI_ASSOC);
     .role-badge {
         background-color: rgba(134, 73, 55, 0.8);
         color: #f7f7f7;
-        font-size: 0.7rem;
-        padding: 3px 6px;
-        border-radius: 3px;
-        margin-right: 3px;
-        margin-bottom: 3px;
+        font-size: 1.1rem !important;
+        padding: 4px 8px !important;
+        border-radius: 4px;
+        margin-right: 4px;
+        margin-bottom: 4px;
         display: inline-block;
     }
 
@@ -229,6 +229,11 @@ $projects = $result->fetch_all(MYSQLI_ASSOC);
     }
 
     /* Fullscreen Mode */
+    body.fullscreen-mode {
+        padding: 0 !important;
+        overflow: hidden !important;
+    }
+
     body.fullscreen-mode .navbar,
     body.fullscreen-mode .py-4>.d-sm-flex,
     body.fullscreen-mode .card:not(#projectTableCard),
@@ -236,24 +241,45 @@ $projects = $result->fetch_all(MYSQLI_ASSOC);
         display: none !important;
     }
 
-    body.fullscreen-mode {
-        padding: 0;
-        overflow: hidden;
+    body.fullscreen-mode #projectTableCard {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        z-index: 9999 !important;
+        margin: 0 !important;
+        border-radius: 0 !important;
+        backdrop-filter: blur(20px) !important;
+        -webkit-backdrop-filter: blur(20px) !important;
+        background-color: rgba(30, 30, 30, 0.9) !important;
+        overflow: hidden !important;
     }
 
-    body.fullscreen-mode #projectTableCard {
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        z-index: 9999;
-        margin: 0;
-        border-radius: 0;
-        backdrop-filter: blur(20px);
-        -webkit-backdrop-filter: blur(20px);
-        background-color: rgba(30, 30, 30, 0.9);
-        overflow: auto;
+    body.fullscreen-mode .card-body {
+        padding: 0 !important;
+        height: 100vh !important;
+        overflow: hidden !important;
+    }
+
+    body.fullscreen-mode .table-responsive {
+        height: 100vh !important;
+        max-height: 100vh !important;
+        overflow: auto !important;
+        padding: 20px !important;
+    }
+
+    body.fullscreen-mode .table-responsive table {
+        transform: scale(1.1) !important;
+        transform-origin: top center !important;
+        margin-top: 20px !important;
+    }
+
+    body.fullscreen-mode .fullscreen-btn {
+        position: fixed !important;
+        top: 10px !important;
+        right: 10px !important;
+        z-index: 10000 !important;
     }
 
     body.fullscreen-mode .fullscreen-btn i.fa-expand {
@@ -275,13 +301,7 @@ $projects = $result->fetch_all(MYSQLI_ASSOC);
         -webkit-backdrop-filter: blur(5px);
     }
 
-    .table-danger {
-        background-color: rgba(255, 0, 25, 0.25) !important;
-    }
 
-    .table-warning {
-        background-color: rgba(255, 178, 46, 0.15) !important;
-    }
 
     footer {
         backdrop-filter: blur(10px);
@@ -378,9 +398,45 @@ $projects = $result->fetch_all(MYSQLI_ASSOC);
         background-color: rgba(40, 40, 40, 0.7) !important;
         color: #f7f7f7 !important;
         border: 1px solid #864937 !important;
+        height: 30px !important;
+        min-height: 30px !important;
+        line-height: 30px !important;
     }
 
+    /* Ensure dropdown text is visible */
+    select.form-control {
+        color: #f7f7f7 !important;
+        background-color: #333333 !important;
+        height: 30px !important;
+        min-height: 30px !important;
+        line-height: 30px !important;
+        padding: 0 8px !important;
+        padding-right: 25px !important;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23ffb22e' d='M6 8.825L1.175 4 2.05 3.125 6 7.075 9.95 3.125 10.825 4z'/%3E%3C/svg%3E") !important;
+        background-repeat: no-repeat !important;
+        background-position: right 8px center !important;
+        background-size: 12px !important;
+        appearance: none !important;
+        -webkit-appearance: none !important;
+        -moz-appearance: none !important;
+    }
+
+    select.form-control option {
+        color: #f7f7f7 !important;
+        background-color: #333333 !important;
+        padding: 8px !important;
+        height: auto !important;
+        min-height: 30px !important;
+    }
+
+    /* Ensure proper contrast for dropdown items */
+    select.form-control option {
+        background-color: #333333 !important;
+    }
+
+    /* Ensure focus doesn't hide text */
     .form-control:focus {
+        color: #f7f7f7 !important;
         border-color: #ffb22e !important;
         box-shadow: 0 0 0 0.2rem rgba(255, 178, 46, 0.25) !important;
     }
@@ -463,67 +519,7 @@ $projects = $result->fetch_all(MYSQLI_ASSOC);
     .table-hover tbody tr:hover {
         background-color: rgba(255, 178, 46, 0.15) !important;
     }
-</style>
 
-<style>
-    .tiny-label {
-        font-size: 11px;
-        font-weight: 500;
-        color: #ffb22e;
-        margin-bottom: 2px;
-        display: block;
-    }
-
-    .filter-item {
-        display: flex;
-        flex-direction: column;
-    }
-
-    .compact-filters .form-control-sm {
-        height: calc(1.5rem + 2px);
-        padding: 0.1rem 0.3rem;
-        font-size: 0.875rem;
-    }
-
-    .single-row {
-        white-space: nowrap;
-    }
-
-    .btn-xs {
-        font-size: 0.75rem;
-        line-height: 1.2;
-    }
-
-    #projectTableCard {
-        min-height: 75vh;
-    }
-
-    .table-container {
-        height: 65vh;
-        overflow-y: auto;
-    }
-
-    /* Custom scrollbar for the dark theme */
-    ::-webkit-scrollbar {
-        width: 8px;
-        height: 8px;
-    }
-
-    ::-webkit-scrollbar-track {
-        background: rgba(30, 30, 30, 0.6);
-    }
-
-    ::-webkit-scrollbar-thumb {
-        background: #864937;
-        border-radius: 4px;
-    }
-
-    ::-webkit-scrollbar-thumb:hover {
-        background: #ffb22e;
-    }
-</style>
-
-<style>
     /* Make the All Projects container full width */
     #projectTableCard {
         width: 100vw;
@@ -536,91 +532,66 @@ $projects = $result->fetch_all(MYSQLI_ASSOC);
         border-radius: 0 !important;
         min-height: 75vh;
     }
+</style>
 
-    /* Adjust the table to be more compact */
-    .table td,
-    .table th {
-        padding: 0.4rem !important;
-        vertical-align: middle;
-        font-size: 0.9rem;
-    }
-
-    /* Make rows more compact */
-    .table tr {
-        line-height: 1.1;
-    }
-
-    /* Custom column widths to fit more content */
-    #projectTable th:nth-child(1) {
-        width: 12%;
-    }
-
-    /* Company */
-    #projectTable th:nth-child(2) {
-        width: 8%;
-    }
-
-    /* Status */
-    #projectTable th:nth-child(3) {
-        width: 10%;
-    }
-
-    /* Date Arrived */
-    #projectTable th:nth-child(4) {
-        width: 6%;
-    }
-
-    /* Images */
-    #projectTable th:nth-child(5) {
-        width: 15%;
-    }
-
-    /* Deadline */
-    #projectTable th:nth-child(6) {
-        width: 20%;
-    }
-
-    /* Assignees */
-    #projectTable th:nth-child(7) {
-        width: 20%;
-    }
-
-    /* Roles */
-    #projectTable th:nth-child(8) {
-        width: 9%;
-    }
-
+<style>
     /* Action */
 
     /* Stronger red for overdue with pulse effect */
-    .table-danger {
-        background-color: rgba(255, 0, 25, 0.4) !important;
-        animation: pulse-red 2s infinite;
+    .table-danger,
+    table.table tr.table-danger,
+    #projectTable tbody tr.table-danger,
+    table.dataTable#projectTable tbody tr.table-danger {
+        background-color: rgb(255, 0, 25) !important;
+        animation: pulse-red 2s infinite !important;
+        color: #ffffff !important;
+    }
+
+    .table-danger td,
+    table.table tr.table-danger td,
+    #projectTable tbody tr.table-danger td,
+    table.dataTable#projectTable tbody tr.table-danger td {
+        background-color: transparent !important;
+        color: #ffffff !important;
     }
 
     @keyframes pulse-red {
         0% {
-            background-color: rgba(255, 0, 25, 0.4);
+            transform: scaleY(1);
+            background-color: #e63131 !important;
+            box-shadow: 0 0 0 0 rgba(255, 0, 0, 0.7);
         }
 
-        50% {
-            background-color: rgba(255, 0, 25, 0.7);
+        70% {
+            transform: scaleY(1.05);
+            background-color: #ff0000 !important;
+            box-shadow: 0 0 0 10px rgba(255, 0, 0, 0);
         }
 
         100% {
-            background-color: rgba(255, 0, 25, 0.4);
+            transform: scaleY(1);
+            background-color: #e63131 !important;
+            box-shadow: 0 0 0 0 rgba(255, 0, 0, 0);
         }
     }
 
     /* Stronger orange for tomorrow deadline with dark text */
-    .table-warning {
-        background-color: rgba(255, 140, 0, 0.5) !important;
+    .table-warning,
+    table.table tr.table-warning,
+    #projectTable tbody tr.table-warning,
+    table.dataTable#projectTable tbody tr.table-warning {
+        background-color: rgb(255, 140, 0) !important;
         color: #000000 !important;
     }
 
-    .table-warning td {
+    .table-warning td,
+    table.table tr.table-warning td,
+    #projectTable tbody tr.table-warning td,
+    table.dataTable#projectTable tbody tr.table-warning td {
+        background-color: transparent !important;
         color: #000000 !important;
     }
+
 
     /* Fix any contrast issues with orange background */
     .table-warning .text-info,
@@ -630,15 +601,7 @@ $projects = $result->fetch_all(MYSQLI_ASSOC);
         font-weight: 600;
     }
 
-    /* Tooltip styles for acronyms */
-    .role-badge {
-        cursor: help;
-        position: relative;
-    }
 
-    .assignee-avatar {
-        cursor: help;
-    }
 
     /* Custom status colors */
     .badge-pending {
@@ -673,430 +636,73 @@ $projects = $result->fetch_all(MYSQLI_ASSOC);
         overflow-x: auto;
     }
 
-    /* Improve scrollbars for the table container */
-    .table-container {
-        height: 70vh;
-        overflow-y: auto;
-        width: 100%;
+    /* Enhanced text styling for specific columns */
+    #projectTable td:nth-child(1) {
+        font-weight: bold !important;
+        letter-spacing: 0.05em !important;
     }
 
-    /* Add space for the container to breathe */
-    .container {
-        max-width: 100% !important;
-        padding: 0 15px !important;
-    }
+    #projectTable td:nth-child(1),
 
-    .py-4 {
-        padding-left: 0 !important;
-        padding-right: 0 !important;
-    }
-
-    /* Make badges more compact */
-    .badge {
-        padding: 0.25em 0.5em;
-        font-size: 0.8em;
-    }
-
-    /* Hover effect enhancements */
-    [data-tooltip] {
-        position: relative;
-        cursor: help;
-    }
-
-    /* Hide the role-column images when not showing all */
-    .role-badge {
-        display: inline-block;
-        margin-right: 3px;
-        margin-bottom: 3px;
-    }
-</style>
-
-<style>
-    /* Make the project table container full width */
-    #projectTableCard {
-        width: 100vw;
-        max-width: 100vw;
-        position: relative;
-        left: 50%;
-        right: 50%;
-        margin-left: -50vw;
-        margin-right: -50vw;
-        border-radius: 0 !important;
+    #projectTable td:nth-child(3),
+    #projectTable td:nth-child(4),
+    #projectTable td:nth-child(5) {
+        font-size: 1.1rem !important;
+        font-weight: 900 !important;
     }
 
     /* Compact table rows with reduced padding */
     .table td,
     .table th {
-        padding: 0.4rem !important;
+        padding: 0.1rem 1rem !important;
         vertical-align: middle;
         font-size: 0.9rem;
-    }
-
-    /* Make rows more compact */
-    .table tr {
-        line-height: 1.1;
-    }
-
-    /* Custom column widths to fit more content */
-    #projectTable th:nth-child(1) {
-        width: 3%;
-    }
-
-    /* ID */
-    #projectTable th:nth-child(2) {
-        width: 15%;
-    }
-
-    /* Company */
-    #projectTable th:nth-child(3) {
-        width: 8%;
-    }
-
-    /* Status */
-    #projectTable th:nth-child(4) {
-        width: 8%;
-    }
-
-    /* Date Arrived */
-    #projectTable th:nth-child(5) {
-        width: 5%;
-    }
-
-    /* Images */
-    #projectTable th:nth-child(6) {
-        width: 10%;
-    }
-
-    /* Deadline */
-    #projectTable th:nth-child(7) {
-        width: 20%;
-    }
-
-    /* Assignee */
-    #projectTable th:nth-child(8) {
-        width: 20%;
-    }
-
-    /* Roles */
-    #projectTable th:nth-child(9) {
-        width: 8%;
-    }
-
-    /* Action */
-
-    /* Stronger red for overdue with pulse effect */
-    .table-danger {
-        background-color: rgba(255, 0, 25, 0.4) !important;
-        animation: pulse-red 2s infinite;
-    }
-
-    @keyframes pulse-red {
-        0% {
-            background-color: rgba(255, 0, 25, 0.4);
-        }
-
-        50% {
-            background-color: rgba(255, 0, 25, 0.7);
-        }
-
-        100% {
-            background-color: rgba(255, 0, 25, 0.4);
-        }
-    }
-
-    /* Stronger orange for tomorrow deadline with dark text */
-    .table-warning {
-        background-color: rgba(255, 140, 0, 0.6) !important;
-        color: #000000 !important;
-    }
-
-    .table-warning td {
-        color: #000000 !important;
-    }
-
-    /* Fix contrast issues with orange background */
-    .table-warning .text-info,
-    .table-warning .text-muted,
-    .table-warning .text-warning {
-        color: #000000 !important;
-        font-weight: 600;
-    }
-
-    /* Enhanced tooltip styles for roles and assignees */
-    .role-badge {
-        cursor: help;
-        position: relative;
-        margin-right: 3px;
-        margin-bottom: 3px;
-        display: inline-block;
-    }
-
-    .role-badge:after {
-        display: none !important;
-        /* Completely remove the question mark */
-    }
-
-    .assignee-avatar {
-        cursor: help;
-    }
-
-    /* Custom tooltip style */
-    .tooltip .tooltip-inner {
-        max-width: 250px;
-        padding: 8px 12px;
-        background-color: rgba(0, 0, 0, 0.85);
-        font-size: 0.9rem;
-        border-radius: 4px;
-    }
-
-    /* Improve DataTables container */
-    .dataTables_wrapper {
-        width: 100%;
-        overflow-x: auto;
-    }
-
-    /* Add space for the container to breathe */
-    .container-fluid {
-        max-width: 100% !important;
-        padding: 0 !important;
-    }
-
-    .card-body {
-        padding: 1rem !important;
     }
 </style>
 
 <style>
-    /* Remove the question mark from role badges */
-    .role-badge:after {
-        display: none !important;
-        /* Completely remove the question mark */
+    /* Tooltip hover fixes */
+    .assignee-avatar,
+    .role-badge {
+        cursor: pointer !important;
     }
 
-    /* Ensure tooltips have proper z-index in fullscreen mode */
+    /* Ensure tooltips are visible in fullscreen */
     .tooltip {
-        z-index: 9999 !important;
+        z-index: 10001 !important;
+        opacity: 1 !important;
     }
 
-    /* Improve tooltip content visibility */
-    .tooltip-inner {
-        font-size: 0.9rem !important;
+    body.fullscreen-mode .tooltip {
+        z-index: 11000 !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+        pointer-events: auto !important;
+    }
+
+    body.fullscreen-mode .tooltip-inner {
+        background-color: rgba(30, 30, 30, 0.95) !important;
+        border: 1px solid #864937 !important;
+        color: #f7f7f7 !important;
+        font-size: 14px !important;
         padding: 8px 12px !important;
         max-width: 300px !important;
     }
 
-    /* Enhanced styling for the role badges */
-    .role-badge {
-        padding: 3px 6px !important;
-        border-radius: 4px !important;
-        cursor: help !important;
+    /* Fix for fullscreen hover */
+    body.fullscreen-mode * {
+        cursor: auto !important;
     }
 
-    /* Enhanced styling for assignee avatars */
-    .assignee-avatar {
-        transition: transform 0.2s !important;
-    }
-
-    .assignee-avatar:hover {
-        transform: scale(1.1) !important;
-    }
-</style>
-
-<style>
-    /* Add enhanced CSS for overdue and due tomorrow styling */
-    .table-danger {
-        background-color: rgba(255, 0, 25, 0.4) !important;
-        animation: pulse-red 2s infinite !important;
-    }
-
-    /* Strong pulse effect animation */
-    @keyframes pulse-red {
-        0% {
-            background-color: rgba(255, 0, 25, 0.4);
-        }
-
-        50% {
-            background-color: rgba(255, 0, 25, 0.8);
-        }
-
-        100% {
-            background-color: rgba(255, 0, 25, 0.4);
-        }
-    }
-
-    /* Stronger orange for due tomorrow with better contrast */
-    .table-warning {
-        background-color: rgba(255, 140, 0, 0.7) !important;
-    }
-
-    /* Text color for due tomorrow rows */
-    .table-warning td {
-        color: #86371F !important;
-        /* Dark orange for better contrast */
-        font-weight: 600 !important;
-    }
-
-    /* Make sure deadlines in warning rows stand out */
-    .table-warning .small .text-warning {
-        color: #FF4500 !important;
-        /* Bright orange-red */
-        font-weight: 700 !important;
-    }
-
-    /* Make sure filters in header are compact */
-    .card-header .compact-filters select {
-        height: 30px !important;
-        padding: 2px 5px !important;
-        font-size: 0.85rem !important;
-    }
-
-    .card-header .filter-actions .btn-xs {
-        height: 30px !important;
-        font-size: 0.8rem !important;
-        padding: 2px 8px !important;
-    }
-
-    /* Make sure table cell content is visible on various backgrounds */
-    .table-danger td,
-    .table-warning td {
-        position: relative !important;
-        z-index: 1 !important;
-    }
-</style>
-
-<style>
-    /* Add enhanced styling for table columns to make content bolder and clearer */
-    /* Company column */
-    #projectTable td:nth-child(1) {
-        font-weight: 700 !important;
-        font-size: 1.1rem !important;
-    }
-
-    /* Date Arrived column */
-    #projectTable td:nth-child(3) {
-        font-weight: 700 !important;
-        font-size: 1.05rem !important;
-    }
-
-    /* Images column */
-    #projectTable td:nth-child(4) {
-        font-weight: 700 !important;
-        font-size: 1.1rem !important;
-        text-align: center !important;
-    }
-
-    /* Deadline column */
-    #projectTable td:nth-child(5) {
-        font-weight: 700 !important;
-        font-size: 1.05rem !important;
-    }
-
-    /* Roles column */
-    #projectTable td:nth-child(7) .role-badge {
-        font-weight: 700 !important;
-        font-size: 1rem !important;
-        padding: 4px 8px !important;
-        margin-right: 5px !important;
-        margin-bottom: 5px !important;
-    }
-
-    /* Ensure strong background colors */
-    .table-danger {
-        background-color: rgba(255, 0, 25, 0.5) !important;
-        animation: pulse-red 2s infinite !important;
-    }
-
-    @keyframes pulse-red {
-        0% {
-            background-color: rgba(255, 0, 25, 0.5) !important;
-        }
-
-        50% {
-            background-color: rgba(255, 0, 25, 0.9) !important;
-        }
-
-        100% {
-            background-color: rgba(255, 0, 25, 0.5) !important;
-        }
-    }
-
-    .table-warning {
-        background-color: rgba(255, 140, 0, 0.8) !important;
-    }
-
-    /* Ensure styles apply even with DataTables */
-    .dataTable .table-danger,
-    .dataTable .table-warning,
-    table.dataTable tbody tr.table-danger,
-    table.dataTable tbody tr.table-warning {
-        background-color: inherit !important;
-    }
-
-    /* Remove margins between date and status */
-    td .small {
-        display: none !important;
-        /* Hide the status text completely */
-    }
-</style>
-
-<style>
-    /* Fix the filter layout in card header */
-    .card-header {
-        padding: 0.5rem !important;
-    }
-
-    .card-header .filter-actions {
-        display: flex !important;
-        flex-direction: row !important;
-        align-items: center !important;
-    }
-
-    /* Force background colors with higher priority */
-    .table-danger {
-        background-color: #FF2D2D !important;
-        animation: none !important;
-        /* First remove any animations */
-    }
-
-    .table-warning {
-        background-color: #FF8C00 !important;
-    }
-
-    /* Fix filters layout */
-    .compact-filters {
-        display: flex !important;
-        flex-direction: row !important;
-        align-items: center !important;
-        justify-content: center !important;
-        width: 100% !important;
-    }
-</style>
-
-<!-- Add this to head for guaranteed animation -->
-<style id="animation-styles">
-    @keyframes pulseRed {
-        0% {
-            background-color: #FF1E1E !important;
-        }
-
-        50% {
-            background-color: #FF0000 !important;
-        }
-
-        100% {
-            background-color: #FF1E1E !important;
-        }
-    }
-
-    .table-danger {
-        animation: pulseRed 2s infinite !important;
+    body.fullscreen-mode .role-badge,
+    body.fullscreen-mode .assignee-avatar {
+        cursor: pointer !important;
     }
 </style>
 
 <div class="background"></div>
 <div class="floating-shapes"></div>
 <div class="black-covers"></div>
-<!-- Navbar -->
 <!-- Main Content -->
 <div class="container py-4">
 
@@ -1127,11 +733,9 @@ $projects = $result->fetch_all(MYSQLI_ASSOC);
                             <option value="pending" <?php echo ($status_filter == 'pending') ? 'selected' : ''; ?>>Pending
                             </option>
                             <option value="in_progress" <?php echo ($status_filter == 'in_progress') ? 'selected' : ''; ?>>In Progress</option>
-                            <option value="review" <?php echo ($status_filter == 'review') ? 'selected' : ''; ?>>In Review
                             </option>
                             <option value="completed" <?php echo ($status_filter == 'completed') ? 'selected' : ''; ?>>
                                 Completed</option>
-                            <option value="delayed" <?php echo ($status_filter == 'delayed') ? 'selected' : ''; ?>>Delayed
                             </option>
                         </select>
                     </div>
@@ -1150,10 +754,13 @@ $projects = $result->fetch_all(MYSQLI_ASSOC);
                             style="height: 30px; padding: 0 10px !important;">
                             <i class="fas fa-search fa-xs"></i> Apply
                         </button>
-                        <a href="project-status.php" class="btn btn-xs btn-primary"
+
+                        <a href="project-status.php" class="btn btn-xs btn-primary d-flex align-items-center"
                             style="height: 30px; padding: 0 10px !important;">
-                            <i class="fas fa-undo fa-xs"></i> Reset
+                            <i class="fas fa-undo fa-xs mr-1"></i><span>Reset</span>
                         </a>
+
+
                     </div>
                 </form>
             </div>
@@ -1325,164 +932,225 @@ include("includes/footer.php");
 
 <script>
     $(document).ready(function () {
-        // Force apply the pulse effect directly to overdue rows
-        function forceAnimations() {
-            // Force overdue row animations
-            $('.table-danger').each(function () {
-                $(this).css({
-                    'background-color': 'rgba(255, 0, 25, 0.4)',
-                    'animation': 'pulse-red 2s infinite'
-                });
-            });
-
-            // Force due tomorrow styling
-            $('.table-warning').each(function () {
-                $(this).css({
-                    'background-color': 'rgba(255, 140, 0, 0.7)',
-                    'font-weight': '600'
-                });
-                $(this).find('td').css('color', '#86371F');
-                $(this).find('.small .text-warning').css({
-                    'color': '#FF4500',
-                    'font-weight': '700'
-                });
-            });
-        }
-
-        // Apply immediately
-        forceAnimations();
-
-        // Apply after DataTable operations
-        $('#projectTable').on('draw.dt', function () {
-            forceAnimations();
-            setupEnhancedTooltips();
+        // Initialize DataTable with responsive settings
+        var dataTable = $('#projectTable').DataTable({
+            "pageLength": 10000,
+            "lengthMenu": [[1000, 10000, 100000, 1000000], [1000, 10000, 100000, 1000000]],
+            "orderCellsTop": true,
+            "order": [], // Remove default ordering
+            "language": {
+                "emptyTable": "No projects found",
+                "zeroRecords": "No matching projects found",
+                "lengthMenu": "Show _MENU_ entries",
+                "info": "Showing _START_ to _END_ of _TOTAL_ entries",
+                "infoEmpty": "Showing 0 to 0 of 0 entries",
+                "infoFiltered": "(filtered from _MAX_ total entries)"
+            },
+            "responsive": true,
+            "scrollX": false, // Disable horizontal scrolling
+            "scrollY": false, // Disable vertical scrolling
+            "autoWidth": true,
+            "scrollCollapse": false,
+            "drawCallback": function () {
+                setupEnhancedTooltips();
+            },
+            "initComplete": function () {
+                this.api().columns.adjust();
+                setupEnhancedTooltips();
+            }
         });
 
-        // Also re-apply every 2 seconds to ensure persistence
-        setInterval(forceAnimations, 2000);
-
-        // Enhance tooltip functionality to work better in fullscreen mode
+        // Function to set up enhanced tooltips
         function setupEnhancedTooltips() {
-            // Reset any existing tooltips
+            console.log("Setting up tooltips");
+            // Remove any existing tooltips first
             $('.tooltip').remove();
 
+            // Dispose existing tooltips
+            $('[title]').tooltip('dispose');
+            $('.role-badge').tooltip('dispose');
+            $('.assignee-avatar').tooltip('dispose');
+
             // Setup tooltips with better configuration
-            $('[title]').tooltip('dispose').tooltip({
+            $('[title]').tooltip({
                 placement: 'top',
                 container: 'body',
                 trigger: 'hover',
+                html: true,
                 template: '<div class="tooltip" role="tooltip"><div class="arrow"></div><div class="tooltip-inner"></div></div>'
             });
 
-            // Enhanced role badge tooltips
-            $('.role-badge').tooltip('dispose').tooltip({
+            // Enhanced role badge tooltips with forced display
+            $('.role-badge').tooltip({
                 title: function () {
                     return $(this).attr('title') || "Role";
                 },
                 placement: 'top',
                 container: 'body',
                 trigger: 'hover',
-                delay: { show: 100, hide: 100 }
+                html: true,
+                delay: { show: 0, hide: 0 }
+            }).on('click', function () {
+                // Force show tooltip on click in fullscreen mode
+                if (document.fullscreenElement) {
+                    $(this).tooltip('show');
+                    setTimeout(() => $(this).tooltip('hide'), 2000);
+                }
             });
 
-            // Enhanced assignee tooltips
-            $('.assignee-avatar').tooltip('dispose').tooltip({
+            // Enhanced assignee tooltips with forced display
+            $('.assignee-avatar').tooltip({
                 title: function () {
                     return $(this).attr('title') || "Team Member";
                 },
                 placement: 'top',
                 container: 'body',
                 trigger: 'hover',
-                delay: { show: 100, hide: 100 }
+                html: true,
+                delay: { show: 0, hide: 0 }
+            }).on('click', function () {
+                // Force show tooltip on click in fullscreen mode
+                if (document.fullscreenElement) {
+                    $(this).tooltip('show');
+                    setTimeout(() => $(this).tooltip('hide'), 2000);
+                }
             });
         }
-
-        // Initialize DataTable with responsive settings
-        $('#projectTable').DataTable({
-            "pageLength": 25,
-            "order": [],
-            "language": {
-                "emptyTable": "No projects found",
-                "zeroRecords": "No matching projects found"
-            },
-            "responsive": true,
-            "scrollX": true,
-            "scrollY": "60vh",
-            "scrollCollapse": true
-        });
-
-        // Setup enhanced tooltips initially
-        setupEnhancedTooltips();
 
         // Fullscreen toggle functionality
         $('#fullscreenToggle').on('click', function () {
-            $('body').toggleClass('fullscreen-mode');
+            const projectTableCard = document.getElementById('projectTableCard');
+
+            if (!document.fullscreenElement) {
+                // Enter fullscreen
+                if (projectTableCard.requestFullscreen) {
+                    projectTableCard.requestFullscreen();
+                } else if (projectTableCard.webkitRequestFullscreen) {
+                    projectTableCard.webkitRequestFullscreen();
+                } else if (projectTableCard.msRequestFullscreen) {
+                    projectTableCard.msRequestFullscreen();
+                }
+
+                $('.card-header').hide();
+                $('#projectTableCard').css({
+                    'background-color': 'rgba(30, 30, 30, 0.9)'
+                });
+
+                $('.card-body').css({
+                    'padding': '0',
+                    'height': '100vh',
+                    'overflow': 'hidden'
+                });
+
+                $('.table-responsive').css({
+                    'height': '100vh',
+                    'max-height': '100vh',
+                    'overflow': 'auto',
+                    'padding': '20px'
+                });
+
+                $(this).css({
+                    'position': 'fixed',
+                    'top': '10px',
+                    'right': '10px',
+                    'z-index': '10000'
+                });
+
+                // Re-initialize tooltips after entering fullscreen
+                setTimeout(function () {
+                    setupEnhancedTooltips();
+
+                    // Add click event to show tooltip in fullscreen 
+                    $('.role-badge, .assignee-avatar').off('mouseenter mouseleave').on('click', function () {
+                        $(this).tooltip('show');
+                        setTimeout(() => $(this).tooltip('hide'), 2000);
+                    });
+                }, 500);
+            } else {
+                // Exit fullscreen
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                } else if (document.webkitExitFullscreen) {
+                    document.webkitExitFullscreen();
+                } else if (document.msExitFullscreen) {
+                    document.msExitFullscreen();
+                }
+
+                $('.card-header').show();
+                $('#projectTableCard').removeAttr('style');
+                $('.card-body').removeAttr('style');
+                $('.table-responsive').removeAttr('style');
+                $(this).removeAttr('style');
+            }
 
             // Refresh DataTable when entering/exiting fullscreen
             setTimeout(function () {
-                $('#projectTable').DataTable().columns.adjust().draw();
-                // Re-initialize tooltips after fullscreen toggle
+                dataTable.columns.adjust().draw();
                 setupEnhancedTooltips();
-            }, 300);
+            }, 500);
         });
+
+        // Handle fullscreen change events
+        document.addEventListener('fullscreenchange', handleFullscreenChange);
+        document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+        document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+        document.addEventListener('MSFullscreenChange', handleFullscreenChange);
+
+        function handleFullscreenChange() {
+            if (!document.fullscreenElement &&
+                !document.webkitFullscreenElement &&
+                !document.mozFullScreenElement &&
+                !document.msFullscreenElement) {
+                // Exited fullscreen
+                $('.card-header').show();
+                $('#projectTableCard').removeAttr('style');
+                $('.card-body').removeAttr('style');
+                $('.table-responsive').removeAttr('style');
+                $('#fullscreenToggle').removeAttr('style');
+
+                // Reset tooltip behavior when exiting fullscreen
+                $('.role-badge, .assignee-avatar').off('click');
+
+                // Refresh DataTable
+                setTimeout(function () {
+                    dataTable.columns.adjust().draw();
+                    setupEnhancedTooltips();
+                }, 500);
+            } else {
+                // Re-initialize tooltips after entering fullscreen
+                setTimeout(function () {
+                    setupEnhancedTooltips();
+
+                    // Add click event to show tooltip in fullscreen 
+                    $('.role-badge, .assignee-avatar').off('mouseenter mouseleave').on('click', function () {
+                        $(this).tooltip('show');
+                        setTimeout(() => $(this).tooltip('hide'), 2000);
+                    });
+                }, 500);
+            }
+        }
 
         // Also toggle fullscreen when pressing ESC key
         $(document).on('keydown', function (e) {
-            if (e.key === "Escape" && $('body').hasClass('fullscreen-mode')) {
-                $('body').removeClass('fullscreen-mode');
-
-                // Refresh DataTable when exiting fullscreen
-                setTimeout(function () {
-                    $('#projectTable').DataTable().columns.adjust().draw();
-                    // Re-initialize tooltips after exiting fullscreen
-                    setupEnhancedTooltips();
-                }, 300);
+            if (e.key === "Escape" && document.fullscreenElement) {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                } else if (document.webkitExitFullscreen) {
+                    document.webkitExitFullscreen();
+                } else if (document.msExitFullscreen) {
+                    document.msExitFullscreen();
+                }
             }
         });
+
+        // Fix for filter dropdowns
+        setTimeout(function () {
+            $('#company').val('<?php echo $company_filter; ?>');
+            $('#status').val('<?php echo $status_filter; ?>');
+            $('#overdue').val('<?php echo $overdue_filter; ?>');
+        }, 100);
+
+        // Setup enhanced tooltips initially
+        setupEnhancedTooltips();
     });
-</script>
-
-<script>
-    // Direct force application of styles
-    (function () {
-        // Apply immediately without waiting
-        forceStyles();
-
-        // Keep reapplying several times to ensure it works
-        setTimeout(forceStyles, 100);
-        setTimeout(forceStyles, 500);
-        setTimeout(forceStyles, 1000);
-
-        // Also reapply every second
-        setInterval(forceStyles, 1000);
-
-        function forceStyles() {
-            console.log("Forcing row styles application");
-
-            // Get all overdue rows
-            document.querySelectorAll('.table-danger').forEach(function (row) {
-                // Apply inline styles directly
-                row.style.backgroundColor = "#FF2D2D";
-                row.style.animation = "pulseRed 2s infinite";
-
-                // Also apply to all cells inside
-                row.querySelectorAll('td').forEach(function (cell) {
-                    cell.style.color = "white";
-                    cell.style.fontWeight = "bold";
-                });
-            });
-
-            // Get all due tomorrow rows
-            document.querySelectorAll('.table-warning').forEach(function (row) {
-                // Apply inline styles directly
-                row.style.backgroundColor = "#FF8C00";
-
-                // Also apply to all cells inside
-                row.querySelectorAll('td').forEach(function (cell) {
-                    cell.style.color = "#86371F";
-                    cell.style.fontWeight = "bold";
-                });
-            });
-        }
-    })();
 </script>
