@@ -82,14 +82,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $update_stmt->bind_param("ssssi", $first_name, $mid_name, $last_name, $birth_date, $user_id);
 
                 if ($update_stmt->execute()) {
-                    $alert_type = 'success';
-                    $alert_message = 'Personal information updated successfully';
+                    $_SESSION['profile_updated'] = true;
+                    $_SESSION['profile_message'] = 'Personal information updated successfully';
 
                     // Update local data to reflect changes
                     $user_data['first_name'] = $first_name;
                     $user_data['mid_name'] = $mid_name;
                     $user_data['last_name'] = $last_name;
                     $user_data['birth_date'] = $birth_date;
+
+                    // Redirect to refresh the page
+                    header("Location: " . $_SERVER['PHP_SELF']);
+                    exit;
                 } else {
                     throw new Exception("Failed to update personal information: " . $conn->error);
                 }
@@ -120,8 +124,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $update_stmt->bind_param("sssi", $address, $contact_num, $email_address, $user_id);
 
                 if ($update_stmt->execute()) {
-                    $alert_type = 'success';
-                    $alert_message = 'Contact information updated successfully';
+                    $_SESSION['profile_updated'] = true;
+                    $_SESSION['profile_message'] = 'Contact information updated successfully';
 
                     // Update local data to reflect changes
                     $user_data['address'] = $address;
@@ -172,8 +176,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $update_stmt->bind_param($types, ...$params);
 
                 if ($update_stmt->execute()) {
-                    $alert_type = 'success';
-                    $alert_message = 'Account settings updated successfully';
+                    $_SESSION['profile_updated'] = true;
+                    $_SESSION['profile_message'] = 'Account settings updated successfully';
 
                     // Update local data to reflect changes
                     $account_data['username'] = $username;
@@ -189,40 +193,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // Process profile image upload
                 if (isset($_FILES['profile_image']) && $_FILES['profile_image']['error'] === UPLOAD_ERR_OK) {
                     $file = $_FILES['profile_image'];
-                    
+
                     // Validate file
                     $allowed_types = ['image/jpeg', 'image/png', 'image/gif'];
                     $max_size = 5 * 1024 * 1024; // 5MB
-                    
+
                     if (!in_array($file['type'], $allowed_types)) {
                         throw new Exception("Only JPEG, PNG and GIF images are allowed");
                     }
-                    
+
                     if ($file['size'] > $max_size) {
                         throw new Exception("File size must be less than 5MB");
                     }
-                    
+
                     // Create directory if it doesn't exist
                     $upload_dir = "../uploads/profiles/";
                     if (!is_dir($upload_dir)) {
                         mkdir($upload_dir, 0777, true);
                     }
-                    
+
                     // Generate a unique filename
                     $file_ext = pathinfo($file['name'], PATHINFO_EXTENSION);
                     $new_filename = 'profile_' . $user_id . '_' . time() . '.' . $file_ext;
-                    
+
                     // Move the file
                     if (move_uploaded_file($file['tmp_name'], $upload_dir . $new_filename)) {
                         // Update database
                         $update_query = "UPDATE tbl_users SET profile_img = ? WHERE user_id = ?";
                         $update_stmt = $conn->prepare($update_query);
                         $update_stmt->bind_param("si", $new_filename, $user_id);
-                        
+
                         if ($update_stmt->execute()) {
-                            $alert_type = 'success';
-                            $alert_message = 'Profile image updated successfully';
-                            
+                            $_SESSION['profile_updated'] = true;
+                            $_SESSION['profile_message'] = 'Profile image updated successfully';
+
                             // Update local data
                             $user_data['profile_img'] = $new_filename;
                         } else {
@@ -248,14 +252,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 <?php include("includes/nav.php"); ?>
 
-<?php if (!empty($alert_message)): ?>
-    <div class="alert alert-<?php echo $alert_type; ?> alert-dismissible fade show" role="alert">
-        <?php echo $alert_message; ?>
-        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-            <span aria-hidden="true">&times;</span>
-        </button>
-    </div>
-<?php endif; ?>
+<?php /* Hide the old alert - now using notifications
+if (!empty($alert_message)): ?>
+<div class="alert alert-<?php echo $alert_type; ?> alert-dismissible fade show" role="alert">
+<?php echo $alert_message; ?>
+<button type="button" class="close" data-dismiss="alert" aria-label="Close">
+  <span aria-hidden="true">&times;</span>
+</button>
+</div>
+<?php endif; */ ?>
 
 <div class="profile-settings-container">
     <div class="profile-grid">
@@ -264,16 +269,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div class="text-center position-relative">
                     <?php
                     $profile_img = $user_data['profile_img'] ?? '';
-                    $img_src = !empty($profile_img) 
-                        ? (file_exists("../uploads/profiles/" . $profile_img) 
-                            ? "../uploads/profiles/" . $profile_img 
+                    $img_src = !empty($profile_img)
+                        ? (file_exists("../uploads/profiles/" . $profile_img)
+                            ? "../uploads/profiles/" . $profile_img
                             : "https://images.pexels.com/photos/614810/pexels-photo-614810.jpeg?auto=compress&cs=tinysrgb&w=600")
                         : "https://images.pexels.com/photos/614810/pexels-photo-614810.jpeg?auto=compress&cs=tinysrgb&w=600";
                     ?>
                     <img src="<?php echo $img_src; ?>" alt="Profile" class="profile-img floating" />
                     <form method="post" enctype="multipart/form-data" id="profileImageForm">
                         <input type="hidden" name="form_type" value="profile_image">
-                        <input type="file" id="profile_image" name="profile_image" accept="image/*" style="display: none;">
+                        <input type="file" id="profile_image" name="profile_image" accept="image/*"
+                            style="display: none;">
                         <button type="button" id="uploadProfileBtn" class="btn btn-sm btn-primary position-absolute"
                             style="bottom: 0; right: 35%; border-radius: 50%; width: 32px; height: 32px; padding: 0;">
                             <i class="fas fa-camera"></i>
@@ -291,7 +297,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <p class="text-muted text-center"><?php echo htmlspecialchars($account_data['role'] ?? 'User'); ?></p>
 
                 <!-- Skills section -->
-                <div class="input-group">
+                <!-- <div class="input-group">
                     <label for="skill_1">Skill 1</label>
                     <input type="text" id="skill_1" name="skills[]" placeholder="Enter your skill" value="Clip Pathing">
                 </div>
@@ -302,7 +308,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div class="input-group">
                     <label for="skill_3">Skill 3</label>
                     <input type="text" id="skill_3" name="skills[]" placeholder="Enter your skill" value="Final">
-                </div>
+                </div> -->
             </div>
         </div>
 
@@ -426,6 +432,84 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
 </div>
 
+<style>
+    /* Notification styling */
+    #notificationContainer {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        z-index: 9999;
+        max-width: 350px;
+    }
+
+    .notification {
+        background-color: #fff;
+        border-left: 4px solid #28a745;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        border-radius: 4px;
+        padding: 15px 20px;
+        margin-bottom: 10px;
+        animation: slideIn 0.3s ease-out;
+    }
+
+    @keyframes slideIn {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+
+    .notification-success {
+        border-left-color: #28a745;
+    }
+
+    .notification-error {
+        border-left-color: #dc3545;
+    }
+
+    .notification-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+
+    .notification-title {
+        font-weight: bold;
+        margin: 0;
+        display: flex;
+        align-items: center;
+    }
+
+    .notification-title i {
+        margin-right: 8px;
+    }
+
+    .notification-body {
+        color: #555;
+    }
+
+    .notification-close {
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 16px;
+        color: #aaa;
+    }
+
+    .notification-close:hover {
+        color: #555;
+    }
+</style>
+
+<!-- Add this notification container at the end of the body before the footer -->
+<div id="notificationContainer"></div>
+
 <script>
     // Tab navigation functionality
     document.addEventListener('DOMContentLoaded', function () {
@@ -471,26 +555,69 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         });
     });
 
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function () {
         // Profile image upload handling
         const uploadBtn = document.getElementById('uploadProfileBtn');
         const fileInput = document.getElementById('profile_image');
         const profileForm = document.getElementById('profileImageForm');
-        
+
         if (uploadBtn && fileInput) {
-            uploadBtn.addEventListener('click', function() {
+            uploadBtn.addEventListener('click', function () {
                 fileInput.click();
             });
-            
-            fileInput.addEventListener('change', function() {
+
+            fileInput.addEventListener('change', function () {
                 if (fileInput.files.length > 0) {
                     // Show loading indicator or disable button
                     uploadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
                     uploadBtn.disabled = true;
-                    
+
                     // Submit the form
                     profileForm.submit();
                 }
+            });
+        }
+    });
+
+    $(document).ready(function () {
+        // Profile update success notification handling
+        <?php if (isset($_SESSION['profile_updated']) && $_SESSION['profile_updated']): ?>
+            showNotification('success', 'Profile Updated', '<?php echo $_SESSION['profile_message']; ?>');
+            <?php unset($_SESSION['profile_updated']);
+            unset($_SESSION['profile_message']); ?>
+        <?php endif; ?>
+
+        // Function to display notifications
+        function showNotification(type, title, message) {
+            const icon = type === 'success' ? 'check-circle' : 'exclamation-circle';
+            const notification = `
+                <div class="notification notification-${type}">
+                    <div class="notification-header">
+                        <h5 class="notification-title">
+                            <i class="fas fa-${icon}"></i> ${title}
+                        </h5>
+                        <button type="button" class="notification-close">&times;</button>
+                    </div>
+                    <div class="notification-body">
+                        ${message}
+                    </div>
+                </div>
+            `;
+
+            $('#notificationContainer').append(notification);
+
+            // Auto remove after 5 seconds
+            setTimeout(function () {
+                $('.notification').first().fadeOut(300, function () {
+                    $(this).remove();
+                });
+            }, 5000);
+
+            // Close button functionality
+            $('.notification-close').click(function () {
+                $(this).closest('.notification').fadeOut(300, function () {
+                    $(this).remove();
+                });
             });
         }
     });
@@ -498,4 +625,5 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 <?php include("includes/footer.php"); ?>
 </body>
+
 </html>

@@ -189,8 +189,8 @@ include("includes/header.php");
 <!-- Toast Container -->
 <div id="toastContainer" class="toast-container position-fixed bottom-0 right-0 p-3"></div>
 
-<?php include("includes/footer.php"); ?>
 
+<?php include("includes/footer.php"); ?>
 <!-- Page specific script -->
 <script>
     $(document).ready(function () {
@@ -250,10 +250,12 @@ include("includes/header.php");
                         showToast('success', response.message);
                         loadUsers();
                     } else {
-                        showToast('error', response.message);
+                        showToast('error', response.message || 'An error occurred while updating user status');
+                        console.error('Error updating status:', response);
                     }
                 },
                 error: function (xhr, status, error) {
+                    console.error('AJAX Error:', xhr.responseText);
                     showToast('error', 'Error: ' + error);
                 }
             });

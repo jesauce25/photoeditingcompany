@@ -80,6 +80,40 @@ include("includes/header.php");
 ?>
 <?php include("includes/nav.php"); ?>
 
+<style>
+    /* Center the login container */
+    body {
+        position: relative;
+        min-height: 100vh;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .login-container {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 1;
+        width: 90%;
+        max-width: 400px;
+    }
+
+    /* Make sure background elements cover the viewport */
+    .background,
+    .floating-shapes,
+    .black-covers {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+    }
+</style>
+
 <body>
     <div class="background"></div>
     <div class="floating-shapes"></div>

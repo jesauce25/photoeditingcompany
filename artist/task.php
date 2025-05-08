@@ -140,7 +140,8 @@ try {
   $query = "SELECT pa.*, p.project_title, c.company_name, p.deadline as project_deadline, 
               p.date_arrived, p.priority, p.status_project, p.total_images,
               pa.is_locked, 
-              (SELECT COUNT(pi.image_id) FROM tbl_project_images pi WHERE pi.assignment_id = pa.assignment_id) as assigned_image_count
+              (SELECT COUNT(pi.image_id) FROM tbl_project_images pi WHERE pi.assignment_id = pa.assignment_id) as assigned_image_count,
+              (SELECT GROUP_CONCAT(DISTINCT pi.image_role SEPARATOR ', ') FROM tbl_project_images pi WHERE pi.assignment_id = pa.assignment_id AND pi.image_role IS NOT NULL AND pi.image_role != '') as all_roles
               FROM tbl_project_assignments pa
               JOIN tbl_projects p ON pa.project_id = p.project_id
               LEFT JOIN tbl_companies c ON p.company_id = c.company_id
@@ -207,12 +208,44 @@ include("includes/header.php");
             <h3 class="card-title">
               <i class="fas fa-list mr-2"></i>Assigned Tasks
             </h3>
+            <div class="d-flex justify-content-center align-items-center flex-wrap" style="width: 100%;">
+              <select id="statusFilter" class="form-control form-control-sm mr-2 mb-2" style="width: 150px;">
+                <option value="">All Status</option>
+                <option value="pending">Pending</option>
+                <option value="in_progress">In Progress</option>
+                <option value="finish">Finish</option>
+                <option value="completed">Completed</option>
+                <option value="delayed">Delayed</option>
+              </select>
+
+              <select id="priorityFilter" class="form-control form-control-sm mr-2 mb-2" style="width: 150px;">
+                <option value="">All Priorities</option>
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+                <option value="urgent">Urgent</option>
+              </select>
+
+              <select id="deadlineFilter" class="form-control form-control-sm mr-2 mb-2" style="width: 150px;">
+                <option value="">All Deadlines</option>
+                <option value="upcoming">Upcoming</option>
+                <option value="overdue">Overdue</option>
+              </select>
+
+              <button id="applyFilter" class="btn btn-info btn-sm">
+                <i class="fas fa-filter mr-1"></i> Apply Filters
+              </button>
+
+              <button id="resetFilter" class="btn btn-info btn-sm ml-2">
+                <i class="fas fa-undo mr-1"></i> Reset
+              </button>
+            </div>
           </div>
           <div class="card-body">
             <!-- Table controls -->
             <div class="row mb-4">
               <!-- Left Group: Export buttons -->
-              <div class="col-md-4">
+              <!-- <div class="col-md-4">
                 <div class="btn-group">
                   <button type="button" class="btn btn-success btn-sm export-excel" title="Export to Excel">
                     <i class="fas fa-file-excel mr-1"></i> Excel
@@ -224,48 +257,10 @@ include("includes/header.php");
                     <i class="fas fa-print mr-1"></i> Print
                   </button>
                 </div>
-              </div>
-              <!-- Center Group: Filter options -->
-              <div class="col-md-4">
-                <div class="filter-container" style="width: 100%;">
-                  <div class="d-flex justify-content-center align-items-center flex-wrap" style="width: 100%;">
-                    <select id="statusFilter" class="form-control form-control-sm mr-2 mb-2" style="width: 150px;">
-                      <option value="">All Status</option>
-                      <option value="pending">Pending</option>
-                      <option value="in_progress">In Progress</option>
-                      <option value="qa">QA</option>
-                      <option value="completed">Completed</option>
-                      <option value="delayed">Delayed</option>
-                    </select>
-
-                    <select id="priorityFilter" class="form-control form-control-sm mr-2 mb-2" style="width: 150px;">
-                      <option value="">All Priorities</option>
-                      <option value="low">Low</option>
-                      <option value="medium">Medium</option>
-                      <option value="high">High</option>
-                      <option value="urgent">Urgent</option>
-                    </select>
-
-                    <select id="deadlineFilter" class="form-control form-control-sm mr-2 mb-2" style="width: 150px;">
-                      <option value="">All Deadlines</option>
-                      <option value="upcoming">Upcoming</option>
-                      <option value="urgent">Urgent (< 5 days)</option>
-                      <option value="overdue">Overdue</option>
-                    </select>
-
-                    <button id="applyFilter" class="btn btn-info btn-sm">
-                      <i class="fas fa-filter mr-1"></i> Apply Filters
-                    </button>
-
-                    <button id="resetFilter" class="btn btn-outline-secondary btn-sm ml-2">
-                      <i class="fas fa-undo mr-1"></i> Reset
-                    </button>
-                  </div>
-                </div>
-              </div>
+              </div> -->
 
               <!-- Right Group: Search box -->
-              <div class="col-md-4">
+              <!-- <div class="col-md-4">
                 <div class="search-box float-right" style="width: 250px;">
                   <input type="text" id="searchInput" class="form-control form-control-sm"
                     placeholder="Search tasks...">
@@ -273,7 +268,7 @@ include("includes/header.php");
                     <i class="fas fa-search"></i>
                   </button>
                 </div>
-              </div>
+              </div> -->
             </div>
 
             <!-- Table with loading overlay -->
@@ -401,9 +396,47 @@ include("includes/header.php");
                             </div>
                           </td>
                           <td>
-                            <span class="badge badge-info">
-                              <?php echo htmlspecialchars($task['role_task']); ?>
-                            </span>
+                            <?php if (!empty($task['all_roles'])): ?>
+                              <div class="d-flex flex-wrap">
+                                <?php
+                                $roles = explode(', ', $task['all_roles']);
+                                foreach ($roles as $role):
+                                  // Convert to acronym
+                                  $acronym = '';
+                                  switch (strtolower($role)) {
+                                    case 'retouch':
+                                      $acronym = 'R';
+                                      break;
+                                    case 'clipping path':
+                                      $acronym = 'CP';
+                                      break;
+                                    case 'color correction':
+                                      $acronym = 'Cc';
+                                      break;
+                                    case 'final':
+                                      $acronym = 'F';
+                                      break;
+                                    default:
+                                      // For other roles, use first letter or first 2 letters
+                                      $words = explode(' ', $role);
+                                      if (count($words) > 1) {
+                                        $acronym = strtoupper(substr($words[0], 0, 1) . substr($words[1], 0, 1));
+                                      } else {
+                                        $acronym = strtoupper(substr($role, 0, 2));
+                                      }
+                                  }
+                                  ?>
+                                  <div class="role-badge" title="<?php echo htmlspecialchars($role); ?>"
+                                    style="display:inline-block; padding:3px 8px; margin-right:5px; background-color:#17a2b8; color:white; border-radius:3px; font-size:0.8rem;">
+                                    <?php echo $acronym; ?>
+                                  </div>
+                                <?php endforeach; ?>
+                              </div>
+                            <?php else: ?>
+                              <span class="badge badge-info">
+                                <?php echo htmlspecialchars($task['role_task'] ?? 'Not Assigned'); ?>
+                              </span>
+                            <?php endif; ?>
                           </td>
                           <td class="text-center">
                             <?php if ($is_task_locked): ?>
@@ -498,10 +531,11 @@ include("includes/header.php");
       "responsive": true,
       "lengthChange": true,
       "autoWidth": false,
-      "pageLength": 10,
+      "pageLength": 1000,
       "searching": true,
       "ordering": true,
-      "info": true
+      "info": true,
+      "dom": '<"row align-items-center"<"col-sm-6"l><"col-sm-6 d-flex justify-content-end"f>><"row"<"col-sm-12"tr>><"row"<"col-sm-5"i><"col-sm-7 d-flex justify-content-end"p>>'
     });
 
     // Handle start task button click
@@ -619,45 +653,7 @@ include("includes/header.php");
 
     // Filter functionality
     $('#applyFilter').on('click', function () {
-      var status = $('#statusFilter').val();
-      var priority = $('#priorityFilter').val();
-      var deadline = $('#deadlineFilter').val();
-      var search = $('#searchInput').val();
-
-      table.search(search).draw();
-
-      // Custom filtering for status
-      if (status) {
-        table.columns(2).search(status).draw();
-      }
-
-      // Custom filtering for priority
-      if (priority) {
-        $.fn.dataTable.ext.search.push(function (settings, data, dataIndex) {
-          var rowPriority = $(table.row(dataIndex).node()).find('.priority-badge').attr('title');
-          return !priority || rowPriority.toLowerCase().includes(priority.toLowerCase());
-        });
-        table.draw();
-        $.fn.dataTable.ext.search.pop();
-      }
-
-      // Custom filtering for deadline
-      if (deadline) {
-        $.fn.dataTable.ext.search.push(function (settings, data, dataIndex) {
-          var daysLeft = parseInt($(table.row(dataIndex).node()).find('.deadline-info, .deadline-warning').text());
-
-          if (deadline === 'upcoming' && daysLeft > 3) {
-            return true;
-          } else if (deadline === 'urgent' && daysLeft >= 0 && daysLeft <= 3) {
-            return true;
-          } else if (deadline === 'overdue' && daysLeft < 0) {
-            return true;
-          }
-          return false;
-        });
-        table.draw();
-        $.fn.dataTable.ext.search.pop();
-      }
+      applyFilters();
     });
 
     // Reset filters
@@ -668,6 +664,59 @@ include("includes/header.php");
       $('#searchInput').val('');
       table.search('').columns().search('').draw();
     });
+
+    function applyFilters() {
+      const status = $('#statusFilter').val();
+      const priority = $('#priorityFilter').val();
+      const deadline = $('#deadlineFilter').val();
+
+      // Clear existing searches
+      table.search('').columns().search('').draw();
+
+      // Clear any custom filtering functions
+      $.fn.dataTable.ext.search.pop();
+
+      // Add custom filter function
+      $.fn.dataTable.ext.search.push(function (settings, data, dataIndex) {
+        const row = table.row(dataIndex).node();
+
+        // Status filtering
+        if (status && status !== '') {
+          const statusText = $(row).find('td:nth-child(3) .badge:first').text().trim().toLowerCase();
+          if (!statusText.includes(status.toLowerCase())) {
+            return false;
+          }
+        }
+
+        // Priority filtering
+        if (priority && priority !== '') {
+          const priorityText = $(row).find('td:nth-child(3) .badge:last').text().trim().toLowerCase();
+          if (!priorityText.includes(priority.toLowerCase())) {
+            return false;
+          }
+        }
+
+        // Deadline filtering
+        if (deadline && deadline !== '') {
+          const hasOverdueBadge = $(row).find('.badge-danger:contains("Overdue")').length > 0;
+          const hasTodayBadge = $(row).find('.badge-warning:contains("Deadline Today")').length > 0;
+          const hasTomorrowBadge = $(row).find('.badge-warning:contains("Due Tomorrow")').length > 0;
+
+          if (deadline === 'overdue' && !hasOverdueBadge) {
+            return false;
+          } else if (deadline === 'urgent' && !hasTodayBadge && !hasTomorrowBadge) {
+            return false;
+          } else if (deadline === 'upcoming' && (hasOverdueBadge || hasTodayBadge || hasTomorrowBadge)) {
+            return false;
+          }
+        }
+
+        return true;
+      });
+
+      // Apply filters
+      table.draw();
+    }
 
     // Initialize loading states
     $('.loading-overlay').hide();

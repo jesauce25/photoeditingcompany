@@ -141,11 +141,64 @@ include("includes/header.php");
         <section class="content">
             <div class="container-fluid">
                 <div class="card">
-                    <div class="card-header d-flex align-items-center" style="min-height: 60px;">
-                        <h3 class="card-title d-flex align-items-center m-0">
-                            <i class="fas fa-list mr-2"></i>Company Records
-                        </h3>
-                        <div class="card-tools ml-auto">
+                    <div class="card-header d-flex align-items-center justify-content-between"
+                        style="min-height: 60px;">
+                        <div class="d-flex align-items-center">
+                            <h3 class="card-title m-0 mr-3">
+                                <i class="fas fa-list mr-2"></i>Company Records
+                            </h3>
+                        </div>
+
+                        <div class="d-flex justify-content-center align-items-center flex-grow-1">
+                            <select id="filterType" class="form-control form-control-sm mr-2"
+                                style="width: 150px; height: 100%;">
+                                <option value="country" selected>Country</option>
+                                <option value="dateSignedUp">Date Signed Up</option>
+                            </select>
+
+                            <div id="countryFilterContainer" class="filter-option">
+                                <select id="countrySelect" class="form-control form-control-sm mr-2"
+                                    style="width: 150px; height: 100%;">
+                                    <option value="">All Countries</option>
+                                    <option value="USA">United States</option>
+                                    <option value="UK">United Kingdom</option>
+                                    <option value="Canada">Canada</option>
+                                    <option value="Australia">Australia</option>
+                                    <option value="Philippines">Philippines</option>
+                                </select>
+                            </div>
+
+                            <div id="dateTypeContainer" class="filter-option" style="display: none;">
+                                <select id="dateFilterType" class="form-control form-control-sm mr-2"
+                                    style="width: 150px; height: 100%;">
+                                    <option value="year" selected>Year</option>
+                                    <option value="month-year">Month-Year</option>
+                                </select>
+                            </div>
+
+                            <div id="yearFilterContainer" class="filter-option" style="display: none;">
+                                <select id="yearSelect" class="form-control form-control-sm mr-2"
+                                    style="width: 150px; height: 100%;">
+                                    <option value="">All Years</option>
+                                    <?php
+                                    for ($year = 2000; $year <= 2025; $year++) {
+                                        echo "<option value=\"$year\">$year</option>";
+                                    }
+                                    ?>
+                                </select>
+                            </div>
+
+                            <div id="monthYearContainer" class="filter-option" style="display: none;">
+                                <input type="month" id="monthYearPicker" class="form-control form-control-sm mr-2"
+                                    style="width: 150px; height: 100%;">
+                            </div>
+
+                            <button id="applyFilter" class="btn btn-info btn-sm">
+                                <i class="fas fa-filter mr-1"></i> Filter
+                            </button>
+                        </div>
+
+                        <div>
                             <a href="add-company.php" class="btn btn-primary btn-sm">
                                 <i class="fas fa-plus mr-1"></i> Add New Company
                             </a>
@@ -155,7 +208,7 @@ include("includes/header.php");
                         <!-- Table controls -->
                         <div class="row mb-4">
                             <!-- Left Group: Export buttons -->
-                            <div class="col-md-4">
+                            <!-- <div class="col-md-4">
                                 <div class="btn-group">
                                     <button type="button" class="btn btn-success btn-sm export-excel"
                                         title="Export to Excel">
@@ -169,65 +222,12 @@ include("includes/header.php");
                                         <i class="fas fa-print mr-1"></i> Print
                                     </button>
                                 </div>
-                            </div>
+                            </div> -->
 
-                            <!-- Center Group: Filter options -->
-                            <div class="col-md-4">
-                                <div class="filter-container">
-                                    <div class="d-flex justify-content-center align-items-center">
-                                        <select id="filterType" class="form-control form-control-sm mr-2"
-                                            style="width: 150px; height: 100%;">
-                                            <option value="country" selected>Country</option>
-                                            <option value="dateSignedUp">Date Signed Up</option>
-                                        </select>
 
-                                        <div id="countryFilterContainer" class="filter-option">
-                                            <select id="countrySelect" class="form-control form-control-sm mr-2"
-                                                style="width: 150px; height: 100%;">
-                                                <option value="">All Countries</option>
-                                                <option value="USA">United States</option>
-                                                <option value="UK">United Kingdom</option>
-                                                <option value="Canada">Canada</option>
-                                                <option value="Australia">Australia</option>
-                                                <option value="Philippines">Philippines</option>
-                                            </select>
-                                        </div>
-
-                                        <div id="dateTypeContainer" class="filter-option" style="display: none;">
-                                            <select id="dateFilterType" class="form-control form-control-sm mr-2"
-                                                style="width: 150px; height: 100%;">
-                                                <option value="year" selected>Year</option>
-                                                <option value="month-year">Month-Year</option>
-                                            </select>
-                                        </div>
-
-                                        <div id="yearFilterContainer" class="filter-option" style="display: none;">
-                                            <select id="yearSelect" class="form-control form-control-sm mr-2"
-                                                style="width: 150px; height: 100%;">
-                                                <option value="">All Years</option>
-                                                <?php
-                                                for ($year = 2000; $year <= 2025; $year++) {
-                                                    echo "<option value=\"$year\">$year</option>";
-                                                }
-                                                ?>
-                                            </select>
-                                        </div>
-
-                                        <div id="monthYearContainer" class="filter-option" style="display: none;">
-                                            <input type="month" id="monthYearPicker"
-                                                class="form-control form-control-sm mr-2"
-                                                style="width: 150px; height: 100%;">
-                                        </div>
-
-                                        <button id="applyFilter" class="btn btn-info btn-sm">
-                                            <i class="fas fa-filter mr-1"></i> Filter
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
 
                             <!-- Right Group: Search box -->
-                            <div class="col-md-4">
+                            <!-- <div class="col-md-4">
                                 <div class="search-box float-right" style="width: 250px;">
                                     <input type="text" id="searchInput" class="form-control form-control-sm"
                                         placeholder="Search companies...">
@@ -235,7 +235,7 @@ include("includes/header.php");
                                         <i class="fas fa-search"></i>
                                     </button>
                                 </div>
-                            </div>
+                            </div> -->
                         </div>
 
                         <!-- Table with loading overlay -->
@@ -321,13 +321,11 @@ include("includes/header.php");
                 "responsive": true,
                 "lengthChange": true,
                 "autoWidth": false,
-                "pageLength": 10,
+                "pageLength": 1000,
                 "searching": true,
                 "ordering": true,
                 "info": true,
-                "dom": "<'row'<'col-sm-12 col-md-6'l><'col-sm-12 col-md-6'f>>" +
-                    "<'row'<'col-sm-12'tr>>" +
-                    "<'row'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>",
+                "dom": '<"row align-items-center"<"col-sm-6"l><"col-sm-6 d-flex justify-content-end"f>><"row"<"col-sm-12"tr>><"row"<"col-sm-5"i><"col-sm-7 d-flex justify-content-end"p>>',
                 "buttons": [
                     { extend: 'excel', className: 'hidden-button' },
                     { extend: 'pdf', className: 'hidden-button' },

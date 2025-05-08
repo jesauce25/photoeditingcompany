@@ -184,12 +184,12 @@ $projects = $result->fetch_all(MYSQLI_ASSOC);
 
     /* Assignee overdue styles */
     .assignee-overdue {
-        background-color: rgba(220, 53, 69, 0.8) !important;
+        background-color: rgb(166, 0, 17) !important;
     }
 
     .assignee-acceptable {
-        background-color: rgba(220, 53, 69, 0.8) !important;
-        border: 2px solid #28a745 !important;
+        background-color: rgb(166, 0, 17) !important;
+        border: 2px solid rgb(0, 255, 60) !important;
     }
 
     /* Role styling */
@@ -207,8 +207,8 @@ $projects = $result->fetch_all(MYSQLI_ASSOC);
     /* Fullscreen Mode */
     .fullscreen-btn {
         position: absolute;
-        top: 10px;
-        right: 10px;
+        top: 0px;
+        right: 0px;
         z-index: 100;
         background-color: rgba(255, 178, 46, 0.2);
         border: 1px solid rgba(255, 178, 46, 0.5);
@@ -782,6 +782,7 @@ $projects = $result->fetch_all(MYSQLI_ASSOC);
                             <th>Date Arrived</th>
                             <th>Images</th>
                             <th>Deadline</th>
+                            <th>DELAYED</th>
                             <th>Assignees</th>
                             <th>Roles</th>
                             <th>Action</th>
@@ -790,7 +791,7 @@ $projects = $result->fetch_all(MYSQLI_ASSOC);
                     <tbody>
                         <?php if (empty($projects)): ?>
                             <tr>
-                                <td colspan="8" class="text-center">No projects found</td>
+                                <td colspan="9" class="text-center">No projects found</td>
                             </tr>
                         <?php else: ?>
                             <?php foreach ($projects as $project): ?>
@@ -830,6 +831,17 @@ $projects = $result->fetch_all(MYSQLI_ASSOC);
                                     </td>
                                     <td>
                                         <?php echo date('M d', strtotime($project['deadline'])); ?>
+                                    </td>
+                                    <td>
+                                        <?php if ($is_overdue): ?>
+                                            <span class="badge badge-danger p-2">
+                                                <?php echo $days_diff; ?> days
+                                            </span>
+                                        <?php else: ?>
+                                            <span class="badge badge-success p-2">
+                                                On Time
+                                            </span>
+                                        <?php endif; ?>
                                     </td>
                                     <td>
                                         <?php if (!empty($assignees)): ?>

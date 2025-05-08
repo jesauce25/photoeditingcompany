@@ -359,21 +359,56 @@ try {
       // Filter functionality
       $('#applyFilter').click(function () {
         var month = $('#monthFilter').val();
+        var year = $('#yearFilter').val();
+        var status = $('#statusFilter').val();
+
         showLoading();
+
         // Simulate filtering delay
         setTimeout(function () {
-          if (month) {
-            $('#historyTable tbody tr').hide();
-            $('#historyTable tbody tr').each(function () {
-              if ($(this).text().indexOf(month) > -1) {
-                $(this).show();
+          $('#historyTable tbody tr').show(); // Reset visibility
+
+          // Apply selected filters
+          $('#historyTable tbody tr').each(function () {
+            var rowVisible = true;
+            var rowText = $(this).text();
+
+            // Month filter
+            if (month && !rowText.includes(month)) {
+              rowVisible = false;
+            }
+
+            // Year filter
+            if (year && !rowText.includes(year)) {
+              rowVisible = false;
+            }
+
+            // Status filter (ontime or delayed)
+            if (status) {
+              // Check for status specifically in the Status column
+              var statusCell = $(this).find('td:nth-child(4)').text().toLowerCase();
+              if (status === 'ontime' && !statusCell.includes('on time')) {
+                rowVisible = false;
+              } else if (status === 'delayed' && !statusCell.includes('delayed')) {
+                rowVisible = false;
               }
-            });
-          } else {
-            $('#historyTable tbody tr').show();
-          }
+            }
+
+            // Show or hide row based on combined filter results
+            $(this).toggle(rowVisible);
+          });
+
           hideLoading();
         }, 600);
+      });
+
+      // Reset filter button
+      $('#resetFilter').click(function () {
+        $('#monthFilter').val('');
+        $('#yearFilter').val('');
+        $('#statusFilter').val('');
+        $('#searchInput').val('');
+        $('#historyTable tbody tr').show();
       });
 
       // Loading indicator functions

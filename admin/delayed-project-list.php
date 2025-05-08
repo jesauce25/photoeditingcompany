@@ -118,12 +118,39 @@ unset($_SESSION['success_message']);
                                 <i class="fas fa-plus mr-1"></i> Add New Project
                             </a>
                         </div>
+                        <div class="d-flex justify-content-center align-items-center ">
+                            <div id="companyFilterContainer" class="filter-option">
+                                <select id="companySelect" class="form-control form-control-sm mr-2"
+                                    style="width: 150px; height: 100%;">
+                                    <option value="">All Companies</option>
+                                    <?php foreach ($companies as $company): ?>
+                                        <option value="<?php echo $company['company_id']; ?>" <?php echo (isset($_GET['company_id']) && $_GET['company_id'] == $company['company_id']) ? 'selected' : ''; ?>>
+                                            <?php echo htmlspecialchars($company['company_name']); ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <select id="prioritySelect" class="form-control form-control-sm mr-2"
+                                style="width: 150px; height: 100%;">
+                                <option value="">All Priorities</option>
+                                <option value="low" <?php echo (isset($_GET['priority']) && $_GET['priority'] == 'low') ? 'selected' : ''; ?>>Low</option>
+                                <option value="medium" <?php echo (isset($_GET['priority']) && $_GET['priority'] == 'medium') ? 'selected' : ''; ?>>Medium</option>
+                                <option value="high" <?php echo (isset($_GET['priority']) && $_GET['priority'] == 'high') ? 'selected' : ''; ?>>High</option>
+                                <option value="urgent" <?php echo (isset($_GET['priority']) && $_GET['priority'] == 'urgent') ? 'selected' : ''; ?>>Urgent</option>
+                            </select>
+                            <button id="applyFilter" class="btn btn-info btn-sm">
+                                <i class="fas fa-filter mr-1"></i> Filter
+                            </button>
+                            <button id="resetFilter" class="btn btn-secondary btn-sm ml-1">
+                                <i class="fas fa-undo mr-1"></i> Reset
+                            </button>
+                        </div>
                     </div>
                     <div class="card-body">
                         <!-- Table controls -->
                         <div class="row mb-4">
                             <!-- Left Group: Export buttons -->
-                            <div class="col-md-4">
+                            <!-- <div class="col-md-4">
                                 <div class="btn-group">
                                     <button type="button" class="btn btn-success btn-sm export-excel"
                                         title="Export to Excel">
@@ -137,43 +164,10 @@ unset($_SESSION['success_message']);
                                         <i class="fas fa-print mr-1"></i> Print
                                     </button>
                                 </div>
-                            </div>
-
-                            <!-- Center Group: Filter options -->
-                            <div class="col-md-4">
-                                <div class="filter-container">
-                                    <div class="d-flex justify-content-center align-items-center ">
-                                        <div id="companyFilterContainer" class="filter-option">
-                                            <select id="companySelect" class="form-control form-control-sm mr-2"
-                                                style="width: 150px; height: 100%;">
-                                                <option value="">All Companies</option>
-                                                <?php foreach ($companies as $company): ?>
-                                                    <option value="<?php echo $company['company_id']; ?>" <?php echo (isset($_GET['company_id']) && $_GET['company_id'] == $company['company_id']) ? 'selected' : ''; ?>>
-                                                        <?php echo htmlspecialchars($company['company_name']); ?>
-                                                    </option>
-                                                <?php endforeach; ?>
-                                            </select>
-                                        </div>
-                                        <select id="prioritySelect" class="form-control form-control-sm mr-2"
-                                            style="width: 150px; height: 100%;">
-                                            <option value="">All Priorities</option>
-                                            <option value="low" <?php echo (isset($_GET['priority']) && $_GET['priority'] == 'low') ? 'selected' : ''; ?>>Low</option>
-                                            <option value="medium" <?php echo (isset($_GET['priority']) && $_GET['priority'] == 'medium') ? 'selected' : ''; ?>>Medium</option>
-                                            <option value="high" <?php echo (isset($_GET['priority']) && $_GET['priority'] == 'high') ? 'selected' : ''; ?>>High</option>
-                                            <option value="urgent" <?php echo (isset($_GET['priority']) && $_GET['priority'] == 'urgent') ? 'selected' : ''; ?>>Urgent</option>
-                                        </select>
-                                        <button id="applyFilter" class="btn btn-info btn-sm">
-                                            <i class="fas fa-filter mr-1"></i> Filter
-                                        </button>
-                                        <button id="resetFilter" class="btn btn-secondary btn-sm ml-1">
-                                            <i class="fas fa-undo mr-1"></i> Reset
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
+                            </div> -->
 
                             <!-- Right Group: Search box -->
-                            <div class="col-md-4">
+                            <!-- <div class="col-md-4">
                                 <div class="search-box float-right" style="width: 250px;">
                                     <input type="text" id="searchInput" class="form-control form-control-sm"
                                         placeholder="Search projects..."
@@ -182,7 +176,7 @@ unset($_SESSION['success_message']);
                                         <i class="fas fa-search"></i>
                                     </button>
                                 </div>
-                            </div>
+                            </div> -->
                         </div>
 
                         <!-- Table with loading overlay -->
@@ -514,7 +508,7 @@ unset($_SESSION['success_message']);
         // Log page load and scan for overdue items
         logging.info('Delayed Project List page loaded');
 
-        // Log overdue projects and assignees on page load
+        // Log overdue projects and assignees on page loads
         $('.project-overdue').each(function () {
             const projectId = $(this).find('td:first').text();
             const projectTitle = $(this).find('.project-title').text().trim();
@@ -532,13 +526,11 @@ unset($_SESSION['success_message']);
             "responsive": true,
             "lengthChange": true,
             "autoWidth": false,
-            "pageLength": 10,
+            "pageLength": 1000,
             "searching": true,
             "ordering": true,
             "info": true,
-            "dom": "<'row'<'col-sm-12 col-md-6'l><'col-sm-12 col-md-6'f>>" +
-                "<'row'<'col-sm-12'tr>>" +
-                "<'row'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>",
+            "dom": '<"row align-items-center"<"col-sm-6"l><"col-sm-6 d-flex justify-content-end"f>><"row"<"col-sm-12"tr>><"row"<"col-sm-5"i><"col-sm-7 d-flex justify-content-end"p>>',
             "buttons": [{
                 extend: 'excel',
                 className: 'hidden-button'

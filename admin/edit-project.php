@@ -2228,7 +2228,14 @@ $projectProgress = getProjectProgressStats($project_id);
                                                         <i class="fas ${image.redo === '1' ? 'fa-times' : 'fa-redo-alt'}"></i> ${image.redo === '1' ? 'Cancel Redo' : 'Redo'}
                                                     </button>
                                                 </div>` :
-                                            `<span class="badge badge-info">Locked</span>`}
+                                            `<div class="btn-group">
+                                                <button type="button" class="btn btn-sm ${image.redo === '1' ? 'btn-danger' : 'btn-warning'} mark-redo-btn" 
+                                                        data-image-id="${image.image_id}"
+                                                        data-redo="${image.redo === '1' ? '0' : '1'}"
+                                                        title="${image.redo === '1' ? 'Cancel Redo Request' : 'Mark for Redo'}">
+                                                    <i class="fas ${image.redo === '1' ? 'fa-times' : 'fa-redo-alt'}"></i> ${image.redo === '1' ? 'Cancel Redo' : 'Redo'}
+                                                </button>
+                                            </div>`}
                                             </td>
                                         </tr>
                                     `;
@@ -2274,7 +2281,7 @@ $projectProgress = getProjectProgressStats($project_id);
                                                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
                                                 </div>
                                                 <div>
-                                                    <button type="button" class="btn btn-danger remove-all-assigned-images mr-2" data-assignment-id="${assignmentId}" ${!statusEditable ? 'disabled' : ''}>
+                                                    <button type="button" class="btn btn-danger remove-all-assigned-images mr-2" data-assignment-id="${assignmentId}">
                                                         <i class="fas fa-trash mr-1"></i> Remove All Images
                                                     </button>
                                                     <button type="button" class="btn btn-success save-all-image-details" data-assignment-id="${assignmentId}" ${!statusEditable ? 'disabled' : ''}>

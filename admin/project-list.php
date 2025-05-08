@@ -311,29 +311,6 @@ unset($_SESSION['success_message']);
         transform: scale(1.05);
     }
 
-    .search-box {
-        position: relative;
-    }
-
-    .search-box input {
-        padding-right: 40px;
-        border-radius: 20px;
-    }
-
-    .search-box button {
-        position: absolute;
-        right: 0;
-        top: 0;
-        height: 100%;
-        border: none;
-        background: transparent;
-        padding: 0 15px;
-        color: #6c757d;
-    }
-
-    .search-box button:hover {
-        color: #007bff;
-    }
 
     /* Total Images UI */
     .total-images-display {
@@ -456,12 +433,40 @@ unset($_SESSION['success_message']);
                                 <i class="fas fa-plus mr-1"></i> Add New Project
                             </a>
                         </div>
+                        <div class="d-flex justify-content-center align-items-center ">
+                            <div id="companyFilterContainer" class="filter-option">
+                                <select id="companySelect" class="form-control form-control-sm mr-2"
+                                    style="width: 150px; height: 100%;">
+                                    <option value="">All Companies</option>
+                                    <?php foreach ($companies as $company): ?>
+                                        <option value="<?php echo $company['company_id']; ?>" <?php echo (isset($_GET['company_id']) && $_GET['company_id'] == $company['company_id']) ? 'selected' : ''; ?>>
+                                            <?php echo htmlspecialchars($company['company_name'] ?? ''); ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <select id="statusSelect" class="form-control form-control-sm mr-2"
+                                style="width: 150px; height: 100%;">
+                                <option value="">All Statuses</option>
+                                <option value="pending" <?php echo (isset($_GET['status_project']) && $_GET['status_project'] == 'pending') ? 'selected' : ''; ?>>Pending
+                                </option>
+                                <option value="in_progress" <?php echo (isset($_GET['status_project']) && $_GET['status_project'] == 'in_progress') ? 'selected' : ''; ?>>In
+                                    Progress
+                                </option>
+                                <option value="review" <?php echo (isset($_GET['status_project']) && $_GET['status_project'] == 'review') ? 'selected' : ''; ?>>Review</option>
+                                <option value="completed" <?php echo (isset($_GET['status_project']) && $_GET['status_project'] == 'completed') ? 'selected' : ''; ?>>Completed
+                                </option>
+                            </select>
+                            <button id="applyFilter" class="btn btn-info btn-sm">
+                                <i class="fas fa-filter mr-1"></i> Filter
+                            </button>
+                        </div>
                     </div>
                     <div class="card-body">
                         <!-- Table controls -->
                         <div class="row mb-4">
                             <!-- Left Group: Export buttons -->
-                            <div class="col-md-4">
+                            <!-- <div class="col-md-4">
                                 <div class="btn-group">
                                     <button type="button" class="btn btn-success btn-sm export-excel"
                                         title="Export to Excel">
@@ -475,44 +480,12 @@ unset($_SESSION['success_message']);
                                         <i class="fas fa-print mr-1"></i> Print
                                     </button>
                                 </div>
-                            </div>
+                            </div> -->
 
-                            <!-- Center Group: Filter options -->
-                            <div class="col-md-4">
-                                <div class="filter-container">
-                                    <div class="d-flex justify-content-center align-items-center ">
-                                        <div id="companyFilterContainer" class="filter-option">
-                                            <select id="companySelect" class="form-control form-control-sm mr-2"
-                                                style="width: 150px; height: 100%;">
-                                                <option value="">All Companies</option>
-                                                <?php foreach ($companies as $company): ?>
-                                                    <option value="<?php echo $company['company_id']; ?>" <?php echo (isset($_GET['company_id']) && $_GET['company_id'] == $company['company_id']) ? 'selected' : ''; ?>>
-                                                        <?php echo htmlspecialchars($company['company_name'] ?? ''); ?>
-                                                    </option>
-                                                <?php endforeach; ?>
-                                            </select>
-                                        </div>
-                                        <select id="statusSelect" class="form-control form-control-sm mr-2"
-                                            style="width: 150px; height: 100%;">
-                                            <option value="">All Statuses</option>
-                                            <option value="pending" <?php echo (isset($_GET['status_project']) && $_GET['status_project'] == 'pending') ? 'selected' : ''; ?>>Pending
-                                            </option>
-                                            <option value="in_progress" <?php echo (isset($_GET['status_project']) && $_GET['status_project'] == 'in_progress') ? 'selected' : ''; ?>>In
-                                                Progress
-                                            </option>
-                                            <option value="review" <?php echo (isset($_GET['status_project']) && $_GET['status_project'] == 'review') ? 'selected' : ''; ?>>Review</option>
-                                            <option value="completed" <?php echo (isset($_GET['status_project']) && $_GET['status_project'] == 'completed') ? 'selected' : ''; ?>>Completed
-                                            </option>
-                                        </select>
-                                        <button id="applyFilter" class="btn btn-info btn-sm">
-                                            <i class="fas fa-filter mr-1"></i> Filter
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
+
 
                             <!-- Right Group: Search box -->
-                            <div class="col-md-4">
+                            <!-- <div class="col-md-4">
                                 <div class="search-box float-right" style="width: 250px;">
                                     <input type="text" id="searchInput" class="form-control form-control-sm"
                                         placeholder="Search projects..."
@@ -521,7 +494,7 @@ unset($_SESSION['success_message']);
                                         <i class="fas fa-search"></i>
                                     </button>
                                 </div>
-                            </div>
+                            </div> -->
                         </div>
 
                         <!-- Projects Table -->
@@ -783,7 +756,7 @@ unset($_SESSION['success_message']);
         </div>
     </div>
 </div>
-
+<?php include("includes/footer.php"); ?>
 <script>
     $(document).ready(function () {
         console.log('Document ready - Initializing project list...');
@@ -830,13 +803,11 @@ unset($_SESSION['success_message']);
             "responsive": true,
             "lengthChange": true,
             "autoWidth": false,
-            "pageLength": 10,
+            "pageLength": 1000,
             "searching": true,
             "ordering": true,
             "info": true,
-            "dom": "<'row'<'col-sm-12 col-md-6'l><'col-sm-12 col-md-6'f>>" +
-                "<'row'<'col-sm-12'tr>>" +
-                "<'row'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>",
+            "dom": '<"row align-items-center"<"col-sm-6"l><"col-sm-6 d-flex justify-content-end"f>><"row"<"col-sm-12"tr>><"row"<"col-sm-5"i><"col-sm-7 d-flex justify-content-end"p>>',
             "buttons": [{
                 extend: 'excel',
                 className: 'hidden-button'
@@ -979,7 +950,6 @@ unset($_SESSION['success_message']);
     });
 </script>
 
-<?php include("includes/footer.php"); ?>
 
 <!-- Debug Script - Direct approach -->
 <script>
@@ -1057,6 +1027,3 @@ unset($_SESSION['success_message']);
         }
     }
 </script>
-</body>
-
-</html>
