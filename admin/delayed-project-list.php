@@ -141,9 +141,9 @@ unset($_SESSION['success_message']);
                             <button id="applyFilter" class="btn btn-info btn-sm">
                                 <i class="fas fa-filter mr-1"></i> Filter
                             </button>
-                            <button id="resetFilter" class="btn btn-secondary btn-sm ml-1">
+                            <!-- <button id="resetFilter" class="btn btn-secondary btn-sm ml-1">
                                 <i class="fas fa-undo mr-1"></i> Reset
-                            </button>
+                            </button> -->
                         </div>
                     </div>
                     <div class="card-body">

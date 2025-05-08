@@ -453,7 +453,6 @@ unset($_SESSION['success_message']);
                                 <option value="in_progress" <?php echo (isset($_GET['status_project']) && $_GET['status_project'] == 'in_progress') ? 'selected' : ''; ?>>In
                                     Progress
                                 </option>
-                                <option value="review" <?php echo (isset($_GET['status_project']) && $_GET['status_project'] == 'review') ? 'selected' : ''; ?>>Review</option>
                                 <option value="completed" <?php echo (isset($_GET['status_project']) && $_GET['status_project'] == 'completed') ? 'selected' : ''; ?>>Completed
                                 </option>
                             </select>
@@ -560,8 +559,7 @@ unset($_SESSION['success_message']);
                                                             <i class="fas fa-spinner fa-spin mr-1"></i>
                                                         <?php elseif ($project['status_project'] == 'pending'): ?>
                                                             <i class="fas fa-clock mr-1"></i>
-                                                        <?php elseif ($project['status_project'] == 'review'): ?>
-                                                            <i class="fas fa-search mr-1"></i>
+
                                                         <?php elseif ($project['status_project'] == 'completed'): ?>
                                                             <i class="fas fa-check-circle mr-1"></i>
                                                         <?php elseif ($project['status_project'] == 'delayed'): ?>

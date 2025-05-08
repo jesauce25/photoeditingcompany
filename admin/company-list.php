@@ -88,9 +88,14 @@ include("includes/header.php");
         color: #2E7D32;
     }
 
-    .default-badge {
-        background-color: #f5f5f5;
-        color: #616161;
+    /* Style for dynamic country badges */
+    .country-badge-dynamic {
+        padding: 5px 10px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 500;
+        display: inline-block;
+        /* Colors will be applied inline */
     }
 
     .action-buttons .btn {
@@ -451,23 +456,49 @@ include("includes/header.php");
                         if (response.data.length > 0) {
                             $.each(response.data, function (index, company) {
                                 // Create country badge
-                                let countryClass = 'default-badge';
+                                let countryClass = '';
+                                let badgeStyle = '';
+
                                 switch (company.country) {
                                     case 'USA': countryClass = 'usa-badge'; break;
                                     case 'UK': countryClass = 'uk-badge'; break;
                                     case 'Canada': countryClass = 'canada-badge'; break;
                                     case 'Australia': countryClass = 'australia-badge'; break;
                                     case 'Philippines': countryClass = 'philippines-badge'; break;
+                                    default:
+                                        // Generate a consistent color based on the country name
+                                        let hash = 0;
+                                        for (let i = 0; i < company.country.length; i++) {
+                                            hash = company.country.charCodeAt(i) + ((hash << 5) - hash);
+                                        }
+
+                                        // Generate HSL color with good saturation and lightness
+                                        const h = hash % 360;
+                                        const s = 65 + (hash % 20); // 65-85% saturation
+                                        const l = 75 + (hash % 10); // 75-85% lightness
+
+                                        // Create inline style for the badge
+                                        const bgColor = `hsl(${h}, ${s}%, ${l}%)`;
+                                        const textColor = `hsl(${h}, ${s}%, 25%)`; // Darker text based on bg
+
+                                        countryClass = 'country-badge-dynamic';
+                                        badgeStyle = `style="background-color:${bgColor};color:${textColor}"`;
                                 }
 
-                                const countryBadge = `<span class="country-badge ${countryClass}">${company.country}</span>`;
+                                const countryBadge = countryClass ?
+                                    `<span class="country-badge ${countryClass}" ${badgeStyle}>${company.country}</span>` :
+                                    `<span class="country-badge-dynamic" ${badgeStyle}>${company.country}</span>`;
 
                                 // Create action buttons
+
+
+                                // add this inside of actions, for the sending email to company
+                                // <a href="mailto:${company.email}" class="btn btn-info btn-sm" title="Send Email">
+                                //         <i class="fas fa-envelope"></i>
+                                //     </a>
                                 const actions = `
                                 <div class="action-buttons text-center">
-                                    <a href="mailto:${company.email}" class="btn btn-info btn-sm" title="Send Email">
-                                        <i class="fas fa-envelope"></i>
-                                    </a>
+                                  
                                     <a href="edit-company.php?id=${company.company_id}" class="btn btn-primary btn-sm" title="Edit Company">
                                         <i class="fas fa-edit"></i>
                                     </a>
