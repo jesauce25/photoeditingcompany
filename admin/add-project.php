@@ -110,7 +110,7 @@ unset($_SESSION['form_data']);
                                         <div class="col-md-6">
                                             <div class="form-group">
                                                 <label for="projectName">Project Name <span
-                                                        class="text-danger">*</span></label>
+                                                        class="text-info">(Optional)</span></label>
                                                 <div class="input-group">
                                                     <div class="input-group-prepend">
                                                         <span class="input-group-text"><i
@@ -118,8 +118,7 @@ unset($_SESSION['form_data']);
                                                     </div>
                                                     <input type="text" class="form-control" id="projectName"
                                                         name="projectName" placeholder="Enter project name"
-                                                        value="<?php echo htmlspecialchars($form_data['projectName'] ?? ''); ?>"
-                                                        required>
+                                                        value="<?php echo htmlspecialchars($form_data['projectName'] ?? ''); ?>">
                                                 </div>
                                             </div>
                                             <div class="form-group">
@@ -169,8 +168,9 @@ unset($_SESSION['form_data']);
                                         </div>
                                     </div>
                                     <div class="form-group">
-                                        <label for="description">Project Description</label>
-                                        <textarea class="form-control" id="description" name="description" rows="3"
+                                        <label for="projectName">Project Description <span
+                                                class="text-info">(Optional)</span></label> <textarea
+                                            class="form-control" id="description" name="description" rows="3"
                                             placeholder="Enter project details"><?php echo htmlspecialchars($form_data['description'] ?? ''); ?></textarea>
                                     </div>
                                 </form>

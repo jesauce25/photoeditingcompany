@@ -31,9 +31,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     // Validate required fields
     $errors = [];
 
-    if (empty($project_title)) {
-        $errors[] = "Project name is required";
-    }
+    // Removed project name validation to allow empty project names
+    // if (empty($project_title)) {
+    //     $errors[] = "Project name is required";
+    // }
 
     if ($company_id <= 0) {
         $errors[] = "Please select a company";

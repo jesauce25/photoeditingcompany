@@ -225,13 +225,6 @@ include("includes/header.php");
         document.getElementById('profileImg').addEventListener('change', function () {
             const file = this.files[0];
             if (file) {
-                // Check file size (max 5MB)
-                if (file.size > 5 * 1024 * 1024) {
-                    showAlert('error', 'File is too large. Maximum size is 5MB.');
-                    this.value = ''; // Clear the file input
-                    return;
-                }
-
                 // Check file type
                 const fileType = file.type;
                 if (!fileType.match('image.*')) {

@@ -386,11 +386,12 @@ if (!isset($hasRedoImages) && !empty($images)) {
                                             <i class="fas fa-filter mr-1"></i> Filter by Role
                                         </button>
                                         <div class="dropdown-menu">
-                                            <a class="dropdown-item active" href="#" data-role="all">All Roles</a>
+                                            <button type="button" class="dropdown-item active" data-role="all">All
+                                                Roles</button>
                                             <div class="dropdown-divider"></div>
                                             <?php foreach ($roles as $role): ?>
-                                                <a class="dropdown-item" href="#"
-                                                    data-role="<?php echo htmlspecialchars($role); ?>"><?php echo htmlspecialchars($role); ?></a>
+                                                <button type="button" class="dropdown-item"
+                                                    data-role="<?php echo htmlspecialchars($role); ?>"><?php echo htmlspecialchars($role); ?></button>
                                             <?php endforeach; ?>
                                         </div>
                                     </div>
@@ -965,8 +966,6 @@ if (!isset($hasRedoImages) && !empty($images)) {
 
         // Handle Role Filter dropdown
         $('.dropdown-item[data-role]').on('click', function (e) {
-            e.preventDefault();
-
             const $this = $(this);
             const selectedRole = $this.data('role');
             const $rows = $('.image-row');
@@ -998,7 +997,7 @@ if (!isset($hasRedoImages) && !empty($images)) {
                 });
             }
         });
-        });
+    });
 </script>
 
 <?php include("includes/footer.php"); ?>

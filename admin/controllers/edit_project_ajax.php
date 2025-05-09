@@ -585,16 +585,15 @@ if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQ
             break;
 
         case 'upload_project_images':
-            logAjaxRequest('upload_project_images', $_POST, $_FILES);
+            // Validate request
+            $project_id = intval($_POST['project_id'] ?? 0);
 
-            // Validate project ID
-            $project_id = isset($_POST['project_id']) ? intval($_POST['project_id']) : 0;
             if ($project_id <= 0) {
                 echo json_encode(['status' => 'error', 'message' => 'Invalid project ID']);
                 exit;
             }
 
-            // Check if project exists
+            // Verify project exists
             $check_sql = "SELECT project_id FROM tbl_projects WHERE project_id = ?";
             $check_stmt = $conn->prepare($check_sql);
             $check_stmt->bind_param("i", $project_id);
@@ -648,8 +647,26 @@ if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQ
 
                 // Get original filename and extension
                 $original_filename = $files['name'][$i];
-                $file_ext = pathinfo($original_filename, PATHINFO_EXTENSION);
+                $file_ext = strtolower(pathinfo($original_filename, PATHINFO_EXTENSION));
                 $base_name = pathinfo($original_filename, PATHINFO_FILENAME);
+
+                // Check file type is an allowed image type (include TIF/TIFF explicitly)
+                $allowed_types = ['jpg', 'jpeg', 'png', 'gif', 'tif', 'tiff'];
+                $allowed_mime_types = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/tiff'];
+
+                $file_type = $files['type'][$i];
+
+                // Special handling for TIFF files which might have inconsistent MIME types
+                if ($file_ext === 'tif' || $file_ext === 'tiff') {
+                    // Force the correct file type for TIF files
+                    $file_type = 'image/tiff';
+                }
+
+                if (!in_array($file_ext, $allowed_types) && !in_array($file_type, $allowed_mime_types)) {
+                    $failed_count++;
+                    $errors[] = "Invalid file type for {$original_filename}. Allowed types: " . implode(', ', $allowed_types);
+                    continue;
+                }
 
                 // Handle filename conflicts by adding a counter suffix if needed
                 $new_filename = $original_filename;
@@ -660,7 +677,6 @@ if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQ
                        VALUES (?, ?, ?, ?, 'available')";
                 $stmt = $conn->prepare($sql);
 
-                $file_type = $files['type'][$i];
                 $file_size = $files['size'][$i];
                 $image_path = $new_filename; // Store just the filename
 
