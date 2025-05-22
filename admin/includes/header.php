@@ -47,6 +47,7 @@ if (session_status() === PHP_SESSION_NONE) {
 
     <!-- Custom CSS for user management -->
     <link rel="stylesheet" href="assets/css/user-management.css">
+    <link rel="stylesheet" href="assets/css/custom.css">
 
     <!-- Optional: Create placeholder CSS files to prevent 404 errors -->
     <style>

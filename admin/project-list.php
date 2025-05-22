@@ -237,10 +237,6 @@ unset($_SESSION['success_message']);
         }
     }
 
-    /* Custom styles for overdue indicators */
-    .project-overdue {
-        background-color: rgba(255, 0, 0, 0.1) !important;
-    }
 
     /* Projects due tomorrow */
     .project-tomorrow {
