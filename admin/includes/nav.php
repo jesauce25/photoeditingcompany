@@ -437,10 +437,10 @@ $notificationCount += count($systemNotifications);
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a href="delayed-project-list.php" class="nav-link text-sm">
+                            <!-- <a href="delayed-project-list.php" class="nav-link text-sm">
                                 <i class="fas fa-exclamation-circle nav-icon"></i>
                                 <p>Delayed Project History</p>
-                            </a>
+                            </a> -->
                         </li>
                     </ul>
                 </li>

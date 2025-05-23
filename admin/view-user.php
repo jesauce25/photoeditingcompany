@@ -43,12 +43,12 @@ include("includes/header.php");
                                 <div class="card-header p-2">
                                     <ul class="nav nav-pills">
                                         <li class="nav-item">
-                                            <a class="nav-link active" href="#details" data-toggle="tab">
+                                            <a class="nav-link active text-white" href="#details" data-toggle="tab">
                                                 <i class="fas fa-info-circle mr-1"></i> User Details
                                             </a>
                                         </li>
                                         <li class="nav-item">
-                                            <a class="nav-link" href="#userTasks" data-toggle="tab">
+                                            <a class="nav-link text-white" href="#userTasks" data-toggle="tab">
                                                 <i class="fas fa-tasks mr-1"></i> User Tasks
                                             </a>
                                         </li>
@@ -330,7 +330,7 @@ include("includes/header.php");
 
 <!-- Page specific script -->
 <script>
-    $(document).ready(function () {
+    $(document).ready(function() {
         // Get user ID from URL
         const urlParams = new URLSearchParams(window.location.search);
         const userId = urlParams.get('id');
@@ -338,7 +338,7 @@ include("includes/header.php");
         // If no user ID is provided, show error and redirect
         if (!userId) {
             showAlert('error', 'No user ID provided');
-            setTimeout(function () {
+            setTimeout(function() {
                 window.location.href = 'user-list.php';
             }, 2000);
             return;
@@ -355,7 +355,7 @@ include("includes/header.php");
         let showingHistory = false;
 
         // Toggle history button click
-        $('#toggleHistory').on('click', function () {
+        $('#toggleHistory').on('click', function() {
             showingHistory = !showingHistory;
             $(this).toggleClass('btn-secondary btn-primary');
 
@@ -371,7 +371,7 @@ include("includes/header.php");
         });
 
         // Initialize the tasks when the user details tab is shown
-        $('a[href="#userTasks"]').on('shown.bs.tab', function (e) {
+        $('a[href="#userTasks"]').on('shown.bs.tab', function(e) {
             if (!taskTable) {
                 initializeTaskTable();
                 loadUserTasks(userId);
@@ -382,12 +382,12 @@ include("includes/header.php");
         loadUserDetails(userId);
 
         // Apply filters button click
-        $('#applyFilter').on('click', function () {
+        $('#applyFilter').on('click', function() {
             applyFilters();
         });
 
         // Reset filters button click
-        $('#resetFilter').on('click', function () {
+        $('#resetFilter').on('click', function() {
             $('#statusFilter').val('');
             $('#priorityFilter').val('');
             $('#deadlineFilter').val('');
@@ -416,9 +416,8 @@ include("includes/header.php");
                 "searching": true,
                 "ordering": true,
                 "info": true,
-                "dom": '<"row align-items-center"<"col-sm-6"l><"col-sm-6 d-flex justify-content-end"f>><"row"<"col-sm-12"tr>><"row"<"col-sm-5"i><"col-sm-7 d-flex justify-content-end"p>>'
-                ,
-                "createdRow": function (row, data, dataIndex) {
+                "dom": '<"row align-items-center"<"col-sm-6"l><"col-sm-6 d-flex justify-content-end"f>><"row"<"col-sm-12"tr>><"row"<"col-sm-5"i><"col-sm-7 d-flex justify-content-end"p>>',
+                "createdRow": function(row, data, dataIndex) {
                     // The row is created but styling may be lost, so we need to 
                     // handle it here based on the deadline in the data
                     const deadlineText = $(row).find('td:nth-child(6)').text();
@@ -444,7 +443,7 @@ include("includes/header.php");
             $.fn.dataTable.ext.search.pop();
 
             // Add custom filter function
-            $.fn.dataTable.ext.search.push(function (settings, data, dataIndex) {
+            $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
                 const row = taskTable.row(dataIndex).node();
 
                 // Status filtering
@@ -488,9 +487,11 @@ include("includes/header.php");
             $.ajax({
                 url: 'controllers/user_controller.php',
                 type: 'GET',
-                data: { user_id: userId },
+                data: {
+                    user_id: userId
+                },
                 dataType: 'json',
-                success: function (response) {
+                success: function(response) {
                     // Hide loading indicator
                     $('#loadingIndicator').hide();
 
@@ -560,7 +561,7 @@ include("includes/header.php");
                         showAlert('error', response.message || 'User not found');
                     }
                 },
-                error: function (xhr, status, error) {
+                error: function(xhr, status, error) {
                     // Hide loading indicator and show error
                     $('#loadingIndicator').hide();
                     $('#userNotFound').show();
@@ -606,7 +607,7 @@ include("includes/header.php");
                     show_hidden: showingHistory ? 1 : 0
                 },
                 dataType: 'json',
-                success: function (response) {
+                success: function(response) {
                     console.log('Tasks loaded:', response);
 
                     // Hide loading indicator
@@ -617,7 +618,7 @@ include("includes/header.php");
                         $('#totalTasks').text(response.tasks.length);
 
                         // Add tasks to the table
-                        response.tasks.forEach(function (task) {
+                        response.tasks.forEach(function(task) {
                             // Format status with appropriate badge
                             let statusBadge, priorityBadge = '';
 
@@ -822,7 +823,7 @@ include("includes/header.php");
                         console.log('Table drawn with data');
 
                         // Ensure row styles are applied after draw
-                        $('#taskTable tbody tr').each(function () {
+                        $('#taskTable tbody tr').each(function() {
                             // Check for both old and new class names for compatibility
                             if ($(this).hasClass('table-danger') || $(this).hasClass('project-overdue')) {
                                 // Remove old class if exists and add the new one
@@ -839,7 +840,7 @@ include("includes/header.php");
                         console.log('No tasks found');
                     }
                 },
-                error: function (xhr, status, error) {
+                error: function(xhr, status, error) {
                     // Hide loading indicator
                     $('.loading-overlay').hide();
 
@@ -869,7 +870,7 @@ include("includes/header.php");
         }
 
         // Function to load task images when a task is viewed
-        $(document).on('click', '.view-task-btn', function () {
+        $(document).on('click', '.view-task-btn', function() {
             const assignmentId = $(this).data('id');
             const row = $(this).closest('tr');
             const projectTitle = row.find('.project-title').text().trim();
@@ -894,7 +895,7 @@ include("includes/header.php");
                     assignment_id: assignmentId
                 },
                 dataType: 'json',
-                success: function (response) {
+                success: function(response) {
                     console.log('Images loaded:', response);
                     if (response.success && response.images && response.images.length > 0) {
                         // Create table to display images
@@ -930,7 +931,7 @@ include("includes/header.php");
                             </style>
                         `;
 
-                        response.images.forEach(function (image, index) {
+                        response.images.forEach(function(image, index) {
                             // Format status with appropriate badge
                             let statusBadge;
                             const status = (image.status_image || 'available').toLowerCase();
@@ -1017,7 +1018,7 @@ include("includes/header.php");
                         $('#modalImagesContainer').html('<div class="alert alert-info">No images found for this task.</div>');
                     }
                 },
-                error: function (xhr, status, error) {
+                error: function(xhr, status, error) {
                     console.error('Error loading task images:', error);
 
                     let errorMsg = 'Failed to load images. Please try again.';
@@ -1058,7 +1059,7 @@ include("includes/header.php");
             $('#alertMessages').html(alertHtml);
 
             // Auto dismiss after 5 seconds
-            setTimeout(function () {
+            setTimeout(function() {
                 $('.alert').alert('close');
             }, 5000);
         }

@@ -850,9 +850,9 @@ if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQ
                 $update_stmt->execute();
 
                 // Update project status if needed
-                if (function_exists('updateProjectStatus')) {
-                    updateProjectStatus($project_id);
-                }
+                // if (function_exists('updateProjectStatus')) {
+                //     updateProjectStatus($project_id);
+                // }
             }
 
             // Return response
@@ -1607,11 +1607,21 @@ if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQ
 
         case 'update_image_assignee':
             $image_id = isset($_POST['image_id']) ? intval($_POST['image_id']) : 0;
-            $user_id = isset($_POST['user_id']) ? intval($_POST['user_id']) : 0;
             $project_id = isset($_POST['project_id']) ? intval($_POST['project_id']) : 0;
 
-            if (!$image_id || !$user_id || !$project_id) {
-                echo json_encode(['status' => 'error', 'message' => 'Invalid image ID, user ID, or project ID']);
+            // Check if user_id exists in the request - if not, this is an unassignment
+            $is_unassign = !isset($_POST['user_id']);
+            $user_id = isset($_POST['user_id']) ? intval($_POST['user_id']) : 0;
+
+            // Validate image_id and project_id (these are always required)
+            if (!$image_id || !$project_id) {
+                echo json_encode(['status' => 'error', 'message' => 'Invalid image ID or project ID']);
+                exit;
+            }
+
+            // Only validate user_id if this is not an unassignment
+            if (!$is_unassign && !$user_id) {
+                echo json_encode(['status' => 'error', 'message' => 'Invalid user ID']);
                 exit;
             }
 
@@ -1629,99 +1639,152 @@ if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQ
                 $currentAssignmentId = $currentData['assignment_id'] ?? 0;
                 $imageRole = $currentData['image_role'] ?? '';
 
-                // Check if the user already has an assignment for this project with the same role
-                $checkSql = "SELECT assignment_id FROM tbl_project_assignments 
-                           WHERE project_id = ? AND user_id = ? AND status_assignee != 'deleted'";
-                $checkStmt = $conn->prepare($checkSql);
-                $checkStmt->bind_param("ii", $project_id, $user_id);
-                $checkStmt->execute();
-                $checkResult = $checkStmt->get_result();
-                $assignment = $checkResult->fetch_assoc();
+                // Handle unassignment case
+                if ($is_unassign) {
+                    // Update the image to remove assignment and set status to unassigned
+                    $unassignSql = "UPDATE tbl_project_images 
+                                   SET assignment_id = NULL, status_image = 'unassigned' 
+                                   WHERE image_id = ? AND project_id = ?";
+                    $unassignStmt = $conn->prepare($unassignSql);
+                    $unassignStmt->bind_param("ii", $image_id, $project_id);
 
-                $new_assignment_id = 0;
-
-                if ($assignment) {
-                    // Use existing assignment
-                    $new_assignment_id = $assignment['assignment_id'];
-                } else {
-                    // Create new assignment
-                    $createSql = "INSERT INTO tbl_project_assignments 
-                                (project_id, user_id, role_task, status_assignee, deadline) 
-                                VALUES (?, ?, ?, 'pending', NOW() + INTERVAL 7 DAY)";
-                    $createStmt = $conn->prepare($createSql);
-                    $createStmt->bind_param("iis", $project_id, $user_id, $imageRole);
-
-                    if (!$createStmt->execute()) {
-                        throw new Exception("Error creating assignment: " . $createStmt->error);
+                    if (!$unassignStmt->execute()) {
+                        throw new Exception("Error unassigning image: " . $unassignStmt->error);
                     }
 
-                    $new_assignment_id = $conn->insert_id;
+                    // Update the old assignment count if it exists
+                    if ($currentAssignmentId > 0) {
+                        $countSql = "UPDATE tbl_project_assignments 
+                                   SET assigned_images = (
+                                       SELECT COUNT(*) FROM tbl_project_images 
+                                       WHERE assignment_id = ? AND project_id = ?
+                                   ) 
+                                   WHERE assignment_id = ?";
+                        $countStmt = $conn->prepare($countSql);
+                        $countStmt->bind_param("iii", $currentAssignmentId, $project_id, $currentAssignmentId);
+                        $countStmt->execute();
+
+                        // Check if the old assignment now has 0 images, if yes, delete it
+                        $checkEmptySql = "SELECT COUNT(*) as img_count FROM tbl_project_images WHERE assignment_id = ?";
+                        $checkEmptyStmt = $conn->prepare($checkEmptySql);
+                        $checkEmptyStmt->bind_param("i", $currentAssignmentId);
+                        $checkEmptyStmt->execute();
+                        $emptyResult = $checkEmptyStmt->get_result();
+                        $imgCount = $emptyResult->fetch_assoc()['img_count'];
+
+                        if ($imgCount == 0) {
+                            // Delete the empty assignment
+                            $deleteEmptySql = "DELETE FROM tbl_project_assignments WHERE assignment_id = ?";
+                            $deleteEmptyStmt = $conn->prepare($deleteEmptySql);
+                            $deleteEmptyStmt->bind_param("i", $currentAssignmentId);
+                            $deleteEmptyStmt->execute();
+                        }
+                    }
+
+                    // Commit transaction
+                    $conn->commit();
+
+                    echo json_encode([
+                        'status' => 'success',
+                        'message' => 'Image unassigned successfully'
+                    ]);
                 }
+                // Handle assignment case
+                else {
+                    // Check if the user already has an assignment for this project with the same role
+                    $checkSql = "SELECT assignment_id FROM tbl_project_assignments 
+                               WHERE project_id = ? AND user_id = ? AND status_assignee != 'deleted'";
+                    $checkStmt = $conn->prepare($checkSql);
+                    $checkStmt->bind_param("ii", $project_id, $user_id);
+                    $checkStmt->execute();
+                    $checkResult = $checkStmt->get_result();
+                    $assignment = $checkResult->fetch_assoc();
 
-                // Update the image with the new assignment ID and status
-                $updateSql = "UPDATE tbl_project_images 
-                             SET assignment_id = ?, status_image = 'assigned' 
-                             WHERE image_id = ? AND project_id = ?";
-                $updateStmt = $conn->prepare($updateSql);
-                $updateStmt->bind_param("iii", $new_assignment_id, $image_id, $project_id);
+                    $new_assignment_id = 0;
 
-                if (!$updateStmt->execute()) {
-                    throw new Exception("Error updating image: " . $updateStmt->error);
-                }
+                    if ($assignment) {
+                        // Use existing assignment
+                        $new_assignment_id = $assignment['assignment_id'];
+                    } else {
+                        // Create new assignment
+                        $createSql = "INSERT INTO tbl_project_assignments 
+                                    (project_id, user_id, role_task, status_assignee, deadline) 
+                                    VALUES (?, ?, ?, 'pending', NOW() + INTERVAL 7 DAY)";
+                        $createStmt = $conn->prepare($createSql);
+                        $createStmt->bind_param("iis", $project_id, $user_id, $imageRole);
 
-                // Update the assigned images count for BOTH old and new assignment
-                // First update the new assignment count
-                $countSql = "UPDATE tbl_project_assignments 
-                           SET assigned_images = (
-                               SELECT COUNT(*) FROM tbl_project_images 
-                               WHERE assignment_id = ? AND project_id = ?
-                           ) 
-                           WHERE assignment_id = ?";
+                        if (!$createStmt->execute()) {
+                            throw new Exception("Error creating assignment: " . $createStmt->error);
+                        }
 
-                $countStmt = $conn->prepare($countSql);
-                // Update new assignment count
-                $countStmt->bind_param("iii", $new_assignment_id, $project_id, $new_assignment_id);
-                $countStmt->execute();
+                        $new_assignment_id = $conn->insert_id;
+                    }
 
-                // Also update the old assignment count if it exists
-                if ($currentAssignmentId > 0) {
-                    $countStmt->bind_param("iii", $currentAssignmentId, $project_id, $currentAssignmentId);
+                    // Update the image with the new assignment ID and status
+                    $updateSql = "UPDATE tbl_project_images 
+                                 SET assignment_id = ?, status_image = 'assigned' 
+                                 WHERE image_id = ? AND project_id = ?";
+                    $updateStmt = $conn->prepare($updateSql);
+                    $updateStmt->bind_param("iii", $new_assignment_id, $image_id, $project_id);
+
+                    if (!$updateStmt->execute()) {
+                        throw new Exception("Error updating image: " . $updateStmt->error);
+                    }
+
+                    // Update the assigned images count for BOTH old and new assignment
+                    // First update the new assignment count
+                    $countSql = "UPDATE tbl_project_assignments 
+                               SET assigned_images = (
+                                   SELECT COUNT(*) FROM tbl_project_images 
+                                   WHERE assignment_id = ? AND project_id = ?
+                               ) 
+                               WHERE assignment_id = ?";
+
+                    $countStmt = $conn->prepare($countSql);
+                    // Update new assignment count
+                    $countStmt->bind_param("iii", $new_assignment_id, $project_id, $new_assignment_id);
                     $countStmt->execute();
 
-                    // Check if the old assignment now has 0 images, if yes, delete it
-                    $checkEmptySql = "SELECT COUNT(*) as img_count FROM tbl_project_images WHERE assignment_id = ?";
-                    $checkEmptyStmt = $conn->prepare($checkEmptySql);
-                    $checkEmptyStmt->bind_param("i", $currentAssignmentId);
-                    $checkEmptyStmt->execute();
-                    $emptyResult = $checkEmptyStmt->get_result();
-                    $imgCount = $emptyResult->fetch_assoc()['img_count'];
+                    // Also update the old assignment count if it exists
+                    if ($currentAssignmentId > 0 && $currentAssignmentId != $new_assignment_id) {
+                        $countStmt->bind_param("iii", $currentAssignmentId, $project_id, $currentAssignmentId);
+                        $countStmt->execute();
 
-                    if ($imgCount == 0) {
-                        // Delete the empty assignment
-                        $deleteEmptySql = "DELETE FROM tbl_project_assignments WHERE assignment_id = ?";
-                        $deleteEmptyStmt = $conn->prepare($deleteEmptySql);
-                        $deleteEmptyStmt->bind_param("i", $currentAssignmentId);
-                        $deleteEmptyStmt->execute();
+                        // Check if the old assignment now has 0 images, if yes, delete it
+                        $checkEmptySql = "SELECT COUNT(*) as img_count FROM tbl_project_images WHERE assignment_id = ?";
+                        $checkEmptyStmt = $conn->prepare($checkEmptySql);
+                        $checkEmptyStmt->bind_param("i", $currentAssignmentId);
+                        $checkEmptyStmt->execute();
+                        $emptyResult = $checkEmptyStmt->get_result();
+                        $imgCount = $emptyResult->fetch_assoc()['img_count'];
+
+                        if ($imgCount == 0) {
+                            // Delete the empty assignment
+                            $deleteEmptySql = "DELETE FROM tbl_project_assignments WHERE assignment_id = ?";
+                            $deleteEmptyStmt = $conn->prepare($deleteEmptySql);
+                            $deleteEmptyStmt->bind_param("i", $currentAssignmentId);
+                            $deleteEmptyStmt->execute();
+                        }
                     }
+
+                    // Commit transaction
+                    $conn->commit();
+
+                    // Get assignee name for response
+                    $nameSql = "SELECT first_name, last_name FROM tbl_users WHERE user_id = ?";
+                    $nameStmt = $conn->prepare($nameSql);
+                    $nameStmt->bind_param("i", $user_id);
+                    $nameStmt->execute();
+                    $nameResult = $nameStmt->get_result();
+                    $user = $nameResult->fetch_assoc();
+
+                    echo json_encode([
+                        'status' => 'success',
+                        'message' => 'Image assignee updated successfully',
+                        'assignment_id' => $new_assignment_id,
+                        'user_name' => $user['first_name'] . ' ' . $user['last_name']
+                    ]);
                 }
-
-                // Commit transaction
-                $conn->commit();
-
-                // Get assignee name for response
-                $nameSql = "SELECT first_name, last_name FROM tbl_users WHERE user_id = ?";
-                $nameStmt = $conn->prepare($nameSql);
-                $nameStmt->bind_param("i", $user_id);
-                $nameStmt->execute();
-                $nameResult = $nameStmt->get_result();
-                $user = $nameResult->fetch_assoc();
-
-                echo json_encode([
-                    'status' => 'success',
-                    'message' => 'Image assignee updated successfully',
-                    'assignment_id' => $new_assignment_id,
-                    'user_name' => $user['first_name'] . ' ' . $user['last_name']
-                ]);
             } catch (Exception $e) {
                 // Roll back transaction on error
                 $conn->rollback();
@@ -1825,7 +1888,6 @@ if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQ
                     'message' => "Successfully uploaded {$uploaded_images} images",
                     'count' => $uploaded_images
                 ]);
-
             } catch (Exception $e) {
                 // Rollback transaction on error
                 $conn->rollback();

@@ -14,11 +14,14 @@ function log_server_action($action, $data = null)
     error_log($log_message);
 }
 
-// Log page access
-log_server_action("Delayed projects page accessed", array("user" => $_SESSION['username'] ?? 'Unknown'));
-
 // Get all companies for filter dropdown
 $companies = getCompaniesForDropdown();
+
+// Determine if we are showing hidden projects (history view)
+$show_hidden = isset($_GET['view']) && $_GET['view'] === 'history';
+
+// Log page access
+log_server_action("Delayed projects page accessed", array("user" => $_SESSION['username'] ?? 'Unknown'));
 
 // Get all delayed projects
 $search = isset($_GET['search']) ? trim($_GET['search']) : '';
@@ -32,6 +35,15 @@ if (isset($_GET['company_id']) && !empty($_GET['company_id'])) {
 if (isset($_GET['priority']) && !empty($_GET['priority'])) {
     $filters['priority'] = $_GET['priority'];
 }
+
+// Add hidden status to filters
+$filters['hidden'] = $show_hidden ? 1 : 0;
+
+// Log page access with view type
+log_server_action("Delayed projects page accessed", array(
+    "user" => $_SESSION['username'] ?? 'Unknown',
+    "view" => $show_hidden ? 'history' : 'active'
+));
 
 $projects = getDelayedProjects($search, $filters);
 log_server_action("Fetched delayed projects", array(
@@ -111,9 +123,13 @@ unset($_SESSION['success_message']);
                 <div class="card">
                     <div class="card-header">
                         <h3 class="card-title">
-                            <i class="fas fa-list mr-2"></i>Delayed Project Records
+                            <i class="fas fa-list mr-2"></i><?php echo $show_hidden ? 'Delayed Project History' : 'Delayed Project Records'; ?>
                         </h3>
                         <div class="card-tools">
+                            <a href="delayed-project-list.php<?php echo $show_hidden ? '' : '?view=history'; ?>" class="btn btn-info btn-sm">
+                                <i class="fas <?php echo $show_hidden ? 'fa-list' : 'fa-history'; ?> mr-1"></i>
+                                <?php echo $show_hidden ? 'Active Delayed Projects' : 'History Delayed Projects'; ?>
+                            </a>
                             <a href="add-project.php" class="btn btn-danger btn-sm">
                                 <i class="fas fa-plus mr-1"></i> Add New Project
                             </a>
@@ -195,7 +211,7 @@ unset($_SESSION['success_message']);
                                             <th width="7%">Total Images</th>
                                             <th width="8%">Deadline</th>
                                             <th width="30%">Assignee</th>
-                                            <th width="8%" class="text-center">Actions</th>
+                                            <th width="15%" class="text-center">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -299,7 +315,7 @@ unset($_SESSION['success_message']);
                                                         <?php
                                                         $deadline = new DateTime($project['deadline']);
                                                         $deadline->setTime(23, 59, 59);  // Set to end of day
-                                                
+
                                                         $now = new DateTime();
 
                                                         // Calculate days difference
@@ -399,6 +415,17 @@ unset($_SESSION['success_message']);
                                                                     <i class="fas fa-trash"></i>
                                                                 </button>
                                                             </form>
+                                                            <form action="process-hide-project.php" method="post"
+                                                                style="display: inline;">
+                                                                <input type="hidden" name="project_id"
+                                                                    value="<?php echo $project['project_id']; ?>">
+                                                                <input type="hidden" name="return_page" value="delayed-project-list.php">
+                                                                <button type="submit" class="btn btn-secondary btn-sm"
+                                                                    title="<?php echo $show_hidden ? 'Unhide Project' : 'Hide Project'; ?>"
+                                                                    onclick="return confirm('Are you sure you want to <?php echo $show_hidden ? 'unhide' : 'hide'; ?> this project?');">
+                                                                    <i class="fas <?php echo $show_hidden ? 'fa-eye' : 'fa-eye-slash'; ?>"></i>
+                                                                </button>
+                                                            </form>
                                                         </div>
                                                     </td>
                                                 </tr>
@@ -460,23 +487,23 @@ unset($_SESSION['success_message']);
 </div>
 
 <script>
-    document.addEventListener("DOMContentLoaded", function () {
+    document.addEventListener("DOMContentLoaded", function() {
 
         // Logging functions
         const logging = {
-            debug: function (message, data = null) {
+            debug: function(message, data = null) {
                 console.debug(`[DEBUG][${new Date().toISOString()}] ${message}`, data || '');
             },
-            info: function (message, data = null) {
+            info: function(message, data = null) {
                 console.info(`[INFO][${new Date().toISOString()}] ${message}`, data || '');
             },
-            warning: function (message, data = null) {
+            warning: function(message, data = null) {
                 console.warn(`[WARNING][${new Date().toISOString()}] ${message}`, data || '');
             },
-            error: function (message, data = null) {
+            error: function(message, data = null) {
                 console.error(`[ERROR][${new Date().toISOString()}] ${message}`, data || '');
             },
-            interaction: function (action, data = null) {
+            interaction: function(action, data = null) {
                 console.log(`[USER ACTION][${new Date().toISOString()}] ${action}`, data || '');
 
                 // Send interaction to server for logging if needed
@@ -494,13 +521,13 @@ unset($_SESSION['success_message']);
                     }
                 }
             },
-            ajax: function (method, url, data = null) {
+            ajax: function(method, url, data = null) {
                 console.log(`[AJAX REQUEST][${new Date().toISOString()}] ${method} ${url}`, data || '');
             },
-            ajaxSuccess: function (method, url, response = null) {
+            ajaxSuccess: function(method, url, response = null) {
                 console.log(`[AJAX SUCCESS][${new Date().toISOString()}] ${method} ${url}`, response || '');
             },
-            ajaxError: function (method, url, error = null) {
+            ajaxError: function(method, url, error = null) {
                 console.error(`[AJAX ERROR][${new Date().toISOString()}] ${method} ${url}`, error || '');
             }
         };
@@ -509,16 +536,22 @@ unset($_SESSION['success_message']);
         logging.info('Delayed Project List page loaded');
 
         // Log overdue projects and assignees on page loads
-        $('.project-overdue').each(function () {
+        $('.project-overdue').each(function() {
             const projectId = $(this).find('td:first').text();
             const projectTitle = $(this).find('.project-title').text().trim();
-            logging.warning('Overdue project detected', { projectId, projectTitle });
+            logging.warning('Overdue project detected', {
+                projectId,
+                projectTitle
+            });
         });
 
-        $('.assignee-overdue').each(function () {
+        $('.assignee-overdue').each(function() {
             const assigneeName = $(this).text().trim();
             const projectTitle = $(this).closest('tr').find('.project-title').text().trim();
-            logging.warning('Overdue assignee detected', { assignee: assigneeName, project: projectTitle });
+            logging.warning('Overdue assignee detected', {
+                assignee: assigneeName,
+                project: projectTitle
+            });
         });
 
         // Initialize DataTable with enhanced features
@@ -532,17 +565,17 @@ unset($_SESSION['success_message']);
             "info": true,
             "dom": '<"row align-items-center"<"col-sm-6"l><"col-sm-6 d-flex justify-content-end"f>><"row"<"col-sm-12"tr>><"row"<"col-sm-5"i><"col-sm-7 d-flex justify-content-end"p>>',
             "buttons": [{
-                extend: 'excel',
-                className: 'hidden-button'
-            },
-            {
-                extend: 'pdf',
-                className: 'hidden-button'
-            },
-            {
-                extend: 'print',
-                className: 'hidden-button'
-            }
+                    extend: 'excel',
+                    className: 'hidden-button'
+                },
+                {
+                    extend: 'pdf',
+                    className: 'hidden-button'
+                },
+                {
+                    extend: 'print',
+                    className: 'hidden-button'
+                }
             ],
             "language": {
                 "lengthMenu": "Show _MENU_ entries",
@@ -553,38 +586,38 @@ unset($_SESSION['success_message']);
                 "infoFiltered": "(filtered from _MAX_ total delayed projects)",
                 "zeroRecords": "No matching delayed projects found"
             },
-            "initComplete": function () {
-                $('#searchInput').on('keyup', function () {
+            "initComplete": function() {
+                $('#searchInput').on('keyup', function() {
                     table.search(this.value).draw();
                 });
             }
         });
 
         // Custom export buttons
-        $('.export-excel').on('click', function () {
+        $('.export-excel').on('click', function() {
             logging.interaction('Export to Excel clicked');
             $('.loading-overlay').fadeIn();
-            setTimeout(function () {
+            setTimeout(function() {
                 table.button('.buttons-excel').trigger();
                 $('.loading-overlay').fadeOut();
                 logging.info('Excel export completed');
             }, 500);
         });
 
-        $('.export-pdf').on('click', function () {
+        $('.export-pdf').on('click', function() {
             logging.interaction('Export to PDF clicked');
             $('.loading-overlay').fadeIn();
-            setTimeout(function () {
+            setTimeout(function() {
                 table.button('.buttons-pdf').trigger();
                 $('.loading-overlay').fadeOut();
                 logging.info('PDF export completed');
             }, 500);
         });
 
-        $('.export-print').on('click', function () {
+        $('.export-print').on('click', function() {
             logging.interaction('Print clicked');
             $('.loading-overlay').fadeIn();
-            setTimeout(function () {
+            setTimeout(function() {
                 table.button('.buttons-print').trigger();
                 $('.loading-overlay').fadeOut();
                 logging.info('Print completed');
@@ -592,12 +625,12 @@ unset($_SESSION['success_message']);
         });
 
         // Filter functionality
-        $('#applyFilter').click(function () {
+        $('#applyFilter').click(function() {
             logging.interaction('Apply filter button clicked');
             applyFilters();
         });
 
-        $('#resetFilter').click(function () {
+        $('#resetFilter').click(function() {
             logging.interaction('Reset filter button clicked');
             // Clear all filter selects
             $('#companySelect').val('');
@@ -607,12 +640,12 @@ unset($_SESSION['success_message']);
             window.location.href = 'delayed-project-list.php';
         });
 
-        $('#searchButton').click(function () {
+        $('#searchButton').click(function() {
             logging.interaction('Search button clicked');
             applyFilters();
         });
 
-        $('#searchInput').keypress(function (e) {
+        $('#searchInput').keypress(function(e) {
             if (e.which == 13) {
                 logging.interaction('Search input: Enter key pressed');
                 applyFilters();
@@ -655,20 +688,20 @@ unset($_SESSION['success_message']);
                 url += params.join('&');
                 console.log('Final URL to navigate:', url);
                 // Use a timeout to ensure UI remains responsive
-                setTimeout(function () {
+                setTimeout(function() {
                     window.location.href = url;
                 }, 100);
             } else {
                 console.log('No filters applied, reloading base page');
                 // Use a timeout to ensure UI remains responsive
-                setTimeout(function () {
+                setTimeout(function() {
                     window.location.href = 'delayed-project-list.php';
                 }, 100);
             }
         }
 
         // Monitor select changes for debugging
-        $('#companySelect, #prioritySelect').on('change', function () {
+        $('#companySelect, #prioritySelect').on('change', function() {
             console.log('Select changed:', {
                 'Element': $(this).attr('id'),
                 'New Value': $(this).val()
@@ -676,7 +709,7 @@ unset($_SESSION['success_message']);
         });
 
         // Delete functionality
-        $(document).on('click', '.delete-btn', function () {
+        $(document).on('click', '.delete-btn', function() {
             var projectId = $(this).data('id');
             var projectName = $(this).data('name');
             $('#projectNameToDelete').text(projectName);
@@ -936,6 +969,95 @@ unset($_SESSION['success_message']);
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
+    }
+
+    /* Compact table styling */
+    .table td {
+        padding: 0.2rem !important;
+        vertical-align: middle !important;
+        line-height: 1.2 !important;
+        margin: 0 !important;
+    }
+
+    .table tr {
+        line-height: 1.2 !important;
+        margin: 0 !important;
+    }
+
+    /* Adjust project details */
+    .project-title {
+        font-size: 0.875rem;
+        line-height: 1.1;
+        margin: 0;
+    }
+
+    .project-company {
+        font-size: 0.75rem;
+        line-height: 1;
+        margin: 0;
+    }
+
+    /* Adjust status badges */
+    .project-status {
+        padding: 1px 4px;
+        font-size: 11px;
+        margin: 0;
+    }
+
+    .priority-badge {
+        width: 6px;
+        height: 6px;
+        margin: 0 3px 0 0;
+    }
+
+    /* Compact total images display */
+    .total-images-display {
+        margin: 0;
+        width: 100%;
+        height: 100%;
+    }
+
+    .total-count {
+        gap: 2px;
+    }
+
+    .total-count i {
+        font-size: 0.8rem;
+    }
+
+    .total-count span {
+        font-size: 0.8rem;
+    }
+
+    /* Compact assignee display */
+    .assignee-container {
+        gap: 2px;
+        margin: 0;
+    }
+
+    .assignee-item {
+        padding: 1px 4px;
+        margin: 0 0 1px 0;
+    }
+
+    .assignee-avatar {
+        width: 18px;
+        height: 18px;
+        font-size: 0.6rem;
+        margin-right: 2px;
+    }
+
+    /* Compact deadline text */
+    .deadline-text {
+        font-size: 0.75rem;
+        line-height: 1.1;
+        margin: 0;
+    }
+
+    small {
+        font-size: 0.7rem;
+        line-height: 1;
+        margin: 0;
     }
 </style>
 

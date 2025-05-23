@@ -6,6 +6,9 @@ require_once "controllers/unified_project_controller.php";
 // Get all companies for filter dropdown
 $companies = getCompaniesForDropdown();
 
+// Determine if we are showing hidden projects (history view)
+$show_hidden = isset($_GET['view']) && $_GET['view'] === 'history';
+
 // Get all projects
 $search = isset($_GET['search']) ? trim($_GET['search']) : '';
 $filters = [];
@@ -22,349 +25,48 @@ if (isset($_GET['priority']) && !empty($_GET['priority'])) {
     $filters['priority'] = $_GET['priority'];
 }
 
-$projects = getAllProjects($search, $filters);
+// Modify the project query to handle hidden status and exclude overdue projects in active view
+$query = "SELECT DISTINCT p.*, c.company_name 
+          FROM tbl_projects p 
+          LEFT JOIN tbl_companies c ON p.company_id = c.company_id 
+          LEFT JOIN tbl_accounts acc ON acc.user_id IN (
+              SELECT user_id FROM tbl_project_assignments WHERE project_id = p.project_id
+          )
+          WHERE p.hidden = " . ($show_hidden ? "1" : "0");
+
+// Only check for overdue tasks in active view
+if (!$show_hidden) {
+    $query .= " AND NOT EXISTS (
+        SELECT 1 FROM tbl_project_assignments pa 
+        JOIN tbl_accounts acc ON pa.user_id = acc.user_id 
+        WHERE pa.project_id = p.project_id AND acc.has_overdue_tasks = 1
+    )";
+}
+
+if (isset($filters['company_id'])) {
+    $company_id = intval($filters['company_id']);
+    $query .= " AND p.company_id = " . $company_id;
+}
+
+if (isset($filters['status_project'])) {
+    $status = $conn->real_escape_string($filters['status_project']);
+    $query .= " AND p.status_project = '$status'";
+}
+
+$query .= " ORDER BY p.date_created DESC";
+
+$result = $conn->query($query);
+$projects = [];
+if ($result) {
+    while ($row = $result->fetch_assoc()) {
+        $projects[] = $row;
+    }
+}
 
 // Check for success message
 $success_message = isset($_SESSION['success_message']) ? $_SESSION['success_message'] : '';
 unset($_SESSION['success_message']);
 ?>
-<style>
-    /* Add additional styling on top of AdminLTE */
-    .project-details-badge {
-        display: inline-flex;
-        align-items: center;
-        padding: 5px 10px;
-        background-color: #f8f9fa;
-        border-radius: 5px;
-        margin-right: 5px;
-        margin-bottom: 5px;
-        font-size: 0.85rem;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    }
-
-    .project-details-badge i {
-        margin-right: 5px;
-    }
-
-    .priority-badge {
-        display: inline-block;
-        width: 10px;
-        height: 10px;
-        border-radius: 50%;
-        margin-right: 5px;
-    }
-
-    .priority-low {
-        background-color: #28a745;
-    }
-
-    .priority-medium {
-        background-color: #17a2b8;
-    }
-
-    .priority-high {
-        background-color: #ffc107;
-    }
-
-    .priority-urgent {
-        background-color: #dc3545;
-    }
-
-    .project-status {
-        display: inline-block;
-        padding: 5px 10px;
-        border-radius: 4px;
-        font-size: 12px;
-        font-weight: 600;
-    }
-
-    .status-pending {
-        background-color: #ffeeba;
-        color: #856404;
-    }
-
-    .status-in-progress {
-        background-color: #bee5eb;
-        color: #0c5460;
-    }
-
-    .status-review {
-        background-color: #b8daff;
-        color: #004085;
-    }
-
-    .status-completed {
-        background-color: #c3e6cb;
-        color: #155724;
-    }
-
-    .status-delayed {
-        background-color: #f5c6cb;
-        color: #721c24;
-    }
-
-    .total-images-display {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: linear-gradient(135deg, #007bff, #00bcd4);
-        padding: 6px 10px;
-        border-radius: 6px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        font-size: 0.9rem;
-    }
-
-    .total-count {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        color: white;
-        font-weight: 600;
-    }
-
-    .total-count i {
-        font-size: 1rem;
-    }
-
-    .total-count span {
-        font-size: 1rem;
-    }
-
-    /* Assignee styling - horizontal layout */
-    .assignee-container {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 6px;
-        align-items: center;
-    }
-
-    .assignee-item {
-        display: flex;
-        align-items: center;
-        background-color: #f8f9fa;
-        border-radius: 20px;
-        padding: 4px 10px;
-        margin-bottom: 3px;
-        border: 1px solid #e9ecef;
-        transition: all 0.2s;
-    }
-
-    .assignee-item:hover {
-        background-color: #e9ecef;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    }
-
-    .assignee-avatar {
-        width: 24px;
-        height: 24px;
-        background-color: #6c757d;
-        color: white;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 0.7rem;
-        margin-right: 6px;
-    }
-
-    /* Enhanced style for the assignee-more indicator */
-    .assignee-more {
-        background-color: #e9ecef !important;
-        border-radius: 20px !important;
-        padding: 4px 10px !important;
-        color: #6c757d !important;
-        font-size: 0.85rem !important;
-        display: inline-flex !important;
-        align-items: center !important;
-        border: 1px solid #ced4da !important;
-        margin-top: 3px !important;
-        font-weight: 500 !important;
-        clear: both !important;
-    }
-
-    .assignee-more i {
-        margin-right: 4px !important;
-    }
-
-    /* Animation for alerts */
-    .auto-fade-alert {
-        animation: fadeInAlert 0.5s ease-in-out;
-    }
-
-    @keyframes fadeInAlert {
-        from {
-            opacity: 0;
-            transform: translateY(-20px);
-        }
-
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-
-    /* Loading overlay */
-    .loading-overlay {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-color: rgba(255, 255, 255, 0.7);
-        display: none;
-        justify-content: center;
-        align-items: center;
-        z-index: 1000;
-        border-radius: 0.25rem;
-    }
-
-    .loading-spinner {
-        width: 40px;
-        height: 40px;
-        border: 4px solid #f3f3f3;
-        border-top: 4px solid #3498db;
-        border-radius: 50%;
-        animation: spin 1s linear infinite;
-    }
-
-    @keyframes spin {
-        0% {
-            transform: rotate(0deg);
-        }
-
-        100% {
-            transform: rotate(360deg);
-        }
-    }
-
-
-    /* Projects due tomorrow */
-    .project-tomorrow {
-        background-color: #fff3cd !important;
-        /* Light orange/yellow background */
-    }
-
-    .assignee-avatar {
-        width: 32px;
-        height: 32px;
-        background-color: #007bff;
-        color: white;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: bold;
-    }
-
-    .assignee-info {
-        line-height: 1.2;
-    }
-
-    .assignee-name {
-        font-weight: 500;
-    }
-
-    .project-details {
-        line-height: 1.2;
-    }
-
-    .project-title {
-        font-weight: 500;
-        color: #333;
-    }
-
-    .project-company {
-        font-size: 0.85rem;
-        color: #666;
-    }
-
-    .status-badge {
-        padding: 5px 10px;
-        border-radius: 15px;
-        font-size: 0.85rem;
-        font-weight: 500;
-    }
-
-    /* Improved filter styles */
-    .filter-container {
-        display: flex;
-        align-items: center;
-    }
-
-    .filter-option {
-        position: relative;
-    }
-
-    .filter-option .form-control {
-        padding-right: 30px;
-    }
-
-    #applyFilter {
-        transition: all 0.3s;
-    }
-
-    #applyFilter:hover {
-        transform: scale(1.05);
-    }
-
-
-    /* Total Images UI */
-    .total-images-display {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: linear-gradient(135deg, #007bff, #00bcd4);
-        padding: 6px 10px;
-        border-radius: 6px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        font-size: 0.9rem;
-    }
-
-    .total-count {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        color: white;
-        font-weight: 600;
-    }
-
-    .total-count i {
-        font-size: 1rem;
-    }
-
-    .total-count span {
-        font-size: 1rem;
-    }
-
-    /* Project row highlighting */
-    .project-overdue {
-        background-color: rgba(255, 37, 37, 0.59) !important;
-    }
-
-    /* Override DataTables hover */
-    table.dataTable tbody tr.project-overdue:hover {
-        background-color: rgba(255, 37, 37, 0.59) !important;
-    }
-
-    .project-tomorrow {
-        background-color: #fff3cd !important;
-    }
-
-    /* When printing, ensure colors are visible */
-    @media print {
-        .project-overdue {
-            background-color: #ffcccc !important;
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-        }
-
-        .project-tomorrow {
-            background-color: #fff3cd !important;
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-        }
-    }
-</style>
 
 <div class="wrapper">
     <?php include("includes/nav.php"); ?>
@@ -422,9 +124,13 @@ unset($_SESSION['success_message']);
                 <div class="card">
                     <div class="card-header">
                         <h3 class="card-title">
-                            <i class="fas fa-list mr-2"></i>Project Records
+                            <i class="fas fa-list mr-2"></i><?php echo $show_hidden ? 'Project History' : 'Project Records'; ?>
                         </h3>
                         <div class="card-tools">
+                            <a href="project-list.php<?php echo $show_hidden ? '' : '?view=history'; ?>" class="btn btn-info btn-sm">
+                                <i class="fas <?php echo $show_hidden ? 'fa-list' : 'fa-history'; ?> mr-1"></i>
+                                <?php echo $show_hidden ? 'Active Projects' : 'History Projects'; ?>
+                            </a>
                             <a href="add-project.php" class="btn btn-success btn-sm">
                                 <i class="fas fa-plus mr-1"></i> Add New Project
                             </a>
@@ -504,7 +210,7 @@ unset($_SESSION['success_message']);
                                         <th width="6%">Total Img</th>
                                         <th width="7%">Deadline</th>
                                         <th width="30%">Assignee</th>
-                                        <th width="8%" class="text-center">Actions</th>
+                                        <th width="15%" class="text-center">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -656,21 +362,45 @@ unset($_SESSION['success_message']);
                                                         echo '<div class="assignee-container">';
 
                                                         foreach ($assignees as $assignee) {
-                                                            $initials = substr($assignee['first_name'] ?? '', 0, 1) . substr($assignee['last_name'] ?? '', 0, 1);
-                                                            echo '<div class="assignee-item">';
-                                                            echo '<div class="assignee-avatar">' . strtoupper($initials) . '</div>';
-                                                            echo '<span>' . htmlspecialchars($assignee['first_name'] ?? '') . '</span>';
+                                                            $initials = substr($assignee['first_name'], 0, 1) . substr($assignee['last_name'], 0, 1);
+
+                                                            // Check if this assignee has an overdue task
+                                                            $is_assignee_overdue = false;
+                                                            $is_acceptable = false;
+
+                                                            if (isset($assignee['deadline'])) {
+                                                                $assignee_deadline = new DateTime($assignee['deadline']);
+                                                                $is_assignee_overdue = $assignee_deadline < $today;
+
+                                                                // Check if the delay is marked as acceptable
+                                                                $is_acceptable = isset($assignee['delay_acceptable']) && $assignee['delay_acceptable'] == 1;
+
+                                                                // Add server-side logging for overdue assignee
+                                                                if ($is_assignee_overdue) {
+                                                                    error_log("Overdue assignee detected: {$assignee['first_name']} {$assignee['last_name']} for project {$project['project_title']} (ID: {$project['project_id']})");
+                                                                }
+                                                            }
+
+                                                            // Add overdue class if needed
+                                                            $assignee_class = $is_assignee_overdue ? 'assignee-overdue' : '';
+
+                                                            // Avatar initial styling based on status
+                                                            $avatar_class = '';
+                                                            if ($is_assignee_overdue && $is_acceptable) {
+                                                                $avatar_class = 'acceptable-delay';
+                                                            }
+
+                                                            echo '<div class="assignee-item ' . $assignee_class . '">';
+                                                            echo '<div class="assignee-avatar ' . $avatar_class . '">' . strtoupper($initials) . '</div>';
+                                                            echo '<span>' . htmlspecialchars($assignee['first_name']) . '</span>';
                                                             echo '</div>';
                                                         }
-
 
                                                         echo '</div>';
                                                     } else {
                                                         echo '<span class="text-muted">Not assigned</span>';
                                                     }
                                                     ?>
-
-
                                                 </td>
                                                 <td>
                                                     <div class="action-buttons text-center">
@@ -690,6 +420,16 @@ unset($_SESSION['success_message']);
                                                                 title="Delete Project"
                                                                 onclick="return confirm('Are you sure you want to delete this project?');">
                                                                 <i class="fas fa-trash"></i>
+                                                            </button>
+                                                        </form>
+                                                        <form action="process-hide-project.php" method="post"
+                                                            style="display: inline;">
+                                                            <input type="hidden" name="project_id"
+                                                                value="<?php echo $project['project_id']; ?>">
+                                                            <button type="submit" class="btn btn-secondary btn-sm"
+                                                                title="<?php echo $show_hidden ? 'Unhide Project' : 'Hide Project'; ?>"
+                                                                onclick="return confirm('Are you sure you want to <?php echo $show_hidden ? 'unhide' : 'hide'; ?> this project?');">
+                                                                <i class="fas <?php echo $show_hidden ? 'fa-eye' : 'fa-eye-slash'; ?>"></i>
                                                             </button>
                                                         </form>
                                                     </div>
@@ -752,7 +492,7 @@ unset($_SESSION['success_message']);
 </div>
 <?php include("includes/footer.php"); ?>
 <script>
-    $(document).ready(function () {
+    $(document).ready(function() {
         console.log('Document ready - Initializing project list...');
 
         // Check for notifications in sessionStorage
@@ -765,7 +505,7 @@ unset($_SESSION['success_message']);
                 // Create and show the notification
                 const alertClass = notificationData.type === 'success' ? 'alert-success' :
                     notificationData.type === 'error' ? 'alert-danger' :
-                        notificationData.type === 'warning' ? 'alert-warning' : 'alert-info';
+                    notificationData.type === 'warning' ? 'alert-warning' : 'alert-info';
 
                 const alertHtml = `
                     <div class="alert ${alertClass} alert-dismissible fade show mx-3 auto-fade-alert" role="alert">
@@ -788,7 +528,7 @@ unset($_SESSION['success_message']);
         }
 
         // Auto fade out alerts after 5 seconds
-        setTimeout(function () {
+        setTimeout(function() {
             $('.auto-fade-alert').fadeOut('slow');
         }, 5000);
 
@@ -803,17 +543,17 @@ unset($_SESSION['success_message']);
             "info": true,
             "dom": '<"row align-items-center"<"col-sm-6"l><"col-sm-6 d-flex justify-content-end"f>><"row"<"col-sm-12"tr>><"row"<"col-sm-5"i><"col-sm-7 d-flex justify-content-end"p>>',
             "buttons": [{
-                extend: 'excel',
-                className: 'hidden-button'
-            },
-            {
-                extend: 'pdf',
-                className: 'hidden-button'
-            },
-            {
-                extend: 'print',
-                className: 'hidden-button'
-            }
+                    extend: 'excel',
+                    className: 'hidden-button'
+                },
+                {
+                    extend: 'pdf',
+                    className: 'hidden-button'
+                },
+                {
+                    extend: 'print',
+                    className: 'hidden-button'
+                }
             ],
             "language": {
                 "lengthMenu": "Show _MENU_ entries",
@@ -870,20 +610,20 @@ unset($_SESSION['success_message']);
         }
 
         // Event handlers with detailed logging
-        $('#applyFilter').on('click', function () {
+        $('#applyFilter').on('click', function() {
             console.log('Filter button clicked');
             console.log('Current company select value:', $('#companySelect').val());
             console.log('Current status select value:', $('#statusSelect').val());
             applyFilters();
         });
 
-        $('#searchButton').on('click', function () {
+        $('#searchButton').on('click', function() {
             console.log('Search button clicked');
             console.log('Current search input value:', $('#searchInput').val());
             applyFilters();
         });
 
-        $('#searchInput').on('keypress', function (e) {
+        $('#searchInput').on('keypress', function(e) {
             if (e.which == 13) {
                 console.log('Enter key pressed in search input');
                 console.log('Current search input value:', $(this).val());
@@ -892,7 +632,7 @@ unset($_SESSION['success_message']);
         });
 
         // Monitor select changes
-        $('#companySelect, #statusSelect').on('change', function () {
+        $('#companySelect, #statusSelect').on('change', function() {
             console.log('Select changed:', {
                 'Element': $(this).attr('id'),
                 'New Value': $(this).val()
@@ -900,35 +640,35 @@ unset($_SESSION['success_message']);
         });
 
         // Custom export buttons
-        $('.export-excel').on('click', function () {
+        $('.export-excel').on('click', function() {
             console.log('Export to Excel clicked');
             $('.loading-overlay').fadeIn();
-            setTimeout(function () {
+            setTimeout(function() {
                 table.button('.buttons-excel').trigger();
                 $('.loading-overlay').fadeOut();
             }, 500);
         });
 
-        $('.export-pdf').on('click', function () {
+        $('.export-pdf').on('click', function() {
             console.log('Export to PDF clicked');
             $('.loading-overlay').fadeIn();
-            setTimeout(function () {
+            setTimeout(function() {
                 table.button('.buttons-pdf').trigger();
                 $('.loading-overlay').fadeOut();
             }, 500);
         });
 
-        $('.export-print').on('click', function () {
+        $('.export-print').on('click', function() {
             console.log('Print clicked');
             $('.loading-overlay').fadeIn();
-            setTimeout(function () {
+            setTimeout(function() {
                 table.button('.buttons-print').trigger();
                 $('.loading-overlay').fadeOut();
             }, 500);
         });
 
         // Delete functionality with enhanced confirmation
-        $(document).on('click', '.delete-btn', function () {
+        $(document).on('click', '.delete-btn', function() {
             var projectId = $(this).data('id');
             var projectName = $(this).data('name');
             console.log('Delete button clicked for project:', {
@@ -958,14 +698,14 @@ unset($_SESSION['success_message']);
     }
 
     // Test direct event binding
-    document.addEventListener('DOMContentLoaded', function () {
+    document.addEventListener('DOMContentLoaded', function() {
         console.log('DIRECT LOG: DOM fully loaded');
 
         // Try to get filter button
         var filterBtn = document.getElementById('applyFilter');
         if (filterBtn) {
             console.log('DIRECT LOG: Filter button found');
-            filterBtn.addEventListener('click', function () {
+            filterBtn.addEventListener('click', function() {
                 console.log('DIRECT LOG: Filter button clicked');
                 debugFilter();
             });
@@ -975,7 +715,7 @@ unset($_SESSION['success_message']);
 
         // Also try jQuery approach as backup
         if (typeof jQuery !== 'undefined') {
-            jQuery('#applyFilter').on('click', function () {
+            jQuery('#applyFilter').on('click', function() {
                 console.log('DIRECT LOG: Filter button clicked via jQuery');
             });
         }
@@ -1021,3 +761,346 @@ unset($_SESSION['success_message']);
         }
     }
 </script>
+
+
+<style>
+    /* Add additional styling on top of AdminLTE */
+    .project-details-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 5px 10px;
+        background-color: #f8f9fa;
+        border-radius: 5px;
+        margin-right: 5px;
+        margin-bottom: 5px;
+        font-size: 0.85rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .project-details-badge i {
+        margin-right: 5px;
+    }
+
+    .priority-badge {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        margin-right: 5px;
+    }
+
+    .priority-low {
+        background-color: #28a745;
+    }
+
+    .priority-medium {
+        background-color: #17a2b8;
+    }
+
+    .priority-high {
+        background-color: #ffc107;
+    }
+
+    .priority-urgent {
+        background-color: #dc3545;
+    }
+
+    .project-status {
+        display: inline-block;
+        padding: 5px 10px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    .status-pending {
+        background-color: #ffeeba;
+        color: #856404;
+    }
+
+    .status-in-progress {
+        background-color: #bee5eb;
+        color: #0c5460;
+    }
+
+    .status-review {
+        background-color: #b8daff;
+        color: #004085;
+    }
+
+    .status-completed {
+        background-color: #c3e6cb;
+        color: #155724;
+    }
+
+    .status-delayed {
+        background-color: #f5c6cb;
+        color: #721c24;
+    }
+
+    .total-images-display {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #007bff, #00bcd4);
+        padding: 6px 10px;
+        border-radius: 6px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        font-size: 0.9rem;
+    }
+
+    .total-count {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        color: white;
+        font-weight: 600;
+    }
+
+    .total-count i {
+        font-size: 1rem;
+    }
+
+    .total-count span {
+        font-size: 1rem;
+    }
+
+    /* Assignee styling - horizontal layout */
+    .assignee-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        align-items: center;
+    }
+
+    .assignee-item {
+        display: flex;
+        align-items: center;
+        background-color: #f8f9fa;
+        border-radius: 20px;
+        padding: 4px 10px;
+        margin-bottom: 3px;
+        border: 1px solid #e9ecef;
+        transition: all 0.2s;
+    }
+
+    .assignee-item:hover {
+        background-color: #e9ecef;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .assignee-avatar {
+        width: 24px;
+        height: 24px;
+        background-color: #6c757d;
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.7rem;
+        margin-right: 6px;
+    }
+
+    /* Style for acceptable delay - green avatar initials */
+    .assignee-avatar.acceptable-delay {
+        background-color: #28a745;
+        color: white;
+        font-weight: bold;
+    }
+
+    .assignee-more {
+        background-color: #e9ecef;
+        border-radius: 20px;
+        padding: 4px 10px;
+        color: #6c757d;
+        font-size: 0.8rem;
+        display: inline-flex;
+        align-items: center;
+    }
+
+    .assignee-more i {
+        margin-right: 4px;
+    }
+
+    /* Animation for alerts */
+    .auto-fade-alert {
+        animation: fadeInAlert 0.5s ease-in-out;
+    }
+
+    @keyframes fadeInAlert {
+        from {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* Loading overlay */
+    .loading-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(255, 255, 255, 0.7);
+        display: none;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+        border-radius: 0.25rem;
+    }
+
+    .loading-spinner {
+        width: 40px;
+        height: 40px;
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #3498db;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+        0% {
+            transform: rotate(0deg);
+        }
+
+        100% {
+            transform: rotate(360deg);
+        }
+    }
+
+    /* Custom styles for overdue indicators */
+    .project-overdue {
+        background-color: rgba(255, 0, 0, 0.1) !important;
+    }
+
+    /* Projects due tomorrow */
+    .project-tomorrow {
+        background-color: #fff3cd !important;
+        /* Light orange/yellow background */
+    }
+
+    /* Overdue assignee (strong red background) */
+    .assignee-overdue {
+        background-color: rgb(255, 37, 37) !important;
+        color: white !important;
+        border-radius: 20px;
+        border: 1px solid #f5c6cb;
+    }
+
+    /* When printing, ensure colors are visible */
+    @media print {
+        .project-overdue {
+            background-color: rgba(255, 37, 37, 0.59) !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .project-tomorrow {
+            background-color: #fff3cd !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .assignee-overdue {
+            background-color: #ff0000 !important;
+            color: white !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+    }
+
+    /* Compact table styling */
+    .table td {
+        padding: 0.2rem !important;
+        vertical-align: middle !important;
+        line-height: 1.2 !important;
+        margin: 0 !important;
+    }
+
+    .table tr {
+        line-height: 1.2 !important;
+        margin: 0 !important;
+    }
+
+    /* Adjust project details */
+    .project-title {
+        font-size: 0.875rem;
+        line-height: 1.1;
+        margin: 0;
+    }
+
+    .project-company {
+        font-size: 0.75rem;
+        line-height: 1;
+        margin: 0;
+    }
+
+    /* Adjust status badges */
+    .project-status {
+        padding: 1px 4px;
+        font-size: 11px;
+        margin: 0;
+    }
+
+    .priority-badge {
+        width: 6px;
+        height: 6px;
+        margin: 0 3px 0 0;
+    }
+
+    /* Compact total images display */
+    .total-images-display {
+        margin: 0;
+        width: 100%;
+        height: 100%;
+    }
+
+    .total-count {
+        gap: 2px;
+    }
+
+    .total-count i {
+        font-size: 0.8rem;
+    }
+
+    .total-count span {
+        font-size: 0.8rem;
+    }
+
+    /* Compact assignee display */
+    .assignee-container {
+        gap: 2px;
+        margin: 0;
+    }
+
+    .assignee-item {
+        padding: 1px 4px;
+        margin: 0 0 1px 0;
+    }
+
+    .assignee-avatar {
+        width: 18px;
+        height: 18px;
+        font-size: 0.6rem;
+        margin-right: 2px;
+    }
+
+    /* Compact deadline text */
+    .deadline-text {
+        font-size: 0.75rem;
+        line-height: 1.1;
+        margin: 0;
+    }
+
+    small {
+        font-size: 0.7rem;
+        line-height: 1;
+        margin: 0;
+    }
+</style>
