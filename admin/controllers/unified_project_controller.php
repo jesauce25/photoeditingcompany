@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Unified Project Controller
  * Combined functionality from project_controller.php and edit_project_functions.php
@@ -129,7 +130,6 @@ function addProject($project_title, $company_id, $description, $date_arrived, $d
             'project_id' => $project_id,
             'uploaded_files' => $uploaded_files
         ];
-
     } catch (Exception $e) {
         $conn->rollback();
         return ['status' => 'error', 'message' => 'Exception: ' . $e->getMessage()];
@@ -350,7 +350,6 @@ function deleteProject($project_id)
         $conn->commit();
 
         return ['status' => 'success', 'message' => 'Project deleted successfully'];
-
     } catch (Exception $e) {
         $conn->rollback();
         return ['status' => 'error', 'message' => 'Exception: ' . $e->getMessage()];
@@ -1027,4 +1026,3 @@ function checkAndUpdateProjectDelayStatus($project_id)
 
 // Run database structure check when file is loaded
 $dbStructure = checkDatabaseStructure();
-?>

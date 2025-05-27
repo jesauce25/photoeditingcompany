@@ -1202,7 +1202,6 @@ include("includes/header.php");
 
     /* Compact table styling */
     #taskTable td {
-        padding: 0.5rem;
         vertical-align: middle;
     }
 

@@ -1,0 +1,9 @@
+[2025-05-27 03:55:01] Registration attempt started
+Data: {"username":"trisha","email":"trisha@gmail.com"}
+------------------------------------
+[2025-05-27 03:55:01] Profile image processing
+Data: {"filename":"n  _0018.jpg","size":3616827,"type":"image\/jpeg","error_code":0}
+------------------------------------
+[2025-05-27 03:55:01] Registration successful
+Data: {"success":true,"message":"User registered successfully"}
+------------------------------------

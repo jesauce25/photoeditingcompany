@@ -81,287 +81,7 @@ $projectProgress = getProjectProgressStats($project_id);
 ?>
 
 
-<!-- Custom CSS for image selection -->
-<style>
-    .image-container {
-        cursor: pointer;
-        position: relative;
-        transition: all 0.2s ease;
-    }
 
-    .image-container.selected .card {
-        border: 2px solid #007bff;
-        box-shadow: 0 0 10px rgba(0, 123, 255, 0.5);
-    }
-
-    /* Status Timeline Styles */
-    .status-timeline {
-        display: flex;
-        align-items: center;
-        position: relative;
-    }
-
-    .status-step {
-        width: 24px;
-        height: 24px;
-        border-radius: 50%;
-        background-color: #e9ecef;
-        color: #6c757d;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: bold;
-        cursor: pointer;
-        position: relative;
-        z-index: 2;
-        transition: all 0.3s ease;
-    }
-
-    .status-step.active {
-        background-color: #28a745;
-        color: white;
-    }
-
-    .status-step.current {
-        border: 2px solid #007bff;
-    }
-
-    .status-connector {
-        height: 3px;
-        flex-grow: 1;
-        background-color: #e9ecef;
-        margin: 0 2px;
-        position: relative;
-        z-index: 1;
-    }
-
-    .status-connector.active {
-        background-color: #28a745;
-    }
-
-    .image-selection-indicator {
-        position: absolute;
-        top: 8px;
-        right: 8px;
-        width: 20px;
-        height: 20px;
-        border-radius: 50%;
-        background-color: #fff;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        opacity: 0;
-        transition: opacity 0.2s ease;
-        z-index: 2;
-    }
-
-    .image-selection-indicator i {
-        color: #28a745;
-        font-size: 16px;
-    }
-
-    .image-container.selected .image-selection-indicator {
-        opacity: 1;
-    }
-
-    .image-container .delete-image {
-        opacity: 0.7;
-        transition: opacity 0.2s ease;
-    }
-
-    .image-container:hover .delete-image,
-    .image-container.selected .delete-image {
-        opacity: 1;
-    }
-
-    /* New styles for improved image cards */
-    .image-card-body {
-        display: flex;
-        flex-direction: column;
-        padding: 6px;
-    }
-
-    .image-file-name {
-        word-break: break-word;
-        font-size: 0.75rem;
-        line-height: 1.2;
-        margin-bottom: 4px;
-        flex-grow: 1;
-        overflow-wrap: break-word;
-    }
-
-    .image-actions {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-top: auto;
-    }
-
-    .image-status {
-        width: 100%;
-        text-align: center;
-        padding: 2px;
-        font-size: 0.7rem;
-    }
-
-    .image-container .badge-primary {
-        position: relative;
-    }
-
-    .image-container .badge-primary:after {
-        content: '\f023';
-        /* Lock icon */
-        font-family: 'Font Awesome 5 Free';
-        font-weight: 900;
-        font-size: 0.7em;
-        position: absolute;
-        top: -3px;
-        right: -3px;
-        background-color: #fff;
-        border-radius: 50%;
-        width: 14px;
-        height: 14px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: #007bff;
-        border: 1px solid #007bff;
-    }
-
-    .image-container.already-assigned {
-        position: relative;
-        overflow: hidden;
-    }
-
-    .image-container.already-assigned:before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background-color: rgba(0, 123, 255, 0.05);
-        z-index: 1;
-        pointer-events: none;
-    }
-
-    .image-container.already-assigned:hover {
-        cursor: not-allowed;
-    }
-</style>
-
-<!-- Custom styles for the image cards -->
-<style>
-    /* Image Container Styles */
-    .image-container {
-        position: relative;
-        transition: all 0.2s ease;
-        cursor: pointer;
-        border: 2px solid transparent;
-    }
-
-    .image-container:hover {
-        box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.15) !important;
-    }
-
-    .image-container.selected {
-        border-color: #007bff;
-        background-color: rgba(0, 123, 255, 0.05);
-    }
-
-    /* Styling for already assigned images */
-    .image-container.already-assigned {
-        opacity: 0.7;
-        position: relative;
-        cursor: not-allowed;
-        border: 2px dashed #d9534f;
-        background-color: rgba(217, 83, 79, 0.05);
-    }
-
-    .image-container.already-assigned:hover {
-        box-shadow: none !important;
-        border: 2px dashed #d9534f;
-    }
-
-    .image-container.already-assigned::after {
-        content: "Already Assigned";
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        background-color: rgba(217, 83, 79, 0.8);
-        color: white;
-        padding: 4px 8px;
-        border-radius: 4px;
-        font-size: 12px;
-        font-weight: bold;
-        pointer-events: none;
-        opacity: 0;
-        transition: opacity 0.2s ease;
-    }
-
-    .image-container.already-assigned:hover::after {
-        opacity: 1;
-    }
-
-    /* Selection Indicator */
-    .image-selection-indicator {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 20px;
-        height: 20px;
-        background-color: #007bff;
-        border-radius: 50%;
-        color: white;
-        display: none;
-        align-items: center;
-        justify-content: center;
-        z-index: 2;
-        transform: translate(-30%, -30%);
-    }
-
-    .image-container.selected .image-selection-indicator {
-        display: flex;
-    }
-
-    /* Badge styling */
-    .badge {
-        font-size: 85%;
-        font-weight: 500;
-    }
-</style>
-
-<!-- Add custom styling for redo items -->
-<style>
-    /* Specific styling for rows with redo status */
-    tr.table-danger {
-        background-color: #ffe6e6 !important;
-        /* Light red background */
-    }
-
-    tr.table-danger:hover {
-        background-color: #ffcccc !important;
-        /* Slightly darker on hover */
-    }
-
-    tr.table-danger td {
-        border-color: #ffb3b3 !important;
-        /* Slightly darker border */
-    }
-
-    .redo-badge {
-        background-color: #dc3545;
-        color: white;
-        padding: 2px 6px;
-        border-radius: 3px;
-        font-size: 0.7rem;
-        font-weight: bold;
-        display: inline-block;
-        margin-left: 5px;
-        vertical-align: middle;
-    }
-</style>
 
 <div class="wrapper">
     <?php include("includes/nav.php"); ?>
@@ -745,46 +465,46 @@ $projectProgress = getProjectProgressStats($project_id);
 
                                                                             // Display connector line for steps after the first (excluding available)
                                                                             if ($step !== 'assigned'): ?>
-                                                                                                    <div
-                                                                                                        class="status-connector <?php echo $index <= $currentStepIndex ? 'active' : ''; ?>">
-                                                                                                    </div>
-                                                                                            <?php endif; ?>
-
-                                                                                            <div class="<?php echo $stepClass; ?>"
-                                                                                                data-image-id="<?php echo $image['image_id']; ?>"
-                                                                                                data-status="<?php echo $step; ?>"
-                                                                                                title="<?php echo ucfirst(str_replace('_', ' ', $step)); ?>">
-                                                                                                <?php
-                                                                                                // Display P for assigned, otherwise first letter
-                                                                                                if ($step === 'assigned') {
-                                                                                                    echo 'P';
-                                                                                                } else {
-                                                                                                    echo substr(ucfirst($step), 0, 1);
-                                                                                                }
-                                                                                                ?>
-                                                                                            </div>
-                                                                                    <?php endforeach; ?>
+                                                                                <div
+                                                                                    class="status-connector <?php echo $index <= $currentStepIndex ? 'active' : ''; ?>">
                                                                                 </div>
-
-                                                                   
-                                                                        <?php else: ?>
-                                                                                <span class="text-muted">Not assigned</span>
-                                                                        <?php endif; ?>
-                                                                    </td>
-                                                                    <td>
-                                                                        <div class="btn-group btn-group-sm">
-                                                                            <button type="button" class="btn btn-danger delete-image"
-                                                                                data-image-id="<?php echo $image['image_id']; ?>"
-                                                                                title="Delete Image">
-                                                                                <i class="fas fa-trash"></i>
-                                                                            </button>
-                                                                            <?php if (isset($image['redo']) && $image['redo'] == '1'): ?>
-                                                                                    <span class="redo-badge ml-2">REDO</span>
                                                                             <?php endif; ?>
-                                                                        </div>
-                                                                    </td>
-                                                                </tr>
-                                                        <?php endforeach; ?>
+
+                                                                            <div class="<?php echo $stepClass; ?>"
+                                                                                data-image-id="<?php echo $image['image_id']; ?>"
+                                                                                data-status="<?php echo $step; ?>"
+                                                                                title="<?php echo ucfirst(str_replace('_', ' ', $step)); ?>">
+                                                                                <?php
+                                                                                // Display P for assigned, otherwise first letter
+                                                                                if ($step === 'assigned') {
+                                                                                    echo 'P';
+                                                                                } else {
+                                                                                    echo substr(ucfirst($step), 0, 1);
+                                                                                }
+                                                                                ?>
+                                                                            </div>
+                                                                        <?php endforeach; ?>
+                                                                    </div>
+
+
+                                                                <?php else: ?>
+                                                                    <span class="text-muted">Not assigned</span>
+                                                                <?php endif; ?>
+                                                            </td>
+                                                            <td>
+                                                                <div class="btn-group btn-group-sm">
+                                                                    <button type="button" class="btn btn-danger delete-image"
+                                                                        data-image-id="<?php echo $image['image_id']; ?>"
+                                                                        title="Delete Image">
+                                                                        <i class="fas fa-trash"></i>
+                                                                    </button>
+                                                                    <?php if (isset($image['redo']) && $image['redo'] == '1'): ?>
+                                                                        <span class="redo-badge ml-2">REDO</span>
+                                                                    <?php endif; ?>
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    <?php endforeach; ?>
                                                 <?php endif; ?>
                                             </tbody>
                                         </table>
@@ -793,7 +513,223 @@ $projectProgress = getProjectProgressStats($project_id);
                             </div>
                         </div>
                     </div>
+                    <style>
+                        /* Aggressive Table Compression CSS - Minimizes row height to absolute minimum */
 
+                        /* Set extremely small table cell padding */
+                        #imagesTable td,
+                        #imagesTable th {
+                            padding: 1px !important;
+                            vertical-align: middle !important;
+                            height: auto !important;
+                            line-height: 1 !important;
+                        }
+
+                        /* Force minimal row height */
+                        #imagesTable tr {
+                            height: 20px !important;
+                            max-height: 20px !important;
+                            line-height: 1 !important;
+                        }
+
+                        /* Reduce font size for the entire table */
+                        #imagesTable {
+                            font-size: 0.7rem !important;
+                            line-height: 1 !important;
+                            border-collapse: collapse !important;
+                            border-spacing: 0 !important;
+                        }
+
+                        /* Extremely compress form controls */
+                        #imagesTable .form-control,
+                        #imagesTable .form-control-sm {
+                            height: 18px !important;
+                            min-height: 18px !important;
+                            padding: 0 0.2rem !important;
+                            font-size: 0.7rem !important;
+                            line-height: 1 !important;
+                            margin: 0 !important;
+                        }
+
+                        /* Extremely compress select dropdowns */
+                        #imagesTable select.form-control,
+                        #imagesTable select.form-control-sm {
+                            height: 18px !important;
+                            min-height: 18px !important;
+                            padding: 0 0.2rem !important;
+                            font-size: 0.7rem !important;
+                            line-height: 1 !important;
+                            margin: 0 !important;
+                        }
+
+                        /* Extremely compress input groups */
+                        #imagesTable .input-group {
+                            height: 18px !important;
+                            min-height: 18px !important;
+                            line-height: 1 !important;
+                        }
+
+                        #imagesTable .input-group-sm>.form-control,
+                        #imagesTable .input-group-sm>.input-group-append>.input-group-text {
+                            height: 18px !important;
+                            min-height: 18px !important;
+                            padding: 0 0.2rem !important;
+                            font-size: 0.7rem !important;
+                            line-height: 1 !important;
+                            margin: 0 !important;
+                        }
+
+                        /* Extremely compress buttons */
+                        #imagesTable .btn,
+                        #imagesTable .btn-sm {
+                            padding: 0 0.2rem !important;
+                            font-size: 0.7rem !important;
+                            line-height: 1 !important;
+                            height: 18px !important;
+                            min-height: 18px !important;
+                            margin: 0 !important;
+                        }
+
+                        /* Extremely compress status timeline */
+                        #imagesTable .status-timeline {
+                            height: 16px !important;
+                            font-size: 0.6rem !important;
+                            line-height: 1 !important;
+                            margin: 0 !important;
+                            padding: 0 !important;
+                        }
+
+                        #imagesTable .status-step {
+                            width: 12px !important;
+                            height: 12px !important;
+                            line-height: 1 !important;
+                            font-size: 0.6rem !important;
+                            margin: 0 !important;
+                            padding: 0 !important;
+                        }
+
+                        #imagesTable .status-connector {
+                            height: 1px !important;
+                            width: 4px !important;
+                            margin: 0 !important;
+                            padding: 0 !important;
+                        }
+
+                        /* Extremely compress icons */
+                        #imagesTable .fas {
+                            font-size: 0.7rem !important;
+                            line-height: 1 !important;
+                            margin: 0 !important;
+                            padding: 0 !important;
+                        }
+
+                        /* Compress card header and body */
+                        .card-header {
+                            padding: 0.25rem 0.5rem !important;
+                            line-height: 1 !important;
+                        }
+
+                        .card-body {
+                            padding: 0.25rem !important;
+                            line-height: 1 !important;
+                        }
+
+                        /* Compress badges */
+                        #imagesTable .badge {
+                            padding: 0.1em 0.3em !important;
+                            font-size: 0.65em !important;
+                            line-height: 1 !important;
+                            margin: 0 !important;
+                        }
+
+                        /* Compress button groups */
+                        #imagesTable .btn-group-sm>.btn {
+                            padding: 0 0.2rem !important;
+                            font-size: 0.7rem !important;
+                            line-height: 1 !important;
+                            height: 18px !important;
+                            min-height: 18px !important;
+                            margin: 0 !important;
+                        }
+
+                        /* Remove all margins between elements */
+                        #imagesTable .mb-3,
+                        #imagesTable .my-3 {
+                            margin-bottom: 0 !important;
+                        }
+
+                        #imagesTable .mt-3,
+                        #imagesTable .my-3 {
+                            margin-top: 0 !important;
+                        }
+
+                        #imagesTable .ml-3,
+                        #imagesTable .mx-3 {
+                            margin-left: 0 !important;
+                        }
+
+                        #imagesTable .mr-3,
+                        #imagesTable .mx-3 {
+                            margin-right: 0 !important;
+                        }
+
+                        /* Compress checkboxes */
+                        #imagesTable input[type="checkbox"] {
+                            width: 12px !important;
+                            height: 12px !important;
+                            margin: 0 !important;
+                            padding: 0 !important;
+                        }
+
+                        /* Remove any extra spacing */
+                        #imagesTable * {
+                            margin-top: 0 !important;
+                            margin-bottom: 0 !important;
+                        }
+
+                        /* Force table to use minimal spacing */
+                        #imagesTable.table-bordered {
+                            border-collapse: collapse !important;
+                        }
+
+                        /* Ensure images don't add extra height */
+                        #imagesTable img {
+                            max-height: 18px !important;
+                            height: auto !important;
+                        }
+
+                        /* Ensure links don't add extra height */
+                        #imagesTable a {
+                            line-height: 1 !important;
+                        }
+
+                        /* Ensure div containers don't add extra height */
+                        #imagesTable div {
+                            line-height: 1 !important;
+                            margin: 0 !important;
+                            padding: 0 !important;
+                        }
+
+                        /* Remove any Bootstrap spacing classes that might be adding height */
+                        #imagesTable .py-1,
+                        #imagesTable .py-2,
+                        #imagesTable .py-3,
+                        #imagesTable .pt-1,
+                        #imagesTable .pt-2,
+                        #imagesTable .pt-3,
+                        #imagesTable .pb-1,
+                        #imagesTable .pb-2,
+                        #imagesTable .pb-3 {
+                            padding-top: 0 !important;
+                            padding-bottom: 0 !important;
+                        }
+
+                        /* Ensure table is as compact as possible */
+                        #imagesTable.table-responsive {
+                            padding: 0 !important;
+                            margin: 0 !important;
+                        }
+                    </style>
                     <!-- TEAM ASSIGNMENTS Section -->
                     <div class="row mt-4">
                         <div class="col-12">
@@ -816,239 +752,239 @@ $projectProgress = getProjectProgressStats($project_id);
                                             </thead>
                                             <tbody>
                                                 <?php if (count($assignments) > 0): ?>
-                                                        <?php foreach ($assignments as $assignment): ?>
-                                                                <tr data-assignment-id="<?php echo $assignment['assignment_id']; ?>">
-                                                                    <td>
-                                                                        <div class="team-member-col">
-                                                                            <select class="form-control team-member-select" <?php echo $assignment['status_assignee'] != 'pending' ? 'disabled' : ''; ?>
-                                                                                data-assignment-id="<?php echo $assignment['assignment_id']; ?>">
-                                                                                <option value="">Select Team Member</option>
-                                                                                <?php foreach ($graphicArtists as $artist): ?>
-                                                                                        <option value="<?php echo $artist['user_id']; ?>" <?php echo ($artist['user_id'] == $assignment['user_id']) ? 'selected' : ''; ?>>
-                                                                                            <?php echo htmlspecialchars($artist['full_name'] . ' (' . $artist['role'] . ')'); ?>
-                                                                                            <?php echo ($artist['status'] == 'Blocked') ? ' [Blocked]' : ''; ?>
-                                                                                        </option>
-                                                                                <?php endforeach; ?>
-                                                                            </select>
+                                                    <?php foreach ($assignments as $assignment): ?>
+                                                        <tr data-assignment-id="<?php echo $assignment['assignment_id']; ?>">
+                                                            <td>
+                                                                <div class="team-member-col">
+                                                                    <select class="form-control team-member-select" <?php echo $assignment['status_assignee'] != 'pending' ? 'disabled' : ''; ?>
+                                                                        data-assignment-id="<?php echo $assignment['assignment_id']; ?>">
+                                                                        <option value="">Select Team Member</option>
+                                                                        <?php foreach ($graphicArtists as $artist): ?>
+                                                                            <option value="<?php echo $artist['user_id']; ?>" <?php echo ($artist['user_id'] == $assignment['user_id']) ? 'selected' : ''; ?>>
+                                                                                <?php echo htmlspecialchars($artist['full_name'] . ' (' . $artist['role'] . ')'); ?>
+                                                                                <?php echo ($artist['status'] == 'Blocked') ? ' [Blocked]' : ''; ?>
+                                                                            </option>
+                                                                        <?php endforeach; ?>
+                                                                    </select>
+                                                                    <?php if ($assignment['status_assignee'] != 'pending'): ?>
+                                                                        <div class="mt-2">
+                                                                            <span class="badge badge-info">
+                                                                                <i class="fas fa-lock mr-1"></i> Locked: Status is
+                                                                                "<?php echo ucfirst($assignment['status_assignee']); ?>"
+                                                                            </span>
+                                                                        </div>
+                                                                    <?php endif; ?>
+                                                                </div>
+                                                            </td>
+                                                            <td>
+                                                                <?php
+                                                                // New logic: Get all image roles from this assignment's images
+                                                                $assignmentId = $assignment['assignment_id'];
+                                                                $sql = "SELECT DISTINCT image_role FROM tbl_project_images 
+                                                                       WHERE assignment_id = ? AND image_role IS NOT NULL AND image_role != ''";
+                                                                $stmt = $conn->prepare($sql);
+                                                                $stmt->bind_param("i", $assignmentId);
+                                                                $stmt->execute();
+                                                                $result = $stmt->get_result();
+
+                                                                $imageRoles = [];
+                                                                while ($row = $result->fetch_assoc()) {
+                                                                    if (!empty($row['image_role'])) {
+                                                                        $imageRoles[] = $row['image_role'];
+                                                                    }
+                                                                }
+
+                                                                // If no image roles found, fall back to the assignment role_task
+                                                                if (empty($imageRoles) && !empty($assignment['role_task'])) {
+                                                                    $imageRoles[] = $assignment['role_task'];
+                                                                }
+
+                                                                // Display roles as badges
+                                                                if (!empty($imageRoles)) {
+                                                                    echo '<div class="d-flex flex-wrap">';
+                                                                    foreach ($imageRoles as $role) {
+                                                                        $roleClass = '';
+                                                                        $roleAbbr = '';
+
+                                                                        // Assign color classes based on role type
+                                                                        switch ($role) {
+                                                                            case 'Clipping Path':
+                                                                                $roleClass = 'badge-primary';
+                                                                                $roleAbbr = 'CP';
+                                                                                break;
+                                                                            case 'Color Correction':
+                                                                                $roleClass = 'badge-warning';
+                                                                                $roleAbbr = 'CC';
+                                                                                break;
+                                                                            case 'Retouch':
+                                                                                $roleClass = 'badge-success';
+                                                                                $roleAbbr = 'R';
+                                                                                break;
+                                                                            case 'Final':
+                                                                                $roleClass = 'badge-info';
+                                                                                $roleAbbr = 'F';
+                                                                                break;
+                                                                            case 'Retouch to Final':
+                                                                                $roleClass = 'badge-secondary';
+                                                                                $roleAbbr = 'RF';
+                                                                                break;
+                                                                            default:
+                                                                                $roleClass = 'badge-dark';
+                                                                                $roleAbbr = substr($role, 0, 2);
+                                                                                break;
+                                                                        }
+
+                                                                        echo '<span class="badge ' . $roleClass . ' mr-1 mb-1 p-2" title="' . htmlspecialchars($role) . '">' . $roleAbbr . '</span>';
+                                                                    }
+                                                                    echo '</div>';
+                                                                } else {
+                                                                    echo '<span class="text-muted">No roles assigned</span>';
+                                                                }
+                                                                ?>
+                                                            </td>
+                                                            <td>
+                                                                <?php echo $assignment['assigned_images']; ?> Images
+                                                                <div class="btn-group ml-2">
+                                                                    <button type="button"
+                                                                        class="btn btn-sm btn-outline-primary view-assigned-images"
+                                                                        data-assignment-id="<?php echo $assignment['assignment_id']; ?>"
+                                                                        title="View Assigned Images">
+                                                                        <i class="fas fa-eye"></i>
+                                                                    </button>
+                                                                </div>
+                                                            </td>
+                                                            <td>
+                                                                <?php
+                                                                // Define the timeline steps
+                                                                $timelineSteps = ['pending', 'in_progress', 'finish', 'qa', 'approved', 'completed'];
+                                                                $currentStatus = $assignment['status_assignee'];
+
+                                                                // Determine the current step index
+                                                                $currentStepIndex = array_search($currentStatus, $timelineSteps);
+                                                                if ($currentStepIndex === false)
+                                                                    $currentStepIndex = 0;
+
+                                                                // Display the timeline
+                                                                ?>
+                                                                <div class="status-timeline d-flex align-items-center"
+                                                                    style="font-size: 0.8rem;">
+                                                                    <?php foreach ($timelineSteps as $index => $step):
+                                                                        $isActive = $index <= $currentStepIndex;
+                                                                        $isCurrent = $index == $currentStepIndex;
+
+                                                                        // Determine classes
+                                                                        $stepClass = 'status-step';
+                                                                        if ($isActive)
+                                                                            $stepClass .= ' active';
+                                                                        if ($isCurrent)
+                                                                            $stepClass .= ' current';
+
+                                                                        // Display connector line for steps after the first
+                                                                        if ($index > 0): ?>
+                                                                            <div
+                                                                                class="status-connector <?php echo $index <= $currentStepIndex ? 'active' : ''; ?>">
+                                                                            </div>
+                                                                        <?php endif; ?>
+
+                                                                        <div class="<?php echo $stepClass; ?>"
+                                                                            data-assignment-id="<?php echo $assignment['assignment_id']; ?>"
+                                                                            data-status="<?php echo $step; ?>"
+                                                                            title="<?php echo ucfirst(str_replace('_', ' ', $step)); ?> (View Only)">
+                                                                            <?php echo substr(ucfirst($step), 0, 1); ?>
+                                                                        </div>
+                                                                    <?php endforeach; ?>
+                                                                </div>
+
+                                                                <input type="hidden" class="current-status"
+                                                                    value="<?php echo $assignment['status_assignee']; ?>"
+                                                                    data-assignment-id="<?php echo $assignment['assignment_id']; ?>">
+                                                            </td>
+                                                            <td>
+                                                                <?php
+                                                                $deadline_date = new DateTime($assignment['deadline']);
+                                                                $today = new DateTime('today');
+                                                                $deadline_status = '';
+                                                                $badge_class = '';
+
+                                                                if ($deadline_date == $today) {
+                                                                    $deadline_status = 'Today';
+                                                                    $badge_class = 'badge-warning';
+                                                                } else if ($deadline_date < $today) {
+                                                                    // Calculate days overdue
+                                                                    $interval = $today->diff($deadline_date);
+                                                                    $days_overdue = $interval->days;
+                                                                    $deadline_status = 'Overdue by ' . $days_overdue . ($days_overdue > 1 ? ' days' : ' day');
+                                                                    $badge_class = 'badge-danger';
+                                                                } else {
+                                                                    // Calculate days remaining
+                                                                    $interval = $today->diff($deadline_date);
+                                                                    $days_left = $interval->days;
+                                                                    if ($days_left == 1) {
+                                                                        $deadline_status = 'Due tomorrow';
+                                                                        $badge_class = 'badge-warning';
+                                                                    } else if ($days_left <= 3) {
+                                                                        $deadline_status = $days_left . ' days left';
+                                                                        $badge_class = 'badge-warning';
+                                                                    } else {
+                                                                        $deadline_status = $days_left . ' days left';
+                                                                        $badge_class = 'badge-info';
+                                                                    }
+                                                                }
+
+                                                                // Check if assignment is marked as understandable
+                                                                $isUnderstandable = isset($assignment['delay_acceptable']) && $assignment['delay_acceptable'] == 1;
+                                                                if ($isUnderstandable && $badge_class == 'badge-danger') {
+                                                                    $badge_class = 'badge-success';
+                                                                }
+                                                                ?>
+                                                                <div class="deadline-container">
+                                                                    <input type="date" class="form-control deadline-input"
+                                                                        value="<?php echo $assignment['deadline']; ?>"
+                                                                        data-assignment-id="<?php echo $assignment['assignment_id']; ?>"
+                                                                        <?php echo $assignment['status_assignee'] != 'pending' ? 'disabled' : ''; ?>>
+                                                                    <div class="d-flex mt-1">
+                                                                        <div class="d-flex flex-wrap align-items-center mt-2">
+                                                                            <?php if (!empty($deadline_status)): ?>
+                                                                                <span
+                                                                                    class="badge <?php echo $badge_class; ?> mr-2 mb-1">
+                                                                                    <?php echo $deadline_status; ?>
+                                                                                </span>
+                                                                            <?php endif; ?>
                                                                             <?php if ($assignment['status_assignee'] != 'pending'): ?>
-                                                                                    <div class="mt-2">
-                                                                                        <span class="badge badge-info">
-                                                                                            <i class="fas fa-lock mr-1"></i> Locked: Status is
-                                                                                            "<?php echo ucfirst($assignment['status_assignee']); ?>"
-                                                                                        </span>
-                                                                                    </div>
+                                                                                <span class="badge badge-info mr-2 mb-1">
+                                                                                    <i class="fas fa-lock mr-1"></i> Locked
+                                                                                </span>
                                                                             <?php endif; ?>
                                                                         </div>
-                                                                    </td>
-                                                                    <td>
-                                                                        <?php
-                                                                        // New logic: Get all image roles from this assignment's images
-                                                                        $assignmentId = $assignment['assignment_id'];
-                                                                        $sql = "SELECT DISTINCT image_role FROM tbl_project_images 
-                                                                       WHERE assignment_id = ? AND image_role IS NOT NULL AND image_role != ''";
-                                                                        $stmt = $conn->prepare($sql);
-                                                                        $stmt->bind_param("i", $assignmentId);
-                                                                        $stmt->execute();
-                                                                        $result = $stmt->get_result();
 
-                                                                        $imageRoles = [];
-                                                                        while ($row = $result->fetch_assoc()) {
-                                                                            if (!empty($row['image_role'])) {
-                                                                                $imageRoles[] = $row['image_role'];
-                                                                            }
-                                                                        }
-
-                                                                        // If no image roles found, fall back to the assignment role_task
-                                                                        if (empty($imageRoles) && !empty($assignment['role_task'])) {
-                                                                            $imageRoles[] = $assignment['role_task'];
-                                                                        }
-
-                                                                        // Display roles as badges
-                                                                        if (!empty($imageRoles)) {
-                                                                            echo '<div class="d-flex flex-wrap">';
-                                                                            foreach ($imageRoles as $role) {
-                                                                                $roleClass = '';
-                                                                                $roleAbbr = '';
-
-                                                                                // Assign color classes based on role type
-                                                                                switch ($role) {
-                                                                                    case 'Clipping Path':
-                                                                                        $roleClass = 'badge-primary';
-                                                                                        $roleAbbr = 'CP';
-                                                                                        break;
-                                                                                    case 'Color Correction':
-                                                                                        $roleClass = 'badge-warning';
-                                                                                        $roleAbbr = 'CC';
-                                                                                        break;
-                                                                                    case 'Retouch':
-                                                                                        $roleClass = 'badge-success';
-                                                                                        $roleAbbr = 'R';
-                                                                                        break;
-                                                                                    case 'Final':
-                                                                                        $roleClass = 'badge-info';
-                                                                                        $roleAbbr = 'F';
-                                                                                        break;
-                                                                                    case 'Retouch to Final':
-                                                                                        $roleClass = 'badge-secondary';
-                                                                                        $roleAbbr = 'RF';
-                                                                                        break;
-                                                                                    default:
-                                                                                        $roleClass = 'badge-dark';
-                                                                                        $roleAbbr = substr($role, 0, 2);
-                                                                                        break;
-                                                                                }
-
-                                                                                echo '<span class="badge ' . $roleClass . ' mr-1 mb-1 p-2" title="' . htmlspecialchars($role) . '">' . $roleAbbr . '</span>';
-                                                                            }
-                                                                            echo '</div>';
-                                                                        } else {
-                                                                            echo '<span class="text-muted">No roles assigned</span>';
-                                                                        }
-                                                                        ?>
-                                                                    </td>
-                                                                    <td>
-                                                                        <?php echo $assignment['assigned_images']; ?> Images
-                                                                        <div class="btn-group ml-2">
-                                                                            <button type="button"
-                                                                                class="btn btn-sm btn-outline-primary view-assigned-images"
-                                                                                data-assignment-id="<?php echo $assignment['assignment_id']; ?>"
-                                                                                title="View Assigned Images">
-                                                                                <i class="fas fa-eye"></i>
-                                                                            </button>
-                                                                        </div>
-                                                                    </td>
-                                                                    <td>
-                                                                        <?php
-                                                                        // Define the timeline steps
-                                                                        $timelineSteps = ['pending', 'in_progress', 'finish', 'qa', 'approved', 'completed'];
-                                                                        $currentStatus = $assignment['status_assignee'];
-
-                                                                        // Determine the current step index
-                                                                        $currentStepIndex = array_search($currentStatus, $timelineSteps);
-                                                                        if ($currentStepIndex === false)
-                                                                            $currentStepIndex = 0;
-
-                                                                        // Display the timeline
-                                                                        ?>
-                                                                        <div class="status-timeline d-flex align-items-center"
-                                                                            style="font-size: 0.8rem;">
-                                                                            <?php foreach ($timelineSteps as $index => $step):
-                                                                                $isActive = $index <= $currentStepIndex;
-                                                                                $isCurrent = $index == $currentStepIndex;
-
-                                                                                // Determine classes
-                                                                                $stepClass = 'status-step';
-                                                                                if ($isActive)
-                                                                                    $stepClass .= ' active';
-                                                                                if ($isCurrent)
-                                                                                    $stepClass .= ' current';
-
-                                                                                // Display connector line for steps after the first
-                                                                                if ($index > 0): ?>
-                                                                                            <div
-                                                                                                class="status-connector <?php echo $index <= $currentStepIndex ? 'active' : ''; ?>">
-                                                                                            </div>
-                                                                                    <?php endif; ?>
-
-                                                                                    <div class="<?php echo $stepClass; ?>"
-                                                                                        data-assignment-id="<?php echo $assignment['assignment_id']; ?>"
-                                                                                        data-status="<?php echo $step; ?>"
-                                                                                        title="<?php echo ucfirst(str_replace('_', ' ', $step)); ?> (View Only)">
-                                                                                        <?php echo substr(ucfirst($step), 0, 1); ?>
-                                                                                    </div>
-                                                                            <?php endforeach; ?>
-                                                                        </div>
-
-                                                                        <input type="hidden" class="current-status"
-                                                                            value="<?php echo $assignment['status_assignee']; ?>"
-                                                                            data-assignment-id="<?php echo $assignment['assignment_id']; ?>">
-                                                                    </td>
-                                                                    <td>
-                                                                        <?php
-                                                                        $deadline_date = new DateTime($assignment['deadline']);
-                                                                        $today = new DateTime('today');
-                                                                        $deadline_status = '';
-                                                                        $badge_class = '';
-
-                                                                        if ($deadline_date == $today) {
-                                                                            $deadline_status = 'Today';
-                                                                            $badge_class = 'badge-warning';
-                                                                        } else if ($deadline_date < $today) {
-                                                                            // Calculate days overdue
-                                                                            $interval = $today->diff($deadline_date);
-                                                                            $days_overdue = $interval->days;
-                                                                            $deadline_status = 'Overdue by ' . $days_overdue . ($days_overdue > 1 ? ' days' : ' day');
-                                                                            $badge_class = 'badge-danger';
-                                                                        } else {
-                                                                            // Calculate days remaining
-                                                                            $interval = $today->diff($deadline_date);
-                                                                            $days_left = $interval->days;
-                                                                            if ($days_left == 1) {
-                                                                                $deadline_status = 'Due tomorrow';
-                                                                                $badge_class = 'badge-warning';
-                                                                            } else if ($days_left <= 3) {
-                                                                                $deadline_status = $days_left . ' days left';
-                                                                                $badge_class = 'badge-warning';
-                                                                            } else {
-                                                                                $deadline_status = $days_left . ' days left';
-                                                                                $badge_class = 'badge-info';
-                                                                            }
-                                                                        }
-
-                                                                        // Check if assignment is marked as understandable
-                                                                        $isUnderstandable = isset($assignment['delay_acceptable']) && $assignment['delay_acceptable'] == 1;
-                                                                        if ($isUnderstandable && $badge_class == 'badge-danger') {
-                                                                            $badge_class = 'badge-success';
-                                                                        }
-                                                                        ?>
-                                                                        <div class="deadline-container">
-                                                                            <input type="date" class="form-control deadline-input"
-                                                                                value="<?php echo $assignment['deadline']; ?>"
-                                                                                data-assignment-id="<?php echo $assignment['assignment_id']; ?>"
-                                                                                <?php echo $assignment['status_assignee'] != 'pending' ? 'disabled' : ''; ?>>
-                                                                            <div class="d-flex mt-1">
-                                                                                <div class="d-flex flex-wrap align-items-center mt-2">
-                                                                                    <?php if (!empty($deadline_status)): ?>
-                                                                                            <span
-                                                                                                class="badge <?php echo $badge_class; ?> mr-2 mb-1">
-                                                                                                <?php echo $deadline_status; ?>
-                                                                                            </span>
-                                                                                    <?php endif; ?>
-                                                                                    <?php if ($assignment['status_assignee'] != 'pending'): ?>
-                                                                                            <span class="badge badge-info mr-2 mb-1">
-                                                                                                <i class="fas fa-lock mr-1"></i> Locked
-                                                                                            </span>
-                                                                                    <?php endif; ?>
-                                                                                </div>
-
-                                                                                <?php if ($badge_class == 'badge-danger' && !$isUnderstandable): ?>
-                                                                                        <div class="mt-0">
-                                                                                            <button type="button"
-                                                                                                class="btn btn-sm btn-outline-success mark-acceptable-btn p-1"
-                                                                                                data-assignment-id="<?php echo $assignment['assignment_id']; ?>"
-                                                                                                data-toggle="tooltip"
-                                                                                                title="Mark this delay as understandable">
-                                                                                                <i class="fas fa-check-circle mr-1"></i> Mark as
-                                                                                                Acceptable
-                                                                                            </button>
-                                                                                        </div>
-                                                                                <?php endif; ?>
+                                                                        <?php if ($badge_class == 'badge-danger' && !$isUnderstandable): ?>
+                                                                            <div class="mt-0">
+                                                                                <button type="button"
+                                                                                    class="btn btn-sm btn-outline-success mark-acceptable-btn p-1"
+                                                                                    data-assignment-id="<?php echo $assignment['assignment_id']; ?>"
+                                                                                    data-toggle="tooltip"
+                                                                                    title="Mark this delay as understandable">
+                                                                                    <i class="fas fa-check-circle mr-1"></i> Mark as
+                                                                                    Acceptable
+                                                                                </button>
                                                                             </div>
-                                                                        </div>
-                                                                    </td>
-                                                                    <td>
-                                                                        <button class="btn btn-sm btn-danger delete-assignment"
-                                                                            data-assignment-id="<?php echo $assignment['assignment_id']; ?>">
-                                                                            <i class="fas fa-trash"></i>
-                                                                        </button>
-                                                                    </td>
-                                                                </tr>
-                                                        <?php endforeach; ?>
-                                                <?php else: ?>
-                                                        <tr>
-                                                            <td colspan="6" class="text-center">No team members assigned yet.
+                                                                        <?php endif; ?>
+                                                                    </div>
+                                                                </div>
+                                                            </td>
+                                                            <td>
+                                                                <button class="btn btn-sm btn-danger delete-assignment"
+                                                                    data-assignment-id="<?php echo $assignment['assignment_id']; ?>">
+                                                                    <i class="fas fa-trash"></i>
+                                                                </button>
                                                             </td>
                                                         </tr>
+                                                    <?php endforeach; ?>
+                                                <?php else: ?>
+                                                    <tr>
+                                                        <td colspan="6" class="text-center">No team members assigned yet.
+                                                        </td>
+                                                    </tr>
                                                 <?php endif; ?>
                                             </tbody>
                                         </table>
@@ -1122,10 +1058,10 @@ $projectProgress = getProjectProgressStats($project_id);
                         <select class="form-control" id="assigneeSelect" name="assignee" required>
                             <option value="">-- Select Assignee --</option>
                             <?php foreach ($graphicArtists as $artist): ?>
-                                    <option value="<?php echo $artist['user_id']; ?>">
-                                        <?php echo htmlspecialchars($artist['full_name'] . ' (' . $artist['role'] . ')'); ?>
-                                        <?php echo ($artist['status'] == 'Blocked') ? ' [Blocked]' : ''; ?>
-                                    </option>
+                                <option value="<?php echo $artist['user_id']; ?>">
+                                    <?php echo htmlspecialchars($artist['full_name'] . ' (' . $artist['role'] . ')'); ?>
+                                    <?php echo ($artist['status'] == 'Blocked') ? ' [Blocked]' : ''; ?>
+                                </option>
                             <?php endforeach; ?>
                         </select>
                     </div>
@@ -1137,6 +1073,7 @@ $projectProgress = getProjectProgressStats($project_id);
                             <option value="Color Correction">Color Correction</option>
                             <option value="Retouch">Retouch</option>
                             <option value="Final">Final</option>
+                            <option value="Retouch to Final">Retouch to Final</option>
                         </select>
                     </div>
                     <div class="form-group">
@@ -1161,57 +1098,57 @@ $projectProgress = getProjectProgressStats($project_id);
 
 
 <!-- First define global variables that components will need -->
-<script>    
-    window.projectId = <?php echo json_encode($project_id); ?>; 
-    
-    window.logging = { 
-        debug: function (message, data = null) { 
-            console.debug(`[DEBUG][${new Date().toISOString()}] ${message}`, data || ''); 
-        }, 
-        info: function (message, data = null) { 
-            console.info(`[INFO][${new Date().toISOString()}] ${message}`, data || ''); 
-        }, 
-        warning: function (message, data = null) { 
-            console.warn(`[WARNING][${new Date().toISOString()}] ${message}`, data || ''); 
-        }, 
-        error: function (message, data = null) { 
-            console.error(`[ERROR][${new Date().toISOString()}] ${message}`, data || ''); 
-        }, 
-        interaction: function (action, data = null) { 
-            console.log(`[USER ACTION][${new Date().toISOString()}] ${action}`, data || ''); 
-            if (window.navigator.sendBeacon) { 
-                try { 
-                    const logData = { 
-                        action: action, 
-                        data: data || {}, 
-                        timestamp: new Date().toISOString(), 
-                        page: 'edit-project', 
-                        projectId: window.projectId 
-                    }; 
-                    navigator.sendBeacon('controllers/log_client_action.php', JSON.stringify(logData)); 
-                } catch (e) { 
-                    console.error('Error sending beacon log:', e); 
-                } 
-            } 
-        }, 
-        ajax: function (method, url, data = null) { 
-            console.log(`[AJAX REQUEST][${new Date().toISOString()}] ${method} ${url}`, data || ''); 
-        }, 
-        ajaxSuccess: function (method, url, response = null) { 
-            console.log(`[AJAX SUCCESS][${new Date().toISOString()}] ${method} ${url}`, response || ''); 
-        }, 
-        ajaxError: function (method, url, error = null) { 
-            console.error(`[AJAX ERROR][${new Date().toISOString()}] ${method} ${url}`, error || ''); 
-        } 
+<script>
+    window.projectId = <?php echo json_encode($project_id); ?>;
+
+    window.logging = {
+        debug: function(message, data = null) {
+            console.debug(`[DEBUG][${new Date().toISOString()}] ${message}`, data || '');
+        },
+        info: function(message, data = null) {
+            console.info(`[INFO][${new Date().toISOString()}] ${message}`, data || '');
+        },
+        warning: function(message, data = null) {
+            console.warn(`[WARNING][${new Date().toISOString()}] ${message}`, data || '');
+        },
+        error: function(message, data = null) {
+            console.error(`[ERROR][${new Date().toISOString()}] ${message}`, data || '');
+        },
+        interaction: function(action, data = null) {
+            console.log(`[USER ACTION][${new Date().toISOString()}] ${action}`, data || '');
+            if (window.navigator.sendBeacon) {
+                try {
+                    const logData = {
+                        action: action,
+                        data: data || {},
+                        timestamp: new Date().toISOString(),
+                        page: 'edit-project',
+                        projectId: window.projectId
+                    };
+                    navigator.sendBeacon('controllers/log_client_action.php', JSON.stringify(logData));
+                } catch (e) {
+                    console.error('Error sending beacon log:', e);
+                }
+            }
+        },
+        ajax: function(method, url, data = null) {
+            console.log(`[AJAX REQUEST][${new Date().toISOString()}] ${method} ${url}`, data || '');
+        },
+        ajaxSuccess: function(method, url, response = null) {
+            console.log(`[AJAX SUCCESS][${new Date().toISOString()}] ${method} ${url}`, response || '');
+        },
+        ajaxError: function(method, url, error = null) {
+            console.error(`[AJAX ERROR][${new Date().toISOString()}] ${method} ${url}`, error || '');
+        }
     };
-    
+
     // Function to get all selected image IDs - make it global so all components can use it  
-    window.getSelectedImageIds = function () { 
-        const selectedImages = []; 
+    window.getSelectedImageIds = function() {
+        const selectedImages = [];
         $('.image-select:checked').each(function() {
             selectedImages.push($(this).val());
         });
-        return selectedImages; 
+        return selectedImages;
     };
 </script>
 <!-- Now include component scripts -->
@@ -1289,13 +1226,27 @@ $projectProgress = getProjectProgressStats($project_id);
 
     /* Completed status styling */
     .status-step[data-status="completed"] {
-        background-color: #007bff; /* Default blue color */
+        background-color: #007bff;
+        /* Default blue color */
         color: white;
     }
-    
+
     /* Only make completed status green when it's the current status */
     .status-step[data-status="completed"].current {
-        background-color: #28a745; /* Green color for current completed status */
+        background-color: #28a745;
+        /* Green color for current completed status */
         border: 2px solid #1e7e34;
+    }
+
+    .redo-badge {
+        background-color: #dc3545;
+        color: white;
+        padding: 2px 6px;
+        border-radius: 3px;
+        font-size: 0.7rem;
+        font-weight: bold;
+        display: inline-block;
+        margin-left: 5px;
+        vertical-align: middle;
     }
 </style>

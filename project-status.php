@@ -74,7 +74,7 @@ $query = "SELECT p.*, c.company_name,
           CASE WHEN p.deadline < CURDATE() THEN 1 ELSE 0 END as is_overdue
           FROM tbl_projects p
           LEFT JOIN tbl_companies c ON p.company_id = c.company_id
-          WHERE 1=1";
+          WHERE p.hidden = 0";
 
 // Add filters
 $params = [];
@@ -366,12 +366,12 @@ $projects = $result->fetch_all(MYSQLI_ASSOC);
 
     /* Badge styling */
     .badge-primary {
-        background-color: #ffb22e !important;
-        color: #000000 !important;
+        background-color: #007bff !important;
+        color: rgb(255, 255, 255) !important;
     }
 
     .badge-info {
-        background-color: #864937 !important;
+        background-color: #17a2b8 !important;
         color: #f7f7f7 !important;
     }
 
@@ -385,7 +385,7 @@ $projects = $result->fetch_all(MYSQLI_ASSOC);
     }
 
     .badge-warning {
-        background-color: #ffb22e !important;
+        background-color: #ffc107 !important;
         color: #000000 !important;
     }
 
@@ -483,6 +483,7 @@ $projects = $result->fetch_all(MYSQLI_ASSOC);
         background-color: rgba(20, 20, 20, 0.7);
         font-weight: 600;
         color: #ffb22e;
+        padding: 0.5rem 1rem !important;
     }
 
     /* Fix any table borders */
@@ -700,9 +701,12 @@ $projects = $result->fetch_all(MYSQLI_ASSOC);
     }
 </style>
 
+
+
 <div class="background"></div>
 <div class="floating-shapes"></div>
 <div class="black-covers"></div>
+
 <!-- Main Content -->
 <div class="container py-4">
 
@@ -800,7 +804,6 @@ $projects = $result->fetch_all(MYSQLI_ASSOC);
                                 $deadline = new DateTime($project['deadline']);
                                 $today = new DateTime();
                                 $is_overdue = $deadline < $today;
-
                                 if ($is_overdue) {
                                     $interval = $today->diff($deadline);
                                     $days_diff = $interval->days;
@@ -810,7 +813,7 @@ $projects = $result->fetch_all(MYSQLI_ASSOC);
                                     $interval = $today->diff($deadline);
                                     $days_left = $interval->days;
                                     $deadline_status = $days_left . ' days left';
-                                    $row_class = ($days_left <= 3) ? 'table-warning' : '';
+                                    $row_class = ($days_left <= 1) ? 'table-warning' : '';
                                 }
 
                                 // Get assignees
@@ -866,7 +869,7 @@ $projects = $result->fetch_all(MYSQLI_ASSOC);
                                                     if ($is_assignee_overdue) {
                                                         $avatar_class = $is_acceptable ? 'assignee-acceptable' : 'assignee-overdue';
                                                     }
-                                                    ?>
+                                                ?>
                                                     <div class="assignee-avatar <?php echo $avatar_class; ?>"
                                                         title="<?php echo htmlspecialchars($assignee['first_name'] . ' ' . $assignee['last_name']); ?><?php echo $is_assignee_overdue ? ($is_acceptable ? ' - Acceptable Delay' : ' - Overdue') : ''; ?>">
                                                         <?php echo strtoupper($initials); ?>
@@ -881,47 +884,92 @@ $projects = $result->fetch_all(MYSQLI_ASSOC);
                                         <?php if (!empty($assignees)): ?>
                                             <div class="d-flex flex-wrap">
                                                 <?php
-                                                $roles = array_map(function ($assignee) {
-                                                    return isset($assignee['role_task']) ? $assignee['role_task'] : null;
-                                                }, $assignees);
-                                                $roles = array_filter($roles);
-                                                $roles = array_unique($roles);
+                                                // Get all image roles for this assignee from project_images table
+                                                $allRoles = [];
+                                                foreach ($assignees as $assignee) {
+                                                    if (isset($assignee['assignment_id'])) {
+                                                        // Query to get all roles from assigned images
+                                                        $roleQuery = "SELECT DISTINCT image_role 
+                                                                    FROM tbl_project_images 
+                                                                    WHERE assignment_id = ? 
+                                                                    AND image_role IS NOT NULL 
+                                                                    AND image_role != ''";
+                                                        $roleStmt = $conn->prepare($roleQuery);
+                                                        $roleStmt->bind_param("i", $assignee['assignment_id']);
+                                                        $roleStmt->execute();
+                                                        $roleResult = $roleStmt->get_result();
 
-                                                foreach ($roles as $role):
-                                                    // Convert to acronym
-                                                    $acronym = '';
-                                                    switch (strtolower($role)) {
-                                                        case 'retouch':
-                                                            $acronym = 'R';
+                                                        while ($row = $roleResult->fetch_assoc()) {
+                                                            if (!empty($row['image_role'])) {
+                                                                $allRoles[] = $row['image_role'];
+                                                            }
+                                                        }
+
+                                                        // If no image roles found, fall back to assignment role_task
+                                                        if (empty($allRoles) && !empty($assignee['role_task'])) {
+                                                            if (strpos($assignee['role_task'], ',') !== false) {
+                                                                $individualRoles = array_map('trim', explode(',', $assignee['role_task']));
+                                                                foreach ($individualRoles as $role) {
+                                                                    if (!empty($role)) {
+                                                                        $allRoles[] = $role;
+                                                                    }
+                                                                }
+                                                            } else {
+                                                                $allRoles[] = trim($assignee['role_task']);
+                                                            }
+                                                        }
+                                                    }
+                                                }
+
+                                                // Remove duplicates and empty values
+                                                $allRoles = array_filter(array_unique($allRoles));
+
+                                                // Sort roles alphabetically
+                                                sort($allRoles);
+
+                                                foreach ($allRoles as $role) {
+                                                    $roleClass = '';
+                                                    $roleAbbr = '';
+
+                                                    // Assign color classes and abbreviations based on role type
+                                                    switch (trim($role)) {
+                                                        case 'Clipping Path':
+                                                            $roleClass = 'badge-primary';
+                                                            $roleAbbr = 'CP';
                                                             break;
-                                                        case 'clipping path':
-                                                            $acronym = 'CP';
+                                                        case 'Color Correction':
+                                                            $roleClass = 'badge-warning';
+                                                            $roleAbbr = 'CC';
                                                             break;
-                                                        case 'color correction':
-                                                            $acronym = 'Cc';
+                                                        case 'Retouch':
+                                                            $roleClass = 'badge-success';
+                                                            $roleAbbr = 'R';
                                                             break;
-                                                        case 'final':
-                                                            $acronym = 'F';
+                                                        case 'Final':
+                                                            $roleClass = 'badge-info';
+                                                            $roleAbbr = 'F';
+                                                            break;
+                                                        case 'Retouch to Final':
+                                                            $roleClass = 'badge-secondary';
+                                                            $roleAbbr = 'RF';
                                                             break;
                                                         default:
-                                                            // For other roles, use first letter or first 2 letters
-                                                            $words = explode(' ', $role);
-                                                            if (count($words) > 1) {
-                                                                $acronym = strtoupper(substr($words[0], 0, 1) . substr($words[1], 0, 1));
-                                                            } else {
-                                                                $acronym = strtoupper(substr($role, 0, 2));
-                                                            }
+                                                            $roleClass = 'badge-dark';
+                                                            $roleAbbr = substr($role, 0, 2);
                                                     }
-                                                    ?>
-                                                    <div class="role-badge" title="<?php echo htmlspecialchars($role); ?>">
-                                                        <?php echo $acronym; ?>
-                                                    </div>
-                                                <?php endforeach; ?>
+
+                                                    echo '<span class="badge ' . $roleClass . ' mr-1 mb-1 p-2" title="' . htmlspecialchars($role) . '">' . $roleAbbr . '</span>';
+                                                }
+                                                ?>
                                             </div>
                                         <?php else: ?>
                                             <span class="text-muted">None</span>
                                         <?php endif; ?>
                                     </td>
+
+
+
+
                                     <td class="text-center">
                                         <a href="view-project.php?id=<?php echo $project['project_id']; ?>"
                                             class="btn btn-info btn-sm" title="View Project">
@@ -943,11 +991,14 @@ include("includes/footer.php");
 ?>
 
 <script>
-    $(document).ready(function () {
+    $(document).ready(function() {
         // Initialize DataTable with responsive settings
         var dataTable = $('#projectTable').DataTable({
             "pageLength": 10000,
-            "lengthMenu": [[1000, 10000, 100000, 1000000], [1000, 10000, 100000, 1000000]],
+            "lengthMenu": [
+                [1000, 10000, 100000, 1000000],
+                [1000, 10000, 100000, 1000000]
+            ],
             "orderCellsTop": true,
             "order": [], // Remove default ordering
             "language": {
@@ -963,10 +1014,10 @@ include("includes/footer.php");
             "scrollY": false, // Disable vertical scrolling
             "autoWidth": true,
             "scrollCollapse": false,
-            "drawCallback": function () {
+            "drawCallback": function() {
                 setupEnhancedTooltips();
             },
-            "initComplete": function () {
+            "initComplete": function() {
                 this.api().columns.adjust();
                 setupEnhancedTooltips();
             }
@@ -992,35 +1043,22 @@ include("includes/footer.php");
                 template: '<div class="tooltip" role="tooltip"><div class="arrow"></div><div class="tooltip-inner"></div></div>'
             });
 
-            // Enhanced role badge tooltips with forced display
-            $('.role-badge').tooltip({
-                title: function () {
-                    return $(this).attr('title') || "Role";
-                },
-                placement: 'top',
-                container: 'body',
-                trigger: 'hover',
-                html: true,
-                delay: { show: 0, hide: 0 }
-            }).on('click', function () {
-                // Force show tooltip on click in fullscreen mode
-                if (document.fullscreenElement) {
-                    $(this).tooltip('show');
-                    setTimeout(() => $(this).tooltip('hide'), 2000);
-                }
-            });
+
 
             // Enhanced assignee tooltips with forced display
             $('.assignee-avatar').tooltip({
-                title: function () {
+                title: function() {
                     return $(this).attr('title') || "Team Member";
                 },
                 placement: 'top',
                 container: 'body',
                 trigger: 'hover',
                 html: true,
-                delay: { show: 0, hide: 0 }
-            }).on('click', function () {
+                delay: {
+                    show: 0,
+                    hide: 0
+                }
+            }).on('click', function() {
                 // Force show tooltip on click in fullscreen mode
                 if (document.fullscreenElement) {
                     $(this).tooltip('show');
@@ -1030,7 +1068,7 @@ include("includes/footer.php");
         }
 
         // Fullscreen toggle functionality
-        $('#fullscreenToggle').on('click', function () {
+        $('#fullscreenToggle').on('click', function() {
             const projectTableCard = document.getElementById('projectTableCard');
 
             if (!document.fullscreenElement) {
@@ -1069,11 +1107,11 @@ include("includes/footer.php");
                 });
 
                 // Re-initialize tooltips after entering fullscreen
-                setTimeout(function () {
+                setTimeout(function() {
                     setupEnhancedTooltips();
 
                     // Add click event to show tooltip in fullscreen 
-                    $('.role-badge, .assignee-avatar').off('mouseenter mouseleave').on('click', function () {
+                    $('.role-badge, .assignee-avatar').off('mouseenter mouseleave').on('click', function() {
                         $(this).tooltip('show');
                         setTimeout(() => $(this).tooltip('hide'), 2000);
                     });
@@ -1096,7 +1134,7 @@ include("includes/footer.php");
             }
 
             // Refresh DataTable when entering/exiting fullscreen
-            setTimeout(function () {
+            setTimeout(function() {
                 dataTable.columns.adjust().draw();
                 setupEnhancedTooltips();
             }, 500);
@@ -1124,17 +1162,17 @@ include("includes/footer.php");
                 $('.role-badge, .assignee-avatar').off('click');
 
                 // Refresh DataTable
-                setTimeout(function () {
+                setTimeout(function() {
                     dataTable.columns.adjust().draw();
                     setupEnhancedTooltips();
                 }, 500);
             } else {
                 // Re-initialize tooltips after entering fullscreen
-                setTimeout(function () {
+                setTimeout(function() {
                     setupEnhancedTooltips();
 
                     // Add click event to show tooltip in fullscreen 
-                    $('.role-badge, .assignee-avatar').off('mouseenter mouseleave').on('click', function () {
+                    $('.role-badge, .assignee-avatar').off('mouseenter mouseleave').on('click', function() {
                         $(this).tooltip('show');
                         setTimeout(() => $(this).tooltip('hide'), 2000);
                     });
@@ -1143,7 +1181,7 @@ include("includes/footer.php");
         }
 
         // Also toggle fullscreen when pressing ESC key
-        $(document).on('keydown', function (e) {
+        $(document).on('keydown', function(e) {
             if (e.key === "Escape" && document.fullscreenElement) {
                 if (document.exitFullscreen) {
                     document.exitFullscreen();
@@ -1156,7 +1194,7 @@ include("includes/footer.php");
         });
 
         // Fix for filter dropdowns
-        setTimeout(function () {
+        setTimeout(function() {
             $('#company').val('<?php echo $company_filter; ?>');
             $('#status').val('<?php echo $status_filter; ?>');
             $('#overdue').val('<?php echo $overdue_filter; ?>');

@@ -222,111 +222,165 @@ function getAssignmentStatusClass($status)
                     </div>
                 </div>
 
-                <!-- Total Images Section -->
-                <div class="row mb-4">
+                <!-- Project Images Section -->
+                <div class="row mt-4">
                     <div class="col-12">
                         <div class="card">
-                            <div
-                                class="card-header d-flex justify-content-between align-items-center bg-primary text-white">
-                                <h5 class="card-title mb-0">
-                                    <i class="fas fa-images mr-2"></i>
-                                    Project Images (Total: <?php echo count($images); ?>)
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">Project Images (Total:
+                                    <?php echo count($images); ?>)
                                 </h5>
                             </div>
                             <div class="card-body">
-                                <!-- Images Grid -->
-                                <div class="row" id="projectImagesList">
-                                    <?php if (empty($images)): ?>
-                                        <div class="col-12 text-center py-5">
-                                            <p class="text-muted">No images uploaded yet.</p>
-                                        </div>
-                                    <?php else: ?>
-                                        <?php foreach ($images as $index => $image): ?>
-                                            <?php
-                                            // Determine status for UI display
-                                            $statusClass = 'badge-success';
-                                            $statusText = 'Available';
+                                <!-- Images Table (View Only) -->
+                                <div class="table-responsive">
+                                    <table class="table table-bordered table-hover" id="imagesTable">
+                                        <thead>
+                                            <tr>
+                                                <th style="width: 40px;">#</th>
+                                                <th>Image</th>
+                                                <th>Assignee</th>
+                                                <th>Time</th>
+                                                <th>Role</th>
+                                                <th>Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <?php if (empty($images)): ?>
+                                                <tr>
+                                                    <td colspan="6" class="text-center">No images uploaded yet.</td>
+                                                </tr>
+                                            <?php else: ?>
+                                                <?php foreach ($images as $index => $image): ?>
+                                                    <?php
+                                                    // Get file name for display
+                                                    $fileName = '';
+                                                    if (isset($image['file_name']) && !empty($image['file_name'])) {
+                                                        $fileName = $image['file_name'];
+                                                    } else if (isset($image['image_path']) && !empty($image['image_path'])) {
+                                                        $fileName = pathinfo($image['image_path'], PATHINFO_BASENAME);
+                                                    } else {
+                                                        $fileName = 'Image ' . $image['image_id'];
+                                                    }
 
-                                            if (isset($image['assignment_id']) && $image['assignment_id']) {
-                                                $statusClass = 'badge-primary';
-                                                // Show assignee's first name if assigned
-                                                $statusText = isset($image['assignee_first_name']) ? $image['assignee_first_name'] : 'Assigned';
-                                            }
+                                                    // Format estimated time
+                                                    $estimatedTimeDisplay = '';
+                                                    if (isset($image['estimated_time']) && !empty($image['estimated_time'])) {
+                                                        $hours = floor($image['estimated_time'] / 60);
+                                                        $minutes = $image['estimated_time'] % 60;
 
-                                            if (isset($image['status_image']) && $image['status_image'] === 'completed') {
-                                                $statusClass = 'badge-success';
-                                                $statusText = 'Completed';
-                                            }
+                                                        if ($hours > 0) {
+                                                            $estimatedTimeDisplay .= $hours . 'h ';
+                                                        }
+                                                        if ($minutes > 0 || $hours == 0) {
+                                                            $estimatedTimeDisplay .= $minutes . 'm';
+                                                        }
+                                                    } else {
+                                                        $estimatedTimeDisplay = 'Not set';
+                                                    }
 
-                                            // Get file name for display
-                                            $fileName = '';
-                                            if (isset($image['file_name']) && !empty($image['file_name'])) {
-                                                $fileName = $image['file_name'];
-                                            } else if (isset($image['image_path']) && !empty($image['image_path'])) {
-                                                $fileName = pathinfo($image['image_path'], PATHINFO_BASENAME);
-                                            } else {
-                                                $fileName = 'Image ' . $image['image_id'];
-                                            }
+                                                    // Determine image status - completely separate from assignee name
+                                                    $statusClass = 'badge-secondary';
+                                                    $statusText = 'Available';
 
-                                            // Format estimated time
-                                            $estimatedTimeDisplay = '';
-                                            if (isset($image['estimated_time']) && !empty($image['estimated_time'])) {
-                                                $hours = floor($image['estimated_time'] / 60);
-                                                $minutes = $image['estimated_time'] % 60;
+                                                    if (isset($image['assignment_id']) && $image['assignment_id']) {
+                                                        $statusClass = 'badge-warning'; // Changed from badge-primary
+                                                        $statusText = 'Pending';  // Changed from Assigned
+                                                    }
 
-                                                if ($hours > 0) {
-                                                    $estimatedTimeDisplay .= $hours . 'h ';
-                                                }
-                                                if ($minutes > 0 || $hours == 0) {
-                                                    $estimatedTimeDisplay .= $minutes . 'm';
-                                                }
-                                            }
-                                            ?>
-                                            <div class="col-md-6 col-lg-3 mb-2">
-                                                <div class="image-container card shadow-sm">
-                                                    <div class="card-body p-2">
-                                                        <div class="d-flex align-items-center">
+                                                    if (isset($image['status_image'])) {
+                                                        if ($image['status_image'] === 'in_progress') {
+                                                            $statusClass = 'badge-warning';
+                                                            $statusText = 'In Progress';
+                                                        } else if ($image['status_image'] === 'finish') {
+                                                            $statusClass = 'badge-info';
+                                                            $statusText = 'Finished';
+                                                        } else if ($image['status_image'] === 'completed') {
+                                                            $statusClass = 'badge-success';
+                                                            $statusText = 'Completed';
+                                                        }
+                                                    }
+                                                    // Determine row class based on redo status and assignment
+                                                    $rowClass = '';
+                                                    if (isset($image['redo']) && $image['redo'] == '1') {
+                                                        $rowClass = 'table-danger';
+                                                    } elseif (isset($image['assignment_id']) && $image['assignment_id'] > 0) {
+                                                        $rowClass = 'table-light';
+                                                    }
+                                                    ?>
+                                                    <tr data-image-id="<?php echo $image['image_id']; ?>" class="<?php echo $rowClass; ?>">
+                                                        <td class="text-center">
+                                                            <?php echo $index + 1; ?>
+                                                        </td>
+                                                        <td>
+                                                            <a href="../uploads/projects/<?php echo $project_id; ?>/<?php echo $image['image_path']; ?>"
+                                                                target="_blank" class="image-preview-link" title="View Image">
+                                                                <?php echo htmlspecialchars($fileName); ?>
+                                                            </a>
+                                                        </td>
+                                                        <td>
+                                                            <?php
+                                                            // Display assignee name
+                                                            $assigneeName = 'Not Assigned';
 
+                                                            // First try to get assignee name from the image data directly
+                                                            if (isset($image['assignee_first_name']) && !empty($image['assignee_first_name'])) {
+                                                                $assigneeName = htmlspecialchars($image['assignee_first_name']);
+                                                                if (isset($image['assignee_last_name']) && !empty($image['assignee_last_name'])) {
+                                                                    $assigneeName .= ' ' . htmlspecialchars($image['assignee_last_name']);
+                                                                }
+                                                            }
+                                                            // If not found, try to get from assignments array
+                                                            else if (isset($image['assignment_id']) && $image['assignment_id'] > 0) {
+                                                                foreach ($assignments as $assignment) {
+                                                                    if ($assignment['assignment_id'] == $image['assignment_id']) {
+                                                                        // Try to get user name from the assignment
+                                                                        if (isset($assignment['user_first_name']) && !empty($assignment['user_first_name'])) {
+                                                                            $assigneeName = htmlspecialchars($assignment['user_first_name']);
+                                                                            if (isset($assignment['user_last_name']) && !empty($assignment['user_last_name'])) {
+                                                                                $assigneeName .= ' ' . htmlspecialchars($assignment['user_last_name']);
+                                                                            }
+                                                                        }
+                                                                        // If no name in assignment, try to use username
+                                                                        else if (isset($assignment['username']) && !empty($assignment['username'])) {
+                                                                            $assigneeName = htmlspecialchars($assignment['username']);
+                                                                        }
+                                                                        // If still no name, use user_id as last resort
+                                                                        else if (isset($assignment['user_id']) && $assignment['user_id'] > 0) {
+                                                                            $assigneeName = 'User #' . $assignment['user_id'];
+                                                                        }
+                                                                        break;
+                                                                    }
+                                                                }
+                                                            }
 
-                                                            <!-- Image details -->
-                                                            <div class="flex-grow-1">
-                                                                <h6 class="mb-0 text-truncate"
-                                                                    title="<?php echo htmlspecialchars($fileName); ?>">
-                                                                    <?php echo htmlspecialchars($fileName); ?>
-                                                                </h6>
-                                                                <div class="d-flex flex-wrap mt-1">
-                                                                    <!-- Assignee badge -->
-                                                                    <span class="badge <?php echo $statusClass; ?> mr-1 mb-1">
-                                                                        <i class="fas fa-user mr-1"></i>
-                                                                        <?php echo $statusText; ?>
-                                                                    </span>
-
-                                                                    <!-- Role badge - always show, even if empty -->
-                                                                    <span class="badge badge-info mr-1 mb-1">
-                                                                        <i class="fas fa-tasks mr-1"></i>
-                                                                        <?php echo !empty($image['image_role']) ? htmlspecialchars($image['image_role']) : 'Not Set'; ?>
-                                                                    </span>
-
-                                                                    <!-- Estimated time badge - always show, even if empty -->
-                                                                    <span class="badge badge-secondary mb-1">
-                                                                        <i class="far fa-clock mr-1"></i>
-                                                                        <?php echo !empty($estimatedTimeDisplay) ? $estimatedTimeDisplay : 'No Time Set'; ?>
-                                                                    </span>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        <?php endforeach; ?>
-                                    <?php endif; ?>
+                                                            echo $assigneeName;
+                                                            ?>
+                                                        </td>
+                                                        <td>
+                                                            <?php echo $estimatedTimeDisplay; ?>
+                                                        </td>
+                                                        <td>
+                                                            <?php echo !empty($image['image_role']) ? htmlspecialchars($image['image_role']) : 'Not Set'; ?>
+                                                        </td>
+                                                        <td>
+                                                            <span class="badge <?php echo $statusClass; ?>">
+                                                                <?php echo $statusText; ?>
+                                                            </span>
+                                                        </td>
+                                                    </tr>
+                                                <?php endforeach; ?>
+                                            <?php endif; ?>
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Assigned Tasks Section -->
+
+
                 <!-- TEAM ASSIGNMENTS Section -->
                 <div class="row mt-4">
                     <div class="col-12">
@@ -380,7 +434,70 @@ function getAssignmentStatusClass($status)
                                                             </div>
                                                         </td>
                                                         <td>
-                                                            <?php echo $assignment['role_task'] ? $assignment['role_task'] : 'Not Set'; ?>
+                                                            <?php
+                                                            // New logic: Get all image roles from this assignment's images
+                                                            $assignmentId = $assignment['assignment_id'];
+                                                            $sql = "SELECT DISTINCT image_role FROM tbl_project_images 
+                                                                       WHERE assignment_id = ? AND image_role IS NOT NULL AND image_role != ''";
+                                                            $stmt = $conn->prepare($sql);
+                                                            $stmt->bind_param("i", $assignmentId);
+                                                            $stmt->execute();
+                                                            $result = $stmt->get_result();
+
+                                                            $imageRoles = [];
+                                                            while ($row = $result->fetch_assoc()) {
+                                                                if (!empty($row['image_role'])) {
+                                                                    $imageRoles[] = $row['image_role'];
+                                                                }
+                                                            }
+
+                                                            // If no image roles found, fall back to the assignment role_task
+                                                            if (empty($imageRoles) && !empty($assignment['role_task'])) {
+                                                                $imageRoles[] = $assignment['role_task'];
+                                                            }
+
+                                                            // Display roles as badges
+                                                            if (!empty($imageRoles)) {
+                                                                echo '<div class="d-flex flex-wrap">';
+                                                                foreach ($imageRoles as $role) {
+                                                                    $roleClass = '';
+                                                                    $roleAbbr = '';
+
+                                                                    // Assign color classes based on role type
+                                                                    switch ($role) {
+                                                                        case 'Clipping Path':
+                                                                            $roleClass = 'badge-primary';
+                                                                            $roleAbbr = 'CP';
+                                                                            break;
+                                                                        case 'Color Correction':
+                                                                            $roleClass = 'badge-warning';
+                                                                            $roleAbbr = 'CC';
+                                                                            break;
+                                                                        case 'Retouch':
+                                                                            $roleClass = 'badge-success';
+                                                                            $roleAbbr = 'R';
+                                                                            break;
+                                                                        case 'Final':
+                                                                            $roleClass = 'badge-info';
+                                                                            $roleAbbr = 'F';
+                                                                            break;
+                                                                        case 'Retouch to Final':
+                                                                            $roleClass = 'badge-secondary';
+                                                                            $roleAbbr = 'RF';
+                                                                            break;
+                                                                        default:
+                                                                            $roleClass = 'badge-dark';
+                                                                            $roleAbbr = substr($role, 0, 2);
+                                                                            break;
+                                                                    }
+
+                                                                    echo '<span class="badge ' . $roleClass . ' mr-1 mb-1 p-2" title="' . htmlspecialchars($role) . '">' . $roleAbbr . '</span>';
+                                                                }
+                                                                echo '</div>';
+                                                            } else {
+                                                                echo '<span class="text-muted">No roles assigned</span>';
+                                                            }
+                                                            ?>
                                                         </td>
                                                         <td>
                                                             <?php echo $assignment['assigned_images']; ?> Images
@@ -534,7 +651,7 @@ function getAssignmentStatusClass($status)
     }
 </style>
 <script>
-    document.addEventListener("DOMContentLoaded", function () {
+    document.addEventListener("DOMContentLoaded", function() {
         // Wait for jQuery to be available
         function checkJQuery() {
             if (window.jQuery) {
@@ -551,19 +668,19 @@ function getAssignmentStatusClass($status)
         function initializePage() {
             // Logging functions
             const logging = {
-                debug: function (message, data = null) {
+                debug: function(message, data = null) {
                     console.debug(`[DEBUG][${new Date().toISOString()}] ${message}`, data || '');
                 },
-                info: function (message, data = null) {
+                info: function(message, data = null) {
                     console.info(`[INFO][${new Date().toISOString()}] ${message}`, data || '');
                 },
-                warning: function (message, data = null) {
+                warning: function(message, data = null) {
                     console.warn(`[WARNING][${new Date().toISOString()}] ${message}`, data || '');
                 },
-                error: function (message, data = null) {
+                error: function(message, data = null) {
                     console.error(`[ERROR][${new Date().toISOString()}] ${message}`, data || '');
                 },
-                interaction: function (action, data = null) {
+                interaction: function(action, data = null) {
                     console.log(`[USER ACTION][${new Date().toISOString()}] ${action}`, data || '');
 
                     // Send interaction to server for logging if needed
@@ -582,19 +699,21 @@ function getAssignmentStatusClass($status)
                         }
                     }
                 },
-                ajax: function (method, url, data = null) {
+                ajax: function(method, url, data = null) {
                     console.log(`[AJAX REQUEST][${new Date().toISOString()}] ${method} ${url}`, data || '');
                 },
-                ajaxSuccess: function (method, url, response = null) {
+                ajaxSuccess: function(method, url, response = null) {
                     console.log(`[AJAX SUCCESS][${new Date().toISOString()}] ${method} ${url}`, response || '');
                 },
-                ajaxError: function (method, url, error = null) {
+                ajaxError: function(method, url, error = null) {
                     console.error(`[AJAX ERROR][${new Date().toISOString()}] ${method} ${url}`, error || '');
                 }
             };
 
             // Log page load
-            logging.info('View Project page loaded', { projectId: <?php echo $project_id; ?> });
+            logging.info('View Project page loaded', {
+                projectId: <?php echo $project_id; ?>
+            });
 
             // Log info about project data
             logging.info('Project data loaded', {
@@ -605,36 +724,30 @@ function getAssignmentStatusClass($status)
             });
 
             // Log user interactions
-            $('.nav-link').click(function () {
+            $('.nav-link').click(function() {
                 const tabId = $(this).attr('href');
-                logging.interaction('Changed team member tab', { tab: tabId });
+                logging.interaction('Changed team member tab', {
+                    tab: tabId
+                });
             });
 
 
 
             // Handle image thumbnail clicks
-            $('.image-container').click(function () {
+            $('.image-container').click(function() {
                 const imageId = $(this).data('image-id');
-                logging.interaction('Image card clicked', { imageId });
+                logging.interaction('Image card clicked', {
+                    imageId
+                });
             });
 
-            // Handle view assigned images
-            $('.view-assigned-images').click(function () {
+            // View assigned images - improved version with REDO styling
+            $(document).on('click', '.view-assigned-images', function() {
                 const assignmentId = $(this).data('assignment-id');
 
-                logging.interaction('Viewing assigned images', {
-                    assignmentId
-                });
-
-                // Show loading indicator
-                const loadingModal = Swal.fire({
-                    title: 'Loading...',
-                    html: '<div class="text-center"><i class="fas fa-spinner fa-spin fa-3x"></i></div>',
-                    showConfirmButton: false,
-                    allowOutsideClick: false,
-                    allowEscapeKey: false,
-                    allowEnterKey: false
-                });
+                // Define project ID from PHP variable
+                // Make sure this is defined in your page
+                const projectId = <?php echo $project_id; ?>;
 
                 // AJAX call to get assigned images
                 $.ajax({
@@ -642,131 +755,118 @@ function getAssignmentStatusClass($status)
                     type: 'POST',
                     data: {
                         action: 'get_assigned_images',
-                        project_id: <?php echo $project_id; ?>,
+                        project_id: projectId,
                         assignment_id: assignmentId
                     },
-                    success: function (response) {
+                    success: function(response) {
                         try {
-                            // Close loading indicator
-                            loadingModal.close();
-
+                            // Parse the response
                             const data = JSON.parse(response);
-                            if (data.status === 'success') {
-                                let imagesHtml = '';
-                                let assignmentInfo = '';
 
-                                // Add assignment information if available
-                                if (data.assignment) {
-                                    // Skip assignment details as requested
-                                    assignmentInfo = '';
-                                }
+                            if (data.status === 'success' && data.images && data.images.length > 0) {
+                                // Build HTML table
+                                let tableHtml = '<div class="table-responsive" style="max-height: none;">';
+                                tableHtml += '<table class="table table-bordered table-sm" style="margin-bottom: 0;">';
+                                tableHtml += '<thead class="thead-light"><tr><th>Image</th><th>Role</th><th>Estimated Time</th><th>Status</th></tr></thead><tbody>';
 
-                                if (data.images && data.images.length > 0) {
-                                    // Create a table for image details
-                                    imagesHtml = `
-                                    <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
-                                        <table class="table table-bordered table-hover table-sm" id="assigned-images-table">
-                                            <thead class="thead-light sticky-top" style="position: sticky; top: 0; z-index: 1;">
-                                                <tr>
-                                                    <th>Image Preview</th>
-                                                    <th>Image Name</th>
-                                                    <th>Estimated Time</th>
-                                                    <th>Role</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                    `;
+                                // Add rows for each image
+                                data.images.forEach(function(image) {
+                                    const fileName = image.image_path ? image.image_path.split('/').pop() : 'Unknown';
+                                    const imageUrl = '../uploads/projects/' + projectId + '/' + image.image_path;
+                                    const estimatedHours = Math.floor((image.estimated_time || 0) / 60);
+                                    const estimatedMinutes = (image.estimated_time || 0) % 60;
+                                    const estimatedTimeDisplay = estimatedHours + 'h ' + estimatedMinutes + 'm';
 
-                                    data.images.forEach(image => {
-                                        const fileName = image.image_path ? image.image_path.split('/').pop() : 'Unknown';
-                                        const imageUrl = image.image_url || '';
-                                        const estimatedHours = Math.floor((image.estimated_time || 0) / 60);
-                                        const estimatedMinutes = (image.estimated_time || 0) % 60;
-                                        const imageRole = image.image_role || 'Not specified';
+                                    // Determine status badge class
+                                    let statusBadgeClass = 'badge-secondary';
+                                    let statusText = 'Available';
 
-                                        // Create a row for each image with preview
-                                        imagesHtml += `
-                                            <tr>
-                                                <td class="text-center">
-                                                    <img src="${imageUrl}" alt="${fileName}" style="max-height: 80px; max-width: 100%;" 
-                                                        onclick="window.open('${imageUrl}', '_blank')" class="cursor-pointer">
-                                                </td>
-                                                <td>
-                                                    <a href="${imageUrl}" target="_blank" class="image-preview-link">
-                                                        ${fileName}
-                                                    </a>
-                                                </td>
-                                                <td>
-                                                    ${estimatedHours}hr ${estimatedMinutes}min
-                                                </td>
-                                                <td>
-                                                    ${imageRole}
-                                                </td>
-                                            </tr>
-                                        `;
-                                    });
-
-                                    imagesHtml += `
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                    `;
-                                } else {
-                                    imagesHtml = '<div class="alert alert-info text-center">No images assigned to this team member.</div>';
-                                }
-
-                                // In the success function of the AJAX call where the modal is created
-                                Swal.fire({
-                                    title: `<i class="fas fa-images mr-2"></i>Assigned Images (${data.images ? data.images.length : 0})`,
-                                    html: imagesHtml,
-                                    width: '90%',  // Change to 90% instead of 100% to add some margin
-                                    confirmButtonText: 'Close',
-                                    confirmButtonColor: '#3085d6',
-                                    showCloseButton: true,
-                                    customClass: {
-                                        container: 'swal-centered-container',
-                                        popup: 'swal-large-content'
+                                    if (image.status_image) {
+                                        switch (image.status_image) {
+                                            case 'in_progress':
+                                                statusBadgeClass = 'badge-primary';
+                                                statusText = 'In Progress';
+                                                break;
+                                            case 'finish':
+                                                statusBadgeClass = 'badge-info';
+                                                statusText = 'Finished';
+                                                break;
+                                            case 'completed':
+                                                statusBadgeClass = 'badge-success';
+                                                statusText = 'Completed';
+                                                break;
+                                        }
                                     }
+
+                                    // Apply proper row class for redo status
+                                    const rowClass = image.redo === '1' ? 'class="table-danger"' : '';
+
+                                    tableHtml += '<tr ' + rowClass + '>';
+                                    tableHtml += '<td><a href="' + imageUrl + '" target="_blank" class="image-preview-link">' + fileName + '</a></td>';
+                                    tableHtml += '<td>' + (image.image_role || 'Not set') + '</td>';
+                                    tableHtml += '<td>' + estimatedTimeDisplay + '</td>';
+                                    tableHtml += '<td><span class="badge ' + statusBadgeClass + '">' + statusText + '</span>';
+
+                                    // Add REDO badge if needed
+                                    if (image.redo === '1') {
+                                        tableHtml += ' <span class="badge badge-danger">REDO</span>';
+                                    }
+
+                                    tableHtml += '</td>';
+                                    tableHtml += '</tr>';
                                 });
 
-                                // Add this custom style right after the Swal.fire call
-                                $('<style>' +
-                                    '.swal-centered-container { display: flex !important; justify-content: center !important; align-items: center !important; }' +
-                                    '.swal2-popup { margin: 0 auto !important; max-width: 1200px !important; }' +  // Added max-width for very large screens
-                                    '.swal-large-content { max-height: 80vh !important; overflow-y: auto !important; }' +
-                                    '</style>').appendTo('head');
-                            } else {
-                                Swal.fire({
-                                    icon: 'error',
-                                    title: 'Error',
-                                    text: data.message || 'Failed to load assigned images'
+                                tableHtml += '</tbody></table></div>';
+
+                                // Create a modal with jQuery
+                                $('body').append(
+                                    '<div id="assignedImagesModal" class="modal fade" tabindex="-1" role="dialog">' +
+                                    '<div class="modal-dialog modal-xl" role="document" style="max-width: 95%; margin: 10px auto;">' +
+                                    '<div class="modal-content">' +
+                                    '<div class="modal-header bg-primary text-white py-2">' +
+                                    '<h5 class="modal-title">Assigned Images (' + data.images.length + ')</h5>' +
+                                    '<button type="button" class="close text-white" data-dismiss="modal">&times;</button>' +
+                                    '</div>' +
+                                    '<div class="modal-body p-2">' + tableHtml + '</div>' +
+                                    '<div class="modal-footer py-1">' +
+                                    '<button type="button" class="btn btn-sm btn-secondary" data-dismiss="modal">Close</button>' +
+                                    '</div>' +
+                                    '</div>' +
+                                    '</div>' +
+                                    '</div>'
+                                );
+
+                                // Show the modal
+                                $('#assignedImagesModal').modal('show');
+
+                                // Remove modal from DOM after it's hidden
+                                $('#assignedImagesModal').on('hidden.bs.modal', function() {
+                                    $(this).remove();
                                 });
+                            } else {
+                                alert("No images found or error in response.");
+                                console.error("API Response:", data);
                             }
                         } catch (e) {
-                            console.error('Error parsing JSON response', e);
-                            Swal.fire({
-                                icon: 'error',
-                                title: 'Error',
-                                text: 'An error occurred while processing the response'
-                            });
+                            alert("Error processing response: " + e.message);
+                            console.error("Error:", e);
+                            console.log("Raw response:", response);
                         }
                     },
-                    error: function (xhr, status, error) {
-                        // Close loading indicator
-                        loadingModal.close();
-
-                        console.error('AJAX Error', {
+                    error: function(xhr, status, error) {
+                        alert("AJAX Error: " + error);
+                        console.error("AJAX Error:", {
+                            xhr,
                             status,
                             error
-                        });
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Error',
-                            text: 'An error occurred while loading assigned images: ' + error
                         });
                     }
                 });
             });
+
+
+
+
 
 
 

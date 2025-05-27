@@ -34,15 +34,6 @@ $query = "SELECT DISTINCT p.*, c.company_name
           )
           WHERE p.hidden = " . ($show_hidden ? "1" : "0");
 
-// Only check for overdue tasks in active view
-if (!$show_hidden) {
-    $query .= " AND NOT EXISTS (
-        SELECT 1 FROM tbl_project_assignments pa 
-        JOIN tbl_accounts acc ON pa.user_id = acc.user_id 
-        WHERE pa.project_id = p.project_id AND acc.has_overdue_tasks = 1
-    )";
-}
-
 if (isset($filters['company_id'])) {
     $company_id = intval($filters['company_id']);
     $query .= " AND p.company_id = " . $company_id;

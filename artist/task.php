@@ -164,7 +164,6 @@ try {
   $tasks = $result->fetch_all(MYSQLI_ASSOC);
 
   error_log("Task.php - Found " . count($tasks) . " tasks for user ID: $user_id");
-
 } catch (Exception $e) {
   // Log the error
   error_log("Error in artist/task.php: " . $e->getMessage());
@@ -178,6 +177,36 @@ try {
 include("includes/header.php");
 ?>
 
+<style>
+  /* Badge styling */
+  .badge-primary {
+    background-color: #007bff !important;
+    color: rgb(255, 255, 255) !important;
+  }
+
+  .badge-info {
+    background-color: #17a2b8 !important;
+    color: #f7f7f7 !important;
+  }
+
+  .badge-secondary {
+    background-color: #6c757d !important;
+    color: #f7f7f7 !important;
+  }
+
+  .badge-success {
+    background-color: #28a745 !important;
+  }
+
+  .badge-warning {
+    background-color: #ffc107 !important;
+    color: #000000 !important;
+  }
+
+  .badge-danger {
+    background-color: #dc3545 !important;
+  }
+</style>
 <div class="main-container">
   <?php include("includes/nav.php"); ?>
 
@@ -229,8 +258,10 @@ include("includes/header.php");
               <select id="deadlineFilter" class="form-control form-control-sm mr-2 mb-2" style="width: 150px;">
                 <option value="">All Deadlines</option>
                 <option value="upcoming">Upcoming</option>
+                <option value="due_tomorrow">Due Tomorrow</option>
                 <option value="overdue">Overdue</option>
               </select>
+
 
               <button id="applyFilter" class="btn btn-info btn-sm">
                 <i class="fas fa-filter mr-1"></i> Apply Filters
@@ -243,33 +274,6 @@ include("includes/header.php");
           </div>
           <div class="card-body">
             <!-- Table controls -->
-            <div class="row mb-4">
-              <!-- Left Group: Export buttons -->
-              <!-- <div class="col-md-4">
-                <div class="btn-group">
-                  <button type="button" class="btn btn-success btn-sm export-excel" title="Export to Excel">
-                    <i class="fas fa-file-excel mr-1"></i> Excel
-                  </button>
-                  <button type="button" class="btn btn-danger btn-sm export-pdf" title="Export to PDF">
-                    <i class="fas fa-file-pdf mr-1"></i> PDF
-                  </button>
-                  <button type="button" class="btn btn-info btn-sm export-print" title="Print">
-                    <i class="fas fa-print mr-1"></i> Print
-                  </button>
-                </div>
-              </div> -->
-
-              <!-- Right Group: Search box -->
-              <!-- <div class="col-md-4">
-                <div class="search-box float-right" style="width: 250px;">
-                  <input type="text" id="searchInput" class="form-control form-control-sm"
-                    placeholder="Search tasks...">
-                  <button type="button" class="btn">
-                    <i class="fas fa-search"></i>
-                  </button>
-                </div>
-              </div> -->
-            </div>
 
             <!-- Table with loading overlay -->
             <div class="position-relative">
@@ -290,24 +294,24 @@ include("includes/header.php");
                 <?php unset($_SESSION['error_message']); ?>
               <?php endif; ?>
 
-              <div class="table-responsive">
-                <table id="taskTable" class="table table-bordered table-hover">
+              <div class="table-responsive" style="max-height: 600px; overflow-y: scroll;">
+                <table id="taskTable" class="table table-bordered table-hover" style="margin-bottom: 0;">
                   <thead>
-                    <tr>
+                    <tr style="line-height: 1;">
                       <th width="5%" class="d-none">#</th>
-                      <th width="12%">Project Details</th>
-                      <th width="10%">Status</th>
-                      <th width="10%">Date Arrived</th>
-                      <th width="15%">Total Images / Assigned</th>
-                      <th width="15%">Deadline / Task Deadline</th>
-                      <th width="10%">Role</th>
-                      <th width="10%" class="text-center">Actions</th>
+                      <th width="12%" style="padding: 15px;">Project Details</th>
+                      <th width="10%" style="padding: 15px;">Status</th>
+                      <th width="10%" style="padding: 15px;">Date Arrived</th>
+                      <th width="15%" style="padding: 15px;">Total Images / Assigned</th>
+                      <th width="15%" style="padding: 15px;">Deadline / Task Deadline</th>
+                      <th width="10%" style="padding: 15px;">Role</th>
+                      <th width="10%" class="text-center" style="padding: 15px;">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     <?php if (empty($tasks)): ?>
                       <tr>
-                        <td colspan="8" class="text-center">No tasks assigned to you yet</td>
+                        <td colspan="8" class="text-center" style="padding: 4px;">No tasks assigned to you yet</td>
                       </tr>
                     <?php else: ?>
                       <?php foreach ($tasks as $task):
@@ -336,85 +340,87 @@ include("includes/header.php");
                         } elseif ($is_task_due_tomorrow) {
                           $rowClass = 'table-warning'; // Orange background for due tomorrow
                         }
-                        ?>
-                        <tr class="<?php echo $rowClass; ?>">
+                      ?>
+                        <tr class="<?php echo $rowClass; ?>" style="line-height: 1;">
                           <td class="d-none"><?php echo $task['assignment_id']; ?></td>
-                          <td>
-                            <div class="project-info">
-                              <div class="project-title">
-                                <?php echo htmlspecialchars($task['project_title']); ?>
+                          <td style="padding: 4px;">
+                            <div style="margin: 0;">
+                              <div style="margin: 0;"><?php echo htmlspecialchars($task['project_title']); ?>
                                 <?php if ($is_task_locked): ?>
-                                  <span class="ml-1 text-danger" title="This task is locked due to overdue tasks">
+                                  <span class="text-danger" title="This task is locked due to overdue tasks">
                                     <i class="fas fa-lock"></i>
                                   </span>
                                 <?php endif; ?>
-
                               </div>
-                              <div class="project-client">
+                              <div style="margin: 0; font-size: 0.85rem;">
                                 <i class="fas fa-building mr-1"></i>
                                 <?php echo htmlspecialchars($task['company_name'] ?? 'N/A'); ?>
                               </div>
                             </div>
                           </td>
-                          <td>
-                            <span class="badge badge-<?php echo $statusClass; ?>">
+                          <td style="padding: 4px;">
+                            <span class="badge badge-<?php echo $statusClass; ?>" style="padding: 2px 5px; font-size: 0.8rem;">
                               <?php echo ucfirst(str_replace('_', ' ', $task['status_assignee'])); ?>
                             </span>
-                            <div class="mt-1">
-                              <span class="badge badge-<?php echo $priorityClass; ?>">
-                                <?php echo ucfirst($task['priority']); ?>
-                              </span>
+                            <span class="badge badge-<?php echo $priorityClass; ?>" style="padding: 2px 5px; font-size: 0.8rem; display: inline-block; margin-top: 2px;">
+                              <?php echo ucfirst($task['priority']); ?>
+                            </span>
+                          </td>
+                          <td style="padding: 4px;"><?php echo date('M d, Y', strtotime($task['date_arrived'])); ?></td>
+                          <td style="padding: 4px;">
+                            <div style="margin: 0;">
+                              <i class="fas fa-images mr-1"></i>
+                              <span><?php echo $task['total_images'] ?? 0; ?> / <?php echo $task['assigned_image_count']; ?></span>
                             </div>
                           </td>
-                          <td><?php echo date('M d, Y', strtotime($task['date_arrived'])); ?></td>
-                          <td>
-                            <div class="task-count">
-                              <div class="images-count">
-                                <i class="fas fa-images mr-1"></i>
-                                <span><?php echo $task['total_images'] ?? 0; ?> /
-                                  <?php echo $task['assigned_image_count']; ?></span>
-                              </div>
-                            </div>
-                          </td>
-                          <td>
-                            <div class="deadlines">
-                              <div class="project-deadline">
-                                <strong>Project:</strong>
-                                <?php echo date('M d, Y', strtotime($task['project_deadline'])); ?>
-                              </div>
-                              <div
-                                class="task-deadline <?php echo ($is_task_overdue) ? 'text-danger' : ($is_task_due_today ? 'text-danger' : ''); ?>">
+                          <td style="padding: 4px;">
+                            <div style="margin: 0; line-height: 1.1;">
+                              <span><strong>Project:</strong> <?php echo date('M d, Y', strtotime($task['project_deadline'])); ?></span>
+                              <div class="<?php echo ($is_task_overdue) ? 'text-danger' : ($is_task_due_today ? 'text-danger' : ''); ?>" style="margin: 0;">
                                 <strong>Task:</strong> <?php echo date('M d, Y', strtotime($task['deadline'])); ?>
                                 <?php if ($is_task_overdue): ?>
-                                  <span class="badge badge-danger ml-1">Overdue</span>
+                                  <span class="badge badge-danger" style="padding: 1px 3px; font-size: 0.75rem;">Overdue</span>
                                 <?php elseif ($is_task_due_today): ?>
-                                  <span class="badge badge-warning ml-1">Deadline Today</span>
+                                  <span class="badge badge-warning" style="padding: 1px 3px; font-size: 0.75rem;">Deadline Today</span>
                                 <?php elseif ($is_task_due_tomorrow): ?>
-                                  <span class="badge badge-warning ml-1">Due Tomorrow</span>
+                                  <span class="badge badge-warning" style="padding: 1px 3px; font-size: 0.75rem;">Due Tomorrow</span>
                                 <?php endif; ?>
                               </div>
                             </div>
                           </td>
-                          <td>
+                          <td style="padding: 4px;">
                             <?php if (!empty($task['all_roles'])): ?>
-                              <div class="d-flex flex-wrap">
+                              <div class="d-flex flex-wrap" style="gap: 2px; margin: 0;">
                                 <?php
                                 $roles = explode(', ', $task['all_roles']);
                                 foreach ($roles as $role):
                                   // Convert to acronym
                                   $acronym = '';
+                                  // Define color for each role
+                                  $bgColor = '';
+                                  $textColor = 'white';
+
                                   switch (strtolower($role)) {
                                     case 'retouch':
                                       $acronym = 'R';
+                                      $bgColor = '#28a745'; // Orange-red
                                       break;
                                     case 'clipping path':
-                                      $acronym = 'CP';
+                                      $acronym = 'Cp';
+                                      $bgColor = '#007bff'; // Blue
                                       break;
                                     case 'color correction':
                                       $acronym = 'Cc';
+                                      $bgColor = '#ffc107'; // Yellow
+                                      $textColor = '#333333'; // Darker text for better contrast on yellow
                                       break;
                                     case 'final':
                                       $acronym = 'F';
+                                      $bgColor = '#17a2b8'; // Green
+                                      break;
+                                    case 'retouch to final':
+                                      $acronym = 'RF';
+                                      $bgColor = '#6c757d'; // Purple
                                       break;
                                     default:
                                       // For other roles, use first letter or first 2 letters
@@ -424,33 +430,35 @@ include("includes/header.php");
                                       } else {
                                         $acronym = strtoupper(substr($role, 0, 2));
                                       }
+                                      $bgColor = '#95A5A6'; // Gray for default
                                   }
-                                  ?>
-                                  <div class="role-badge" title="<?php echo htmlspecialchars($role); ?>"
-                                    style="display:inline-block; padding:3px 8px; margin-right:5px; background-color:#17a2b8; color:white; border-radius:3px; font-size:0.8rem;">
+                                ?>
+                                  <div title="<?php echo htmlspecialchars($role); ?>"
+                                    style="display:inline-block; padding:1px 4px; background-color:<?php echo $bgColor; ?>; color:<?php echo $textColor; ?>; border-radius:3px; font-size:0.75rem;">
                                     <?php echo $acronym; ?>
                                   </div>
                                 <?php endforeach; ?>
                               </div>
                             <?php else: ?>
-                              <span class="badge badge-info">
+                              <span class="badge badge-info" style="padding: 2px 5px; font-size: 0.8rem;">
                                 <?php echo htmlspecialchars($task['role_task'] ?? 'Not Assigned'); ?>
                               </span>
                             <?php endif; ?>
                           </td>
-                          <td class="text-center">
+
+                          <td class="text-center" style="padding: 4px;">
                             <?php if ($is_task_locked): ?>
                               <button type="button" class="btn btn-secondary btn-sm task-locked" data-toggle="modal"
-                                data-target="#accessBlockedModal"
+                                data-target="#accessBlockedModal" style="padding: 2px 5px; font-size: 0.8rem;"
                                 data-reason="Please complete your earliest overdue task before accessing other tasks.">
                                 <i class="fas fa-lock mr-1"></i> Locked
                               </button>
                             <?php else: ?>
-                              <a href="view-task.php?id=<?php echo $task['assignment_id']; ?>" class="btn btn-info btn-sm">
+                              <a href="view-task.php?id=<?php echo $task['assignment_id']; ?>" class="btn btn-info btn-sm" style="padding: 2px 5px; font-size: 0.8rem;">
                                 <i class="fas fa-eye mr-1"></i> View
                               </a>
                               <?php if ($task['status_assignee'] === 'completed'): ?>
-                                <button type="button" class="btn btn-secondary btn-sm hide-task-btn mt-1"
+                                <button type="button" class="btn btn-secondary btn-sm hide-task-btn" style="padding: 2px 5px; font-size: 0.8rem; margin-top: 2px;"
                                   data-id="<?php echo $task['assignment_id']; ?>">
                                   <i class="fas fa-eye-slash mr-1"></i> Hide
                                 </button>
@@ -463,6 +471,9 @@ include("includes/header.php");
                   </tbody>
                 </table>
               </div>
+
+
+
             </div>
           </div>
         </div>
@@ -471,50 +482,6 @@ include("includes/header.php");
   </div>
 </div>
 
-<style>
-  /* Task table styling */
-  .project-title {
-    font-weight: bold;
-    font-size: 1rem;
-  }
-
-  .company-info {
-    font-size: 0.8rem;
-    opacity: 0.8;
-  }
-
-  .deadline-warning {
-    display: block;
-    margin-top: 5px;
-  }
-
-  .task-locked {
-    background-color: #6c757d;
-    border-color: #6c757d;
-    cursor: not-allowed;
-  }
-
-  .task-count {
-    font-size: 1rem;
-    font-weight: bold;
-    color: #343a40;
-  }
-
-  /* First overdue task styling */
-  .first-overdue-indicator {
-    background-color: #fff3cd;
-    color: #856404;
-    padding: 2px 5px;
-    border-radius: 3px;
-    font-weight: bold;
-    display: inline-block;
-    margin-left: 5px;
-  }
-
-  /* Override DataTables styling */
-  .dataTables_wrapper .dataTables_filter {
-    margin-bottom: 15px;
-  }
 </style>
 
 <?php include("includes/footer.php"); ?>
@@ -523,7 +490,7 @@ include("includes/header.php");
   // Debug jQuery loading
   console.log("jQuery version: " + (typeof jQuery !== 'undefined' ? jQuery.fn.jquery : 'not loaded'));
 
-  $(document).ready(function () {
+  $(document).ready(function() {
     console.log("jQuery document ready fired successfully");
 
     // Initialize DataTable
@@ -538,85 +505,10 @@ include("includes/header.php");
       "dom": '<"row align-items-center"<"col-sm-6"l><"col-sm-6 d-flex justify-content-end"f>><"row"<"col-sm-12"tr>><"row"<"col-sm-5"i><"col-sm-7 d-flex justify-content-end"p>>'
     });
 
-    // Handle start task button click
-    $('.start-task-btn').on('click', function () {
-      var taskId = $(this).data('id');
-      var button = $(this);
-      if (confirm('Are you sure you want to start this task?')) {
-        $.ajax({
-          url: 'controllers/task_controller.php',
-          type: 'POST',
-          data: {
-            action: 'start_task',
-            assignment_id: taskId
-          },
-          dataType: 'json',
-          success: function (response) {
-            if (response.status === 'success') {
-              // Update UI without reloading
-              var row = button.closest('tr');
-              row.find('.project-status').html('<i class="fas fa-spinner fa-spin mr-1"></i> In Progress');
-              row.find('.project-status').removeClass('status-pending').addClass('status-in_progress');
 
-              // Replace start button with mark done button
-              button.replaceWith('<button type="button" class="btn btn-success btn-sm mark-done-btn" ' +
-                'data-id="' + taskId + '" ' +
-                'data-status="in_progress" ' +
-                'title="Mark as Finished">' +
-                '<i class="fas fa-check"></i>' +
-                '</button>');
-
-              // Show success message
-              toastr.success('Task started successfully');
-            } else {
-              toastr.error('Error: ' + response.message);
-            }
-          },
-          error: function () {
-            toastr.error('Error occurred while starting the task');
-          }
-        });
-      }
-    });
-
-    // Handle mark done button click
-    $('.mark-done-btn').on('click', function () {
-      var taskId = $(this).data('id');
-      var button = $(this);
-      if (confirm('Are you sure you want to mark this task as finished? This will send it to QA for review.')) {
-        $.ajax({
-          url: 'controllers/task_controller.php',
-          type: 'POST',
-          data: {
-            action: 'complete_task',
-            assignment_id: taskId
-          },
-          dataType: 'json',
-          success: function (response) {
-            if (response.status === 'success') {
-              // Update UI without reloading
-              var row = button.closest('tr');
-              row.find('.project-status').html('<i class="fas fa-check mr-1"></i> Finished');
-              row.find('.project-status').removeClass('status-in_progress').addClass('status-finish');
-
-              // Remove the button
-              button.remove();
-
-              // Show success message
-              toastr.success('Task marked as finished and sent to QA');
-            } else {
-              toastr.error('Error: ' + response.message);
-            }
-          },
-          error: function () {
-            toastr.error('Error occurred while completing the task');
-          }
-        });
-      }
-    });
 
     // Handle hide task button click
-    $(document).on('click', '.hide-task-btn', function () {
+    $(document).on('click', '.hide-task-btn', function() {
       var taskId = $(this).data('id');
       var button = $(this);
       var row = button.closest('tr');
@@ -630,10 +522,10 @@ include("includes/header.php");
             assignment_id: taskId
           },
           dataType: 'json',
-          success: function (response) {
+          success: function(response) {
             if (response.status === 'success') {
               // Remove the row from the table
-              row.fadeOut(300, function () {
+              row.fadeOut(300, function() {
                 $(this).remove();
               });
 
@@ -643,7 +535,7 @@ include("includes/header.php");
               toastr.error('Error: ' + response.message);
             }
           },
-          error: function (xhr, status, error) {
+          error: function(xhr, status, error) {
             console.error('AJAX Error:', error);
             toastr.error('An error occurred while hiding the task');
           }
@@ -652,12 +544,12 @@ include("includes/header.php");
     });
 
     // Filter functionality
-    $('#applyFilter').on('click', function () {
+    $('#applyFilter').on('click', function() {
       applyFilters();
     });
 
     // Reset filters
-    $('#resetFilter').on('click', function () {
+    $('#resetFilter').on('click', function() {
       $('#statusFilter').val('');
       $('#priorityFilter').val('');
       $('#deadlineFilter').val('');
@@ -677,7 +569,7 @@ include("includes/header.php");
       $.fn.dataTable.ext.search.pop();
 
       // Add custom filter function
-      $.fn.dataTable.ext.search.push(function (settings, data, dataIndex) {
+      $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
         const row = table.row(dataIndex).node();
 
         // Status filtering
@@ -705,6 +597,8 @@ include("includes/header.php");
           if (deadline === 'overdue' && !hasOverdueBadge) {
             return false;
           } else if (deadline === 'urgent' && !hasTodayBadge && !hasTomorrowBadge) {
+            return false;
+          } else if (deadline === 'due_tomorrow' && !hasTomorrowBadge) {
             return false;
           } else if (deadline === 'upcoming' && (hasOverdueBadge || hasTodayBadge || hasTomorrowBadge)) {
             return false;
@@ -775,8 +669,8 @@ include("includes/header.php");
 
 <script>
   // Handle showing the access blocked modal with the correct reason
-  $(document).ready(function () {
-    $('#accessBlockedModal').on('show.bs.modal', function (event) {
+  $(document).ready(function() {
+    $('#accessBlockedModal').on('show.bs.modal', function(event) {
       var button = $(event.relatedTarget);
       var reason = button.data('reason');
       var modal = $(this);

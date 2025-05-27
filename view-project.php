@@ -71,7 +71,7 @@ function getAssignmentStatusClass($status)
 $query = "SELECT p.*, c.company_name 
           FROM tbl_projects p 
           LEFT JOIN tbl_companies c ON p.company_id = c.company_id 
-          WHERE p.project_id = ?";
+          WHERE p.project_id = ? AND (p.hidden = 0 OR p.hidden IS NULL)";
 
 $stmt = $conn->prepare($query);
 $stmt->bind_param("i", $project_id);
@@ -120,6 +120,61 @@ $assignments = $assignments_result->fetch_all(MYSQLI_ASSOC);
         background-color: #000000;
         color: #f7f7f7;
         overflow-x: hidden;
+    }
+
+    /* Glass effect for images table */
+    #imagesTable {
+        background: rgba(30, 30, 30, 0.4);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    /* Glass effect for assigned rows */
+    #imagesTable tr.table-light {
+        background: rgba(255, 255, 255, 0.15) !important;
+    }
+
+    #imagesTable tr.table-light td {
+        color: #000000 !important;
+    }
+
+    #imagesTable tr.table-light a {
+        color: #000000 !important;
+    }
+
+    /* Style for redo items - more vibrant red */
+    #imagesTable tr.table-danger {
+        background: rgba(255, 40, 40, 0.7) !important;
+    }
+
+    #imagesTable tr.table-danger td,
+    #imagesTable tr.table-danger a {
+        color: #000000 !important;
+    }
+
+    /* Hover effects */
+    #imagesTable tr.table-light:hover {
+        background: rgba(255, 255, 255, 0.25) !important;
+    }
+
+    #imagesTable tr.table-danger:hover {
+        background: rgba(255, 50, 50, 0.8) !important;
+    }
+
+    /* Control Image column width and text truncation */
+    #imagesTable td:nth-child(2) {
+        max-width: 250px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    #imagesTable td:nth-child(2) a {
+        display: block;
+        width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 
     .container {
@@ -211,12 +266,12 @@ $assignments = $assignments_result->fetch_all(MYSQLI_ASSOC);
 
     /* Badge styling */
     .badge-primary {
-        background-color: #ffb22e !important;
-        color: #000000 !important;
+        background-color: #007bff !important;
+        color: rgb(255, 255, 255) !important;
     }
 
     .badge-info {
-        background-color: #864937 !important;
+        background-color: #17a2b8 !important;
         color: #f7f7f7 !important;
     }
 
@@ -230,7 +285,7 @@ $assignments = $assignments_result->fetch_all(MYSQLI_ASSOC);
     }
 
     .badge-warning {
-        background-color: #ffb22e !important;
+        background-color: #ffc107 !important;
         color: #000000 !important;
     }
 
@@ -402,6 +457,368 @@ $assignments = $assignments_result->fetch_all(MYSQLI_ASSOC);
         </ol>
     </div>
 
+
+
+
+
+    <!-- Project Images Section -->
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="card-title mb-0">
+                <i class="fas fa-images mr-2"></i>Project Images (Total: <?php echo count($images); ?>)
+            </h5>
+        </div>
+        <div class="card-body">
+            <!-- Images Table (View Only) -->
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover" id="imagesTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 40px;">#</th>
+                            <th>Image</th>
+                            <th>Assignee</th>
+                            <th>Time</th>
+                            <th>Role</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php if (empty($images)): ?>
+                            <tr>
+                                <td colspan="6" class="text-center">No images uploaded yet.</td>
+                            </tr>
+                        <?php else: ?>
+                            <?php foreach ($images as $index => $image): ?>
+                                <?php
+                                // Get file name for display
+                                $fileName = '';
+                                if (isset($image['file_name']) && !empty($image['file_name'])) {
+                                    $fileName = $image['file_name'];
+                                } else if (isset($image['image_path']) && !empty($image['image_path'])) {
+                                    $fileName = pathinfo($image['image_path'], PATHINFO_BASENAME);
+                                } else {
+                                    $fileName = 'Image ' . $image['image_id'];
+                                }
+
+                                // Format estimated time
+                                $estimatedTimeDisplay = '';
+                                if (isset($image['estimated_time']) && !empty($image['estimated_time'])) {
+                                    $hours = floor($image['estimated_time'] / 60);
+                                    $minutes = $image['estimated_time'] % 60;
+
+                                    if ($hours > 0) {
+                                        $estimatedTimeDisplay .= $hours . 'h ';
+                                    }
+                                    if ($minutes > 0 || $hours == 0) {
+                                        $estimatedTimeDisplay .= $minutes . 'm';
+                                    }
+                                } else {
+                                    $estimatedTimeDisplay = 'Not set';
+                                }
+
+                                // Determine image status - completely separate from assignee name
+                                $statusClass = 'badge-secondary';
+                                $statusText = 'Available';
+
+                                if (isset($image['assignment_id']) && $image['assignment_id']) {
+                                    $statusClass = 'badge-primary';
+                                    $statusText = 'Assigned';
+                                }
+
+                                if (isset($image['status_image'])) {
+                                    if ($image['status_image'] === 'in_progress') {
+                                        $statusClass = 'badge-warning';
+                                        $statusText = 'In Progress';
+                                    } else if ($image['status_image'] === 'finish') {
+                                        $statusClass = 'badge-info';
+                                        $statusText = 'Finished';
+                                    } else if ($image['status_image'] === 'completed') {
+                                        $statusClass = 'badge-success';
+                                        $statusText = 'Completed';
+                                    }
+                                }
+
+                                // Determine row class based on redo status and assignment
+                                $rowClass = '';
+                                if (isset($image['redo']) && $image['redo'] == '1') {
+                                    $rowClass = 'table-danger';
+                                } elseif (isset($image['assignment_id']) && $image['assignment_id'] > 0) {
+                                    $rowClass = 'table-light';
+                                }
+                                ?>
+                                <tr data-image-id="<?php echo $image['image_id']; ?>" class="<?php echo $rowClass; ?>">
+                                    <td class="text-center">
+                                        <?php echo $index + 1; ?>
+                                    </td>
+                                    <td>
+                                        <a href="../uploads/projects/<?php echo $project_id; ?>/<?php echo $image['image_path']; ?>"
+                                            target="_blank" class="image-preview-link" title="View Image">
+                                            <?php echo htmlspecialchars($fileName); ?>
+                                        </a>
+                                    </td>
+                                    <td>
+                                        <?php
+                                        // Display assignee name
+                                        $assigneeName = 'Not Assigned';
+
+                                        // First try to get assignee name from the image data directly
+                                        if (isset($image['assignee_first_name']) && !empty($image['assignee_first_name'])) {
+                                            $assigneeName = htmlspecialchars($image['assignee_first_name']);
+                                            if (isset($image['assignee_last_name']) && !empty($image['assignee_last_name'])) {
+                                                $assigneeName .= ' ' . htmlspecialchars($image['assignee_last_name']);
+                                            }
+                                        }
+                                        // If not found, try to get from assignments array
+                                        else if (isset($image['assignment_id']) && $image['assignment_id'] > 0) {
+                                            foreach ($assignments as $assignment) {
+                                                if ($assignment['assignment_id'] == $image['assignment_id']) {
+                                                    // Try to get user name from the assignment
+                                                    if (isset($assignment['user_first_name']) && !empty($assignment['user_first_name'])) {
+                                                        $assigneeName = htmlspecialchars($assignment['user_first_name']);
+                                                        if (isset($assignment['user_last_name']) && !empty($assignment['user_last_name'])) {
+                                                            $assigneeName .= ' ' . htmlspecialchars($assignment['user_last_name']);
+                                                        }
+                                                    }
+                                                    // If no name in assignment, try to use username
+                                                    else if (isset($assignment['username']) && !empty($assignment['username'])) {
+                                                        $assigneeName = htmlspecialchars($assignment['username']);
+                                                    }
+                                                    // If still no name, use user_id as last resort
+                                                    else if (isset($assignment['user_id']) && $assignment['user_id'] > 0) {
+                                                        $assigneeName = 'User #' . $assignment['user_id'];
+                                                    }
+                                                    break;
+                                                }
+                                            }
+                                        }
+
+                                        echo $assigneeName;
+                                        ?>
+                                    </td>
+                                    <td>
+                                        <?php echo $estimatedTimeDisplay; ?>
+                                    </td>
+                                    <td>
+                                        <?php echo !empty($image['image_role']) ? htmlspecialchars($image['image_role']) : 'Not Set'; ?>
+                                    </td>
+                                    <td>
+                                        <span class="badge <?php echo $statusClass; ?>">
+                                            <?php echo $statusText; ?>
+                                        </span>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Team Assignments Section -->
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="card-title mb-0">
+                <i class="fas fa-users mr-2"></i>Team Assignments
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover">
+                    <thead class="thead-light">
+                        <tr>
+                            <th>Team Member</th>
+                            <th>Role</th>
+                            <th>Assigned Images</th>
+                            <th>Status</th>
+                            <th>Deadline</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php if (empty($assignments)): ?>
+                            <tr>
+                                <td colspan="5" class="text-center">No team assignments found.</td>
+                            </tr>
+                        <?php else: ?>
+                            <?php foreach ($assignments as $assignment): ?>
+                                <tr>
+                                    <td>
+                                        <?php
+                                        $assigneeName = "Not Assigned";
+                                        // Get the user's name directly from the database
+                                        if (!empty($assignment['user_id'])) {
+                                            $userQuery = "SELECT CONCAT(first_name, ' ', last_name) as full_name FROM tbl_users WHERE user_id = ?";
+                                            $userStmt = $conn->prepare($userQuery);
+                                            if ($userStmt) {
+                                                $userStmt->bind_param("i", $assignment['user_id']);
+                                                $userStmt->execute();
+                                                $userResult = $userStmt->get_result();
+                                                if ($userResult && $userRow = $userResult->fetch_assoc()) {
+                                                    $assigneeName = $userRow['full_name'];
+                                                }
+                                            }
+                                        }
+                                        echo $assigneeName;
+                                        ?>
+                                    </td>
+                                    <td>
+                                        <?php
+                                        // New logic: Get all image roles from this assignment's images
+                                        $assignmentId = $assignment['assignment_id'];
+                                        $sql = "SELECT DISTINCT image_role FROM tbl_project_images 
+                                                                       WHERE assignment_id = ? AND image_role IS NOT NULL AND image_role != ''";
+                                        $stmt = $conn->prepare($sql);
+                                        $stmt->bind_param("i", $assignmentId);
+                                        $stmt->execute();
+                                        $result = $stmt->get_result();
+
+                                        $imageRoles = [];
+                                        while ($row = $result->fetch_assoc()) {
+                                            if (!empty($row['image_role'])) {
+                                                $imageRoles[] = $row['image_role'];
+                                            }
+                                        }
+
+                                        // If no image roles found, fall back to the assignment role_task
+                                        if (empty($imageRoles) && !empty($assignment['role_task'])) {
+                                            $imageRoles[] = $assignment['role_task'];
+                                        }
+
+                                        // Display roles as badges
+                                        if (!empty($imageRoles)) {
+                                            echo '<div class="d-flex flex-wrap">';
+                                            foreach ($imageRoles as $role) {
+                                                $roleClass = '';
+                                                $roleAbbr = '';
+
+                                                // Assign color classes based on role type
+                                                switch ($role) {
+                                                    case 'Clipping Path':
+                                                        $roleClass = 'badge-primary';
+                                                        $roleAbbr = 'CP';
+                                                        break;
+                                                    case 'Color Correction':
+                                                        $roleClass = 'badge-warning';
+                                                        $roleAbbr = 'CC';
+                                                        break;
+                                                    case 'Retouch':
+                                                        $roleClass = 'badge-success';
+                                                        $roleAbbr = 'R';
+                                                        break;
+                                                    case 'Final':
+                                                        $roleClass = 'badge-info';
+                                                        $roleAbbr = 'F';
+                                                        break;
+                                                    case 'Retouch to Final':
+                                                        $roleClass = 'badge-secondary';
+                                                        $roleAbbr = 'RF';
+                                                        break;
+                                                    default:
+                                                        $roleClass = 'badge-dark';
+                                                        $roleAbbr = substr($role, 0, 2);
+                                                        break;
+                                                }
+
+                                                echo '<span class="badge ' . $roleClass . ' mr-1 mb-1 p-2" title="' . htmlspecialchars($role) . '">' . $roleAbbr . '</span>';
+                                            }
+                                            echo '</div>';
+                                        } else {
+                                            echo '<span class="text-muted">No roles assigned</span>';
+                                        }
+                                        ?>
+                                    </td>
+                                    <td>
+                                        <span class="badge badge-primary">
+                                            <?php echo $assignment['assigned_images']; ?> Images
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <?php
+                                        // Define status mapping for display
+                                        $statusDisplayMap = [
+                                            'pending' => 'Pending',
+                                            'in_progress' => 'In Progress',
+                                            'finish' => 'Finished',
+                                            'qa' => 'QA Review',
+                                            'approved' => 'Approved',
+                                            'completed' => 'Completed'
+                                        ];
+
+                                        $currentStatus = $assignment['status_assignee'];
+                                        $statusDisplay = $statusDisplayMap[$currentStatus] ?? ucfirst($currentStatus);
+                                        $statusClass = getAssignmentStatusClass($currentStatus);
+                                        ?>
+                                        <span class="badge badge-<?php echo $statusClass; ?> p-2">
+                                            <?php echo $statusDisplay; ?>
+                                        </span>
+
+                                        <!-- Add a small progress indicator below -->
+                                        <div class="progress mt-2" style="height: 5px;">
+                                            <?php
+                                            // Calculate progress percentage based on status
+                                            $timelineSteps = ['pending', 'in_progress', 'finish', 'qa', 'approved', 'completed'];
+                                            $currentStepIndex = array_search($currentStatus, $timelineSteps);
+                                            if ($currentStepIndex === false)
+                                                $currentStepIndex = 0;
+                                            $progressPercent = ($currentStepIndex / (count($timelineSteps) - 1)) * 100;
+                                            ?>
+                                            <div class="progress-bar bg-<?php echo $statusClass; ?>" role="progressbar"
+                                                style="width: <?php echo $progressPercent; ?>%"
+                                                aria-valuenow="<?php echo $progressPercent; ?>" aria-valuemin="0"
+                                                aria-valuemax="100"></div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <?php
+                                        $deadline_date = new DateTime($assignment['deadline']);
+                                        $today = new DateTime('today');
+                                        $deadline_status = '';
+                                        $badge_class = '';
+
+                                        if ($today > $deadline_date) {
+                                            // Calculate days overdue
+                                            $interval = $deadline_date->diff($today);
+                                            $days_overdue = $interval->days;
+                                            $deadline_status = 'Overdue by ' . $days_overdue . ' day' . ($days_overdue != 1 ? 's' : '');
+                                            $badge_class = 'badge-danger';
+                                        } else {
+                                            // Calculate days remaining
+                                            $interval = $today->diff($deadline_date);
+                                            $days_left = $interval->days;
+                                            if ($days_left == 1) {
+                                                $deadline_status = 'Due tomorrow';
+                                                $badge_class = 'badge-warning';
+                                            } else if ($days_left <= 3) {
+                                                $deadline_status = $days_left . ' days left';
+                                                $badge_class = 'badge-warning';
+                                            } else {
+                                                $deadline_status = $days_left . ' days left';
+                                                $badge_class = 'badge-info';
+                                            }
+                                        }
+                                        ?>
+                                        <div>
+                                            <?php echo date('Y-m-d', strtotime($assignment['deadline'])); ?>
+                                            <span class="badge <?php echo $badge_class; ?> ml-2">
+                                                <?php echo $deadline_status; ?>
+                                            </span>
+
+                                            <?php if ($today > $deadline_date && !empty($assignment['delay_acceptable'])): ?>
+                                                <span class="ml-2 badge badge-info">
+                                                    <i class="fas fa-check mr-1"></i>Delay Accepted
+                                                </span>
+                                            <?php endif; ?>
+                                        </div>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
     <!-- Project Overview Row -->
     <div class="row mb-4">
         <!-- Project Details Card -->
@@ -499,7 +916,6 @@ $assignments = $assignments_result->fetch_all(MYSQLI_ASSOC);
             </div>
         </div>
     </div>
-
     <!-- Progress Summary Card -->
     <div class="card mb-4">
         <div class="card-header bg-info text-white">
@@ -510,7 +926,7 @@ $assignments = $assignments_result->fetch_all(MYSQLI_ASSOC);
         <div class="card-body">
             <div class="row">
                 <!-- Total Images -->
-                <div class="col-md-3 mb-3">
+                <div class="col-md-4 mb-3">
                     <div class="card border-left-primary shadow h-100 py-2">
                         <div class="card-body">
                             <div class="row no-gutters align-items-center">
@@ -530,7 +946,7 @@ $assignments = $assignments_result->fetch_all(MYSQLI_ASSOC);
                 </div>
 
                 <!-- Team Members -->
-                <div class="col-md-3 mb-3">
+                <div class="col-md-4 mb-3">
                     <div class="card border-left-success shadow h-100 py-2">
                         <div class="card-body">
                             <div class="row no-gutters align-items-center">
@@ -549,52 +965,9 @@ $assignments = $assignments_result->fetch_all(MYSQLI_ASSOC);
                     </div>
                 </div>
 
-                <!-- Progress Status -->
-                <div class="col-md-3 mb-3">
-                    <div class="card border-left-info shadow h-100 py-2">
-                        <div class="card-body">
-                            <div class="row no-gutters align-items-center">
-                                <div class="col mr-2">
-                                    <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Overall
-                                        Progress
-                                    </div>
-                                    <?php
-                                    // Calculate percentage based on project status
-                                    $progressMap = [
-                                        'pending' => 10,
-                                        'in_progress' => 40,
-                                        'review' => 75,
-                                        'completed' => 100,
-                                        'delayed' => 30
-                                    ];
-                                    $progressPercent = $progressMap[$project['status_project']] ?? 0;
-                                    ?>
-                                    <div class="row no-gutters align-items-center">
-                                        <div class="col-auto">
-                                            <div class="h5 mb-0 mr-3 font-weight-bold text-gray-800">
-                                                <?php echo $progressPercent; ?>%
-                                            </div>
-                                        </div>
-                                        <div class="col">
-                                            <div class="progress progress-sm mr-2">
-                                                <div class="progress-bar bg-info" role="progressbar"
-                                                    style="width: <?php echo $progressPercent; ?>%"
-                                                    aria-valuenow="<?php echo $progressPercent; ?>" aria-valuemin="0"
-                                                    aria-valuemax="100"></div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-auto">
-                                    <i class="fas fa-clipboard-list fa-2x text-gray-300"></i>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
 
                 <!-- Days Until Deadline -->
-                <div class="col-md-3 mb-3">
+                <div class="col-md-4 mb-3">
                     <div class="card border-left-warning shadow h-100 py-2">
                         <div class="card-body">
                             <div class="row no-gutters align-items-center">
@@ -616,246 +989,6 @@ $assignments = $assignments_result->fetch_all(MYSQLI_ASSOC);
             </div>
         </div>
     </div>
-
-    <!-- Project Images Section -->
-    <div class="card mb-4">
-        <div class="card-header bg-primary text-white">
-            <h5 class="card-title mb-0">
-                <i class="fas fa-images mr-2"></i>Project Images (Total: <?php echo count($images); ?>)
-            </h5>
-        </div>
-        <div class="card-body">
-            <div class="row">
-                <?php if (empty($images)): ?>
-                    <div class="col-12 text-center py-4">
-                        <p class="text-muted mb-0">
-                            <i class="fas fa-info-circle mr-2"></i>No images uploaded yet.
-                        </p>
-                    </div>
-                <?php else: ?>
-                    <?php foreach ($images as $image): ?>
-                        <?php
-                        // Determine status for UI display
-                        $statusClass = 'badge-success';
-                        $statusText = 'Available';
-
-                        if (isset($image['assignment_id']) && $image['assignment_id']) {
-                            $statusClass = 'badge-primary';
-                            // Show assignee's first name if assigned
-                            $statusText = isset($image['assignee_first_name']) ? $image['assignee_first_name'] : 'Assigned';
-                        }
-
-                        if (isset($image['status_image']) && $image['status_image'] === 'completed') {
-                            $statusClass = 'badge-success';
-                            $statusText = 'Completed';
-                        }
-
-                        // Get file name for display
-                        $fileName = '';
-                        if (isset($image['file_name']) && !empty($image['file_name'])) {
-                            $fileName = $image['file_name'];
-                        } else if (isset($image['image_path']) && !empty($image['image_path'])) {
-                            $fileName = pathinfo($image['image_path'], PATHINFO_BASENAME);
-                        } else {
-                            $fileName = 'Image ' . $image['image_id'];
-                        }
-
-                        // Format estimated time
-                        $estimatedTimeDisplay = '';
-                        if (isset($image['estimated_time']) && !empty($image['estimated_time'])) {
-                            $hours = floor($image['estimated_time'] / 60);
-                            $minutes = $image['estimated_time'] % 60;
-
-                            if ($hours > 0) {
-                                $estimatedTimeDisplay .= $hours . 'h ';
-                            }
-                            if ($minutes > 0 || $hours == 0) {
-                                $estimatedTimeDisplay .= $minutes . 'm';
-                            }
-                        }
-                        ?>
-                        <div class="col-md-6 col-lg-3 mb-3">
-                            <div class="image-container card shadow-sm">
-                                <div class="card-body p-2">
-                                    <div class="d-flex align-items-center">
-                                        <!-- Image details -->
-                                        <div class="flex-grow-1">
-                                            <h6 class="mb-0 text-truncate" title="<?php echo htmlspecialchars($fileName); ?>">
-                                                <?php echo htmlspecialchars($fileName); ?>
-                                            </h6>
-                                            <div class="d-flex flex-wrap mt-1">
-                                                <!-- Assignee badge -->
-                                                <span class="badge <?php echo $statusClass; ?> mr-1 mb-1">
-                                                    <i class="fas fa-user mr-1"></i>
-                                                    <?php echo $statusText; ?>
-                                                </span>
-
-                                                <!-- Role badge - always show, even if empty -->
-                                                <span class="badge badge-info mr-1 mb-1">
-                                                    <i class="fas fa-tasks mr-1"></i>
-                                                    <?php echo !empty($image['image_role']) ? htmlspecialchars($image['image_role']) : 'Not Set'; ?>
-                                                </span>
-
-                                                <!-- Estimated time badge - always show, even if empty -->
-                                                <span class="badge badge-secondary mb-1">
-                                                    <i class="far fa-clock mr-1"></i>
-                                                    <?php echo !empty($estimatedTimeDisplay) ? $estimatedTimeDisplay : 'No Time Set'; ?>
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    <?php endforeach; ?>
-                <?php endif; ?>
-            </div>
-        </div>
-    </div>
-
-    <!-- Team Assignments Section -->
-    <div class="card mb-4">
-        <div class="card-header bg-primary text-white">
-            <h5 class="card-title mb-0">
-                <i class="fas fa-users mr-2"></i>Team Assignments
-            </h5>
-        </div>
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-bordered table-hover">
-                    <thead class="thead-light">
-                        <tr>
-                            <th>Team Member</th>
-                            <th>Role</th>
-                            <th>Assigned Images</th>
-                            <th>Status</th>
-                            <th>Deadline</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php if (empty($assignments)): ?>
-                            <tr>
-                                <td colspan="5" class="text-center">No team assignments found.</td>
-                            </tr>
-                        <?php else: ?>
-                            <?php foreach ($assignments as $assignment): ?>
-                                <tr>
-                                    <td>
-                                        <?php
-                                        $assigneeName = "Not Assigned";
-                                        // Get the user's name directly from the database
-                                        if (!empty($assignment['user_id'])) {
-                                            $userQuery = "SELECT CONCAT(first_name, ' ', last_name) as full_name FROM tbl_users WHERE user_id = ?";
-                                            $userStmt = $conn->prepare($userQuery);
-                                            if ($userStmt) {
-                                                $userStmt->bind_param("i", $assignment['user_id']);
-                                                $userStmt->execute();
-                                                $userResult = $userStmt->get_result();
-                                                if ($userResult && $userRow = $userResult->fetch_assoc()) {
-                                                    $assigneeName = $userRow['full_name'];
-                                                }
-                                            }
-                                        }
-                                        echo $assigneeName;
-                                        ?>
-                                    </td>
-                                    <td>
-                                        <span class="badge badge-info">
-                                            <?php echo $assignment['role_task'] ? htmlspecialchars($assignment['role_task']) : 'Not Set'; ?>
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <span class="badge badge-primary">
-                                            <?php echo $assignment['assigned_images']; ?> Images
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <?php
-                                        // Define status mapping for display
-                                        $statusDisplayMap = [
-                                            'pending' => 'Pending',
-                                            'in_progress' => 'In Progress',
-                                            'finish' => 'Finished',
-                                            'qa' => 'QA Review',
-                                            'approved' => 'Approved',
-                                            'completed' => 'Completed'
-                                        ];
-
-                                        $currentStatus = $assignment['status_assignee'];
-                                        $statusDisplay = $statusDisplayMap[$currentStatus] ?? ucfirst($currentStatus);
-                                        $statusClass = getAssignmentStatusClass($currentStatus);
-                                        ?>
-                                        <span class="badge badge-<?php echo $statusClass; ?> p-2">
-                                            <?php echo $statusDisplay; ?>
-                                        </span>
-
-                                        <!-- Add a small progress indicator below -->
-                                        <div class="progress mt-2" style="height: 5px;">
-                                            <?php
-                                            // Calculate progress percentage based on status
-                                            $timelineSteps = ['pending', 'in_progress', 'finish', 'qa', 'approved', 'completed'];
-                                            $currentStepIndex = array_search($currentStatus, $timelineSteps);
-                                            if ($currentStepIndex === false)
-                                                $currentStepIndex = 0;
-                                            $progressPercent = ($currentStepIndex / (count($timelineSteps) - 1)) * 100;
-                                            ?>
-                                            <div class="progress-bar bg-<?php echo $statusClass; ?>" role="progressbar"
-                                                style="width: <?php echo $progressPercent; ?>%"
-                                                aria-valuenow="<?php echo $progressPercent; ?>" aria-valuemin="0"
-                                                aria-valuemax="100"></div>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <?php
-                                        $deadline_date = new DateTime($assignment['deadline']);
-                                        $today = new DateTime('today');
-                                        $deadline_status = '';
-                                        $badge_class = '';
-
-                                        if ($today > $deadline_date) {
-                                            // Calculate days overdue
-                                            $interval = $deadline_date->diff($today);
-                                            $days_overdue = $interval->days;
-                                            $deadline_status = 'Overdue by ' . $days_overdue . ' day' . ($days_overdue != 1 ? 's' : '');
-                                            $badge_class = 'badge-danger';
-                                        } else {
-                                            // Calculate days remaining
-                                            $interval = $today->diff($deadline_date);
-                                            $days_left = $interval->days;
-                                            if ($days_left == 1) {
-                                                $deadline_status = 'Due tomorrow';
-                                                $badge_class = 'badge-warning';
-                                            } else if ($days_left <= 3) {
-                                                $deadline_status = $days_left . ' days left';
-                                                $badge_class = 'badge-warning';
-                                            } else {
-                                                $deadline_status = $days_left . ' days left';
-                                                $badge_class = 'badge-info';
-                                            }
-                                        }
-                                        ?>
-                                        <div>
-                                            <?php echo date('Y-m-d', strtotime($assignment['deadline'])); ?>
-                                            <span class="badge <?php echo $badge_class; ?> ml-2">
-                                                <?php echo $deadline_status; ?>
-                                            </span>
-
-                                            <?php if ($today > $deadline_date && !empty($assignment['delay_acceptable'])): ?>
-                                                <span class="ml-2 badge badge-info">
-                                                    <i class="fas fa-check mr-1"></i>Delay Accepted
-                                                </span>
-                                            <?php endif; ?>
-                                        </div>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                        <?php endif; ?>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
     <!-- Back Button -->
     <div class="text-center mb-4">
         <a href="project-status.php" class="btn btn-secondary">
