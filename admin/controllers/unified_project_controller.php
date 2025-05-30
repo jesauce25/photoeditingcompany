@@ -93,9 +93,7 @@ function addProject($project_title, $company_id, $description, $date_arrived, $d
             return ['status' => 'error', 'message' => 'Error adding project: ' . $stmt->error];
         }
 
-        $project_id = $conn->insert_id;
-
-        // Save file information if any
+        $project_id = $conn->insert_id;        // Save file information if any
         $uploaded_files = [];
 
         if (!empty($file_data) && is_array($file_data)) {
@@ -105,11 +103,13 @@ function addProject($project_title, $company_id, $description, $date_arrived, $d
                     $file_name = $file['name'];
                     $file_type = $file['type'] ?? 'application/octet-stream';
                     $file_size = $file['size'] ?? 0;
+                    $user_id = $created_by; // Use the same user who created the project
 
                     // Store file information in database
-                    $sql = "INSERT INTO tbl_project_images (project_id, image_path, file_type, file_size) VALUES (?, ?, ?, ?)";
+                    $sql = "INSERT INTO tbl_project_images (project_id, user_id, image_path, file_name, file_type, file_size, status_image) 
+                            VALUES (?, ?, ?, ?, ?, ?, 'available')";
                     $stmt = $conn->prepare($sql);
-                    $stmt->bind_param("issi", $project_id, $file_name, $file_type, $file_size);
+                    $stmt->bind_param("iisssi", $project_id, $user_id, $file_name, $file_name, $file_type, $file_size);
 
                     if (!$stmt->execute()) {
                         $conn->rollback();
@@ -421,21 +421,6 @@ function getGraphicArtists()
 }
 
 /**
- * Get all available roles for task assignment
- * @return array Array of roles
- */
-function getAvailableRoles()
-{
-    return [
-        'Retouch' => 'Basic Retouching',
-        'Color' => 'Color Correction',
-        'Extraction' => 'Background Extraction',
-        'Final' => 'Final Review',
-        'Other' => 'Other Tasks'
-    ];
-}
-
-/**
  * Get project images
  * @param int $project_id
  * @return array
@@ -618,7 +603,7 @@ function getProjectStats($project_id)
     $completedImagesRow = $completedImagesResult->fetch_assoc();
     $completedImages = $completedImagesRow['completed'] ?? 0;
 
-    // Get completed assignees count (for the UI display)
+    // Get completed assignees count (for reference only)
     $completedAssigneesSql = "SELECT COUNT(*) as completed FROM tbl_project_assignments WHERE project_id = ? AND status_assignee = 'completed'";
     $completedAssigneesStmt = $conn->prepare($completedAssigneesSql);
     $completedAssigneesStmt->bind_param("i", $project_id);
@@ -627,16 +612,15 @@ function getProjectStats($project_id)
     $completedAssigneesRow = $completedAssigneesResult->fetch_assoc();
     $completedAssignees = $completedAssigneesRow['completed'] ?? 0;
 
-    // Calculate percentage completion based on completed images vs total images
-
     return [
         'total' => $total,
         'assigned' => $assigned,
-        'completed' => $completedAssignees, // Keep the UI display consistent with completedAssignees
-        'completed_images' => $completedImages, // Add new field for completed images
+        'completed' => $completedImages, // Now correctly using completed images count
+        'completed_assignees' => $completedAssignees, // Keep track of completed assignees separately
         'unassigned' => $total - $assigned,
     ];
 }
+
 
 /**
  * Get project progress stats - Alias for getProjectStats for backward compatibility

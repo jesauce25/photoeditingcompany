@@ -119,6 +119,7 @@ $projects = $result->fetch_all(MYSQLI_ASSOC);
 
 
 <!-- Custom Styles -->
+<!-- Custom Styles -->
 <style>
     body {
         font-family: 'Arial', sans-serif;
@@ -142,25 +143,16 @@ $projects = $result->fetch_all(MYSQLI_ASSOC);
         transition: all 0.3s ease;
     }
 
-    .card-header {
-        background-color: rgba(40, 40, 40, 0.7);
-        border-bottom: 1px solid rgba(80, 80, 80, 0.4);
-        color: #ffb22e;
+    /* Default row background is now white */
+    .table {
+        color: black !important;
     }
 
-    .table th {
-        font-weight: 500;
-        font-size: 0.9rem;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        color: #ffb22e;
-    }
 
-    .table td,
-    .table th {
-        vertical-align: middle;
-        color: #f7f7f7;
-        border-top: 1px solid rgba(80, 80, 80, 0.4);
+    /* Default row background is now white */
+    .table tbody tr {
+        background-color: #ffffff;
+        /* Added white background for default rows */
     }
 
     .table-hover tbody tr:hover {
@@ -184,11 +176,11 @@ $projects = $result->fetch_all(MYSQLI_ASSOC);
 
     /* Assignee overdue styles */
     .assignee-overdue {
-        background-color: rgb(166, 0, 17) !important;
+        background-color: rgb(255, 0, 25) !important;
     }
 
     .assignee-acceptable {
-        background-color: rgb(166, 0, 17) !important;
+        background-color: rgb(255, 0, 25) !important;
         border: 2px solid rgb(0, 255, 60) !important;
     }
 
@@ -262,16 +254,17 @@ $projects = $result->fetch_all(MYSQLI_ASSOC);
         overflow: hidden !important;
     }
 
+    /* Removed scroll effects */
     body.fullscreen-mode .table-responsive {
         height: 100vh !important;
         max-height: 100vh !important;
-        overflow: auto !important;
+        overflow: visible !important;
+        /* Changed from auto to visible */
         padding: 20px !important;
     }
 
+    /* Removed transform scale effect */
     body.fullscreen-mode .table-responsive table {
-        transform: scale(1.1) !important;
-        transform-origin: top center !important;
         margin-top: 20px !important;
     }
 
@@ -296,12 +289,35 @@ $projects = $result->fetch_all(MYSQLI_ASSOC);
 
     /* Enhanced table appearance */
     .table {
-        background-color: rgba(40, 40, 40, 0.5);
-        backdrop-filter: blur(5px);
-        -webkit-backdrop-filter: blur(5px);
+        background-color: #ffffff;
+        /* Changed from rgba(40, 40, 40, 0.5) to white */
+        backdrop-filter: none;
+        /* Removed blur effect */
+        -webkit-backdrop-filter: none;
+        /* Removed blur effect */
+        overflow: visible !important;
+    }
+
+    /* Remove hover lift effect */
+    .table tbody tr {
+        transform: none !important;
+        -webkit-transform: none !important;
+        -ms-transform: none !important;
+        transition: background-color 0.2s ease !important;
+    }
+
+    .table tbody tr:hover {
+        transform: none !important;
+        -webkit-transform: none !important;
+        -ms-transform: none !important;
     }
 
 
+    /* Remove scrolling for table */
+    .table-responsive {
+        overflow: visible !important;
+        /* Changed from auto to visible */
+    }
 
     footer {
         backdrop-filter: blur(10px);
@@ -390,7 +406,7 @@ $projects = $result->fetch_all(MYSQLI_ASSOC);
     }
 
     .badge-danger {
-        background-color: #dc3545 !important;
+        background-color: rgb(255, 0, 25) !important;
     }
 
     /* Form control styling */
@@ -480,8 +496,8 @@ $projects = $result->fetch_all(MYSQLI_ASSOC);
 
     /* Make table header text more prominent */
     .table thead th {
-        background-color: rgba(20, 20, 20, 0.7);
-        font-weight: 600;
+        background-color: rgb(20, 20, 20);
+        font-weight: 900;
         color: #ffb22e;
         padding: 0.5rem 1rem !important;
     }
@@ -543,7 +559,7 @@ $projects = $result->fetch_all(MYSQLI_ASSOC);
     table.table tr.table-danger,
     #projectTable tbody tr.table-danger,
     table.dataTable#projectTable tbody tr.table-danger {
-        background-color: rgb(255, 0, 25) !important;
+        background-color: rgba(255, 0, 25, 0.71) !important;
         animation: pulse-red 2s infinite !important;
         color: #ffffff !important;
     }
@@ -631,25 +647,22 @@ $projects = $result->fetch_all(MYSQLI_ASSOC);
         color: #ffffff !important;
     }
 
-    /* Fix datatable container width */
-    .dataTables_wrapper {
-        width: 100%;
-        overflow-x: auto;
-    }
 
-    /* Enhanced text styling for specific columns */
+    /* Enhanced text styling for specific columns - changed from bold to normal */
     #projectTable td:nth-child(1) {
         font-weight: bold !important;
+        /* Changed from bold to normal */
         letter-spacing: 0.05em !important;
     }
 
     #projectTable td:nth-child(1),
-
     #projectTable td:nth-child(3),
     #projectTable td:nth-child(4),
     #projectTable td:nth-child(5) {
-        font-size: 1.1rem !important;
-        font-weight: 900 !important;
+        font-size: 0.9rem !important;
+        /* Reduced from 1.1rem */
+        font-weight: bold !important;
+        /* Changed from 900 to normal */
     }
 
     /* Compact table rows with reduced padding */
@@ -700,6 +713,7 @@ $projects = $result->fetch_all(MYSQLI_ASSOC);
         cursor: pointer !important;
     }
 </style>
+
 
 
 
@@ -800,11 +814,16 @@ $projects = $result->fetch_all(MYSQLI_ASSOC);
                         <?php else: ?>
                             <?php foreach ($projects as $project): ?>
                                 <?php
+
                                 // Calculate days until deadline
                                 $deadline = new DateTime($project['deadline']);
                                 $today = new DateTime();
+                                $today->setTime(0, 0, 0); // Set to beginning of day for accurate comparison
+
                                 $is_overdue = $deadline < $today;
+
                                 if ($is_overdue) {
+                                    // If deadline is in the past (overdue)
                                     $interval = $today->diff($deadline);
                                     $days_diff = $interval->days;
                                     $deadline_status = 'Overdue by ' . $days_diff . ' days';
@@ -812,11 +831,29 @@ $projects = $result->fetch_all(MYSQLI_ASSOC);
                                 } else {
                                     $interval = $today->diff($deadline);
                                     $days_left = $interval->days;
-                                    $deadline_status = $days_left . ' days left';
-                                    $row_class = ($days_left <= 1) ? 'table-warning' : '';
+
+                                    // Check if deadline is today
+                                    $is_today = ($days_left == 0);
+
+                                    // Check if deadline is tomorrow
+                                    $is_tomorrow = ($days_left == 1);
+
+                                    if ($is_today) {
+                                        // If deadline is today
+                                        $deadline_status = 'Due today';
+                                        $row_class = 'table-danger';
+                                    } else if ($is_tomorrow) {
+                                        // If deadline is tomorrow
+                                        $deadline_status = '1 day left';
+                                        $row_class = 'table-warning';
+                                    } else {
+                                        // If deadline is 2+ days away
+                                        $deadline_status = $days_left . ' days left';
+                                        $row_class = ''; // No special class
+                                    }
                                 }
 
-                                // Get assignees
+                                // Get assignees - THIS LINE IS CRITICAL and was missing in the previous update
                                 $assignees = getProjectAssignee($project['project_id']);
                                 ?>
                                 <tr class="<?php echo $row_class; ?>">

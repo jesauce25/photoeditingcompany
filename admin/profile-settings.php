@@ -288,12 +288,12 @@ if (!empty($user['profile_img'])) {
                             <div class="card-header p-2">
                                 <ul class="nav nav-pills">
                                     <li class="nav-item">
-                                        <a class="nav-link active" href="#settings" data-toggle="tab">
+                                        <a class="nav-link active text-white" href="#settings" data-toggle="tab">
                                             <i class="fas fa-user-edit mr-1"></i> Profile
                                         </a>
                                     </li>
-                                    <li class="nav-item">
-                                        <a class="nav-link" href="#security" data-toggle="tab">
+                                    <li class="nav-item ">
+                                        <a class="nav-link text-white" href="#security" data-toggle="tab">
                                             <i class="fas fa-shield-alt mr-1"></i> Security
                                         </a>
                                     </li>
@@ -455,10 +455,10 @@ if (!empty($user['profile_img'])) {
 </div>
 
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
+    document.addEventListener('DOMContentLoaded', function() {
         // Handle password toggle buttons
-        document.querySelectorAll('.toggle-password').forEach(function (button) {
-            button.addEventListener('click', function () {
+        document.querySelectorAll('.toggle-password').forEach(function(button) {
+            button.addEventListener('click', function() {
                 const targetId = this.getAttribute('data-target');
                 const passwordInput = document.getElementById(targetId);
 
@@ -487,7 +487,7 @@ if (!empty($user['profile_img'])) {
             currentPasswordInput.readOnly = false;
 
             // Clear placeholder value when focused
-            currentPasswordInput.addEventListener('focus', function () {
+            currentPasswordInput.addEventListener('focus', function() {
                 if (this.value === '••••••••') {
                     this.value = '';
                 }

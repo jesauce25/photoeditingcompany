@@ -60,24 +60,24 @@ unset($_SESSION['error_message']);
 
         <!-- Display success message if exists -->
         <?php if (!empty($successMessage)) : ?>
-        <div class="alert alert-success alert-dismissible fade show mx-3">
-            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                <span aria-hidden="true">&times;</span>
-            </button>
-            <h5><i class="icon fas fa-check"></i> Success!</h5>
-            <?php echo $successMessage; ?>
-        </div>
+            <div class="alert alert-success alert-dismissible fade show mx-3">
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+                <h5><i class="icon fas fa-check"></i> Success!</h5>
+                <?php echo $successMessage; ?>
+            </div>
         <?php endif; ?>
 
         <!-- Display error message if exists -->
         <?php if (!empty($errorMessage)) : ?>
-        <div class="alert alert-danger alert-dismissible fade show mx-3">
-            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                <span aria-hidden="true">&times;</span>
-            </button>
-            <h5><i class="icon fas fa-ban"></i> Error!</h5>
-            <?php echo $errorMessage; ?>
-        </div>
+            <div class="alert alert-danger alert-dismissible fade show mx-3">
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+                <h5><i class="icon fas fa-ban"></i> Error!</h5>
+                <?php echo $errorMessage; ?>
+            </div>
         <?php endif; ?>
 
         <!-- Main content -->
@@ -99,7 +99,7 @@ unset($_SESSION['error_message']);
                                     enctype="multipart/form-data">
                                     <input type="hidden" name="company_id" value="<?php echo $company['company_id']; ?>">
                                     <input type="hidden" name="current_logo_path" value="<?php echo $company['logo_path']; ?>">
-                                    
+
                                     <div class="row">
                                         <div class="col-md-6">
                                             <div class="form-group">
@@ -124,7 +124,7 @@ unset($_SESSION['error_message']);
                                                                 class="fas fa-calendar-alt"></i></span>
                                                     </div>
                                                     <input type="date" class="form-control" id="dateSignedUp"
-                                                        name="dateSignedUp" 
+                                                        name="dateSignedUp"
                                                         value="<?php echo $company['date_signed_up']; ?>" required>
                                                 </div>
                                             </div>
@@ -168,12 +168,12 @@ unset($_SESSION['error_message']);
                                                                 class="fas fa-envelope"></i></span>
                                                     </div>
                                                     <input type="email" class="form-control" id="email" name="email"
-                                                        placeholder="Enter company email" 
+                                                        placeholder="Enter company email"
                                                         value="<?php echo htmlspecialchars($company['email']); ?>" required>
                                                 </div>
                                             </div>
                                             <div class="form-group">
-                                                <label for="incharge">Person In Charge <span
+                                                <label for="incharge">In Charge <span
                                                         class="text-danger">*</span></label>
                                                 <div class="input-group">
                                                     <div class="input-group-prepend">
@@ -181,7 +181,7 @@ unset($_SESSION['error_message']);
                                                                 class="fas fa-user-tie"></i></span>
                                                     </div>
                                                     <input type="text" class="form-control" id="incharge"
-                                                        name="incharge" placeholder="Enter person in charge" 
+                                                        name="incharge" placeholder="Enter person in charge"
                                                         value="<?php echo htmlspecialchars($company['person_in_charge']); ?>" required>
                                                 </div>
                                             </div>
@@ -214,8 +214,8 @@ unset($_SESSION['error_message']);
                                             <i class="fas fa-cloud-upload-alt fa-2x"></i>
                                             <p>Drop your logo here or click to upload</p>
                                         </div>
-                                        <img src="<?php echo !empty($company['logo_path']) ? '../' . $company['logo_path'] : '../dist/img/company-placeholder.png'; ?>" 
-                                             alt="Company Logo" class="img-fluid preview-image" id="logoPreview">
+                                        <img src="<?php echo !empty($company['logo_path']) ? '../' . $company['logo_path'] : '../dist/img/company-placeholder.png'; ?>"
+                                            alt="Company Logo" class="img-fluid preview-image" id="logoPreview">
                                         <input type="file" class="dropzone" id="companyLogo" name="companyLogo"
                                             form="companyForm" accept="image/*">
                                     </div>
@@ -271,7 +271,7 @@ unset($_SESSION['error_message']);
                                 </div>
                             </div>
                         </div>
-                        
+
                         <div class="card card-danger card-outline">
                             <div class="card-header">
                                 <h3 class="card-title"><i class="fas fa-history mr-2"></i>Company History</h3>
@@ -283,10 +283,10 @@ unset($_SESSION['error_message']);
                                         <td><?php echo date('M d, Y H:i', strtotime($company['date_created'])); ?></td>
                                     </tr>
                                     <?php if (!empty($company['date_updated'])): ?>
-                                    <tr>
-                                        <td><strong>Last Updated:</strong></td>
-                                        <td><?php echo date('M d, Y H:i', strtotime($company['date_updated'])); ?></td>
-                                    </tr>
+                                        <tr>
+                                            <td><strong>Last Updated:</strong></td>
+                                            <td><?php echo date('M d, Y H:i', strtotime($company['date_updated'])); ?></td>
+                                        </tr>
                                     <?php endif; ?>
                                 </table>
                             </div>
@@ -301,13 +301,13 @@ unset($_SESSION['error_message']);
 <?php include("includes/footer.php"); ?>
 
 <script>
-    $(document).ready(function () {
+    $(document).ready(function() {
         // Logo preview
-        $('#companyLogo').change(function () {
+        $('#companyLogo').change(function() {
             const file = this.files[0];
             if (file) {
                 const reader = new FileReader();
-                reader.onload = function (e) {
+                reader.onload = function(e) {
                     $('#logoPreview').attr('src', e.target.result);
                     $('#logoFileName').text(file.name);
                     $('#removeLogo').show();
@@ -317,7 +317,7 @@ unset($_SESSION['error_message']);
         });
 
         // Remove logo button
-        $('#removeLogo').click(function () {
+        $('#removeLogo').click(function() {
             if (confirm('Are you sure you want to remove the company logo?')) {
                 $('#companyLogo').val('');
                 $('#logoPreview').attr('src', '../dist/img/company-placeholder.png');

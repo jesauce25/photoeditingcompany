@@ -207,6 +207,7 @@ include("includes/header.php");
     background-color: #dc3545 !important;
   }
 </style>
+
 <div class="main-container">
   <?php include("includes/nav.php"); ?>
 

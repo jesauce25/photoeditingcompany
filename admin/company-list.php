@@ -255,7 +255,7 @@ include("includes/header.php");
                                             <th width="15%">Company Name</th>
                                             <th width="15%">Country</th>
                                             <th width="15%">Date Signed Up</th>
-                                            <th width="20%">Contact Person</th>
+                                            <th width="20%">In Charge</th>
                                             <th width="15%">Email</th>
                                             <th width="15%" class="text-center">Actions</th>
                                         </tr>
@@ -318,7 +318,7 @@ include("includes/header.php");
 <?php include("includes/footer.php"); ?>
 
 <script>
-    $(document).ready(function () {
+    $(document).ready(function() {
         // Initialize DataTable only if it's not already initialized
         let table;
         if (!$.fn.dataTable.isDataTable('#companyTable')) {
@@ -331,10 +331,18 @@ include("includes/header.php");
                 "ordering": true,
                 "info": true,
                 "dom": '<"row align-items-center"<"col-sm-6"l><"col-sm-6 d-flex justify-content-end"f>><"row"<"col-sm-12"tr>><"row"<"col-sm-5"i><"col-sm-7 d-flex justify-content-end"p>>',
-                "buttons": [
-                    { extend: 'excel', className: 'hidden-button' },
-                    { extend: 'pdf', className: 'hidden-button' },
-                    { extend: 'print', className: 'hidden-button' }
+                "buttons": [{
+                        extend: 'excel',
+                        className: 'hidden-button'
+                    },
+                    {
+                        extend: 'pdf',
+                        className: 'hidden-button'
+                    },
+                    {
+                        extend: 'print',
+                        className: 'hidden-button'
+                    }
                 ],
                 "language": {
                     "lengthMenu": "Show _MENU_ entries",
@@ -358,25 +366,25 @@ include("includes/header.php");
         }
 
         // Handle custom export buttons
-        $('.export-excel').on('click', function () {
+        $('.export-excel').on('click', function() {
             table.button('.buttons-excel').trigger();
         });
 
-        $('.export-pdf').on('click', function () {
+        $('.export-pdf').on('click', function() {
             table.button('.buttons-pdf').trigger();
         });
 
-        $('.export-print').on('click', function () {
+        $('.export-print').on('click', function() {
             table.button('.buttons-print').trigger();
         });
 
         // Handle custom search box
-        $('#searchInput').on('keyup', function () {
+        $('#searchInput').on('keyup', function() {
             table.search(this.value).draw();
         });
 
         // Filter type change
-        $('#filterType').change(function () {
+        $('#filterType').change(function() {
             const filterType = $(this).val();
 
             if (filterType === 'country') {
@@ -398,7 +406,7 @@ include("includes/header.php");
         });
 
         // Date filter type change
-        $('#dateFilterType').change(function () {
+        $('#dateFilterType').change(function() {
             const dateFilterType = $(this).val();
 
             if (dateFilterType === 'year') {
@@ -411,7 +419,7 @@ include("includes/header.php");
         });
 
         // Apply filter button
-        $('#applyFilter').click(function () {
+        $('#applyFilter').click(function() {
             loadCompanies();
         });
 
@@ -447,24 +455,34 @@ include("includes/header.php");
                 type: 'GET',
                 data: params,
                 dataType: 'json',
-                success: function (response) {
+                success: function(response) {
                     if (response.status === 'success') {
                         // Clear existing data
                         table.clear();
 
                         // Add data to table
                         if (response.data.length > 0) {
-                            $.each(response.data, function (index, company) {
+                            $.each(response.data, function(index, company) {
                                 // Create country badge
                                 let countryClass = '';
                                 let badgeStyle = '';
 
                                 switch (company.country) {
-                                    case 'USA': countryClass = 'usa-badge'; break;
-                                    case 'UK': countryClass = 'uk-badge'; break;
-                                    case 'Canada': countryClass = 'canada-badge'; break;
-                                    case 'Australia': countryClass = 'australia-badge'; break;
-                                    case 'Philippines': countryClass = 'philippines-badge'; break;
+                                    case 'USA':
+                                        countryClass = 'usa-badge';
+                                        break;
+                                    case 'UK':
+                                        countryClass = 'uk-badge';
+                                        break;
+                                    case 'Canada':
+                                        countryClass = 'canada-badge';
+                                        break;
+                                    case 'Australia':
+                                        countryClass = 'australia-badge';
+                                        break;
+                                    case 'Philippines':
+                                        countryClass = 'philippines-badge';
+                                        break;
                                     default:
                                         // Generate a consistent color based on the country name
                                         let hash = 0;
@@ -538,7 +556,7 @@ include("includes/header.php");
                         });
                     }
                 },
-                error: function () {
+                error: function() {
                     // Show error message
                     Swal.fire({
                         icon: 'error',
@@ -547,7 +565,7 @@ include("includes/header.php");
                         confirmButtonText: 'OK'
                     });
                 },
-                complete: function () {
+                complete: function() {
                     // Hide loading overlay
                     $('.loading-overlay').hide();
                 }
@@ -558,7 +576,7 @@ include("includes/header.php");
         loadCompanies();
 
         // Delete button click handler (using event delegation)
-        $('#companyTable').on('click', '.delete-btn', function () {
+        $('#companyTable').on('click', '.delete-btn', function() {
             const companyId = $(this).data('id');
             const companyName = $(this).data('name');
 
@@ -571,7 +589,7 @@ include("includes/header.php");
         });
 
         // Update the confirmDelete button click handler
-        $('#confirmDelete').click(function () {
+        $('#confirmDelete').click(function() {
             const companyId = $('#companyIdToDelete').val();
             const button = $(this);
             const originalHtml = button.html();
@@ -583,9 +601,11 @@ include("includes/header.php");
             $.ajax({
                 url: 'delete-company.php',
                 type: 'POST',
-                data: { company_id: companyId },
+                data: {
+                    company_id: companyId
+                },
                 dataType: 'json',
-                success: function (response) {
+                success: function(response) {
                     // Close modal regardless of success or failure
                     $('#deleteModal').modal('hide');
 
@@ -599,13 +619,13 @@ include("includes/header.php");
                         loadCompanies();
                     }
                 },
-                error: function () {
+                error: function() {
                     // Close modal and reload quietly on error
                     $('#deleteModal').modal('hide');
                     loadCompanies();
                     console.error('Server error during delete operation');
                 },
-                complete: function () {
+                complete: function() {
                     // Restore button state
                     button.html(originalHtml).prop('disabled', false);
                 }

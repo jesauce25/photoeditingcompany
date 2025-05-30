@@ -90,8 +90,6 @@ unset($_SESSION['form_data']);
                                                         class="text-danger">*</span></label>
                                                 <div class="input-group">
                                                     <div class="input-group-prepend">
-                                                        <span class="input-group-text"><i
-                                                                class="fas fa-building"></i></span>
                                                     </div>
                                                     <select class="form-control select2" id="companyName"
                                                         name="companyName" required style="height: 100%;">
@@ -199,10 +197,6 @@ unset($_SESSION['form_data']);
                                     <select class="form-control" id="status" name="status" form="projectForm"
                                         style="height: 100%;">
                                         <option value="pending" <?php echo (!isset($form_data['status']) || $form_data['status'] == 'pending') ? 'selected' : ''; ?>>Pending</option>
-                                        <option value="in_progress" <?php echo (isset($form_data['status']) && $form_data['status'] == 'in_progress') ? 'selected' : ''; ?>>In Progress
-                                        </option>
-                                        <option value="review" <?php echo (isset($form_data['status']) && $form_data['status'] == 'review') ? 'selected' : ''; ?>>Under Review</option>
-                                        <option value="completed" <?php echo (isset($form_data['status']) && $form_data['status'] == 'completed') ? 'selected' : ''; ?>>Completed</option>
                                     </select>
                                 </div>
 
@@ -236,7 +230,10 @@ unset($_SESSION['form_data']);
                                             value="">
                                     </div>
                                     <div class="mt-3">
-                                        <label><strong>Selected Files:</strong></label>
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <label class="mb-0"><strong>Selected Files:</strong></label>
+                                            <label class="mb-0"><strong>Total Files: </strong><span id="totalFilesCount" class="badge badge-primary">0</span></label>
+                                        </div>
                                         <div id="selectedFilesList" class="list-group">
                                             <div class="list-group-item text-muted">No files selected</div>
                                         </div>
@@ -398,45 +395,163 @@ unset($_SESSION['form_data']);
         border: 1px solid #dee2e6;
         border-radius: 4px;
     }
+
+    .select2-container--bootstrap4 .select2-results__options {
+        max-height: 200px;
+        overflow-y: auto;
+    }
+
+    .select2-container--bootstrap4 .select2-search--dropdown .select2-search__field {
+        padding: 8px;
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+    }
+
+    .select2-container--bootstrap4 {
+        width: 100% !important;
+    }
 </style>
 
 <!-- Custom JavaScript -->
 <script>
-    $(document).ready(function () {
+    $(document).ready(function() {
         const dropzone = document.getElementById('dropzone');
         const fileInput = document.getElementById('projectImages');
         const fileList = document.getElementById('selectedFilesList');
         const totalImagesInput = document.getElementById('total_images');
         const fileNamesInput = document.getElementById('fileNames');
+        const totalFilesCount = document.getElementById('totalFilesCount'); // Array to store batches of files
+        let batches = [];
+        // Array of colors for different batches
+        const batchColors = [
+            'rgba(200, 230, 201, 0.5)', // Light green
+            'rgba(179, 229, 252, 0.5)', // Light blue
+            'rgba(255, 224, 178, 0.5)', // Light orange
+            'rgba(225, 190, 231, 0.5)', // Light purple
+            'rgba(255, 205, 210, 0.5)', // Light pink
+            'rgba(255, 245, 157, 0.5)', // Light yellow
+            'rgba(207, 216, 220, 0.5)', // Light gray
+            'rgba(174, 213, 129, 0.5)', // Soft lime
+            'rgba(255, 171, 145, 0.5)', // Soft coral
+            'rgba(176, 190, 255, 0.5)', // Soft blue
+            'rgba(255, 188, 217, 0.5)', // Soft pink 2
+            'rgba(179, 157, 219, 0.5)', // Soft purple
+            'rgba(197, 225, 165, 0.5)', // Pale green
+            'rgba(255, 204, 128, 0.5)', // Pale orange
+            'rgba(158, 235, 207, 0.5)', // Mint
+            'rgba(244, 143, 177, 0.5)', // Rose
+            'rgba(206, 147, 216, 0.5)', // Orchid
+            'rgba(129, 212, 250, 0.5)', // Sky blue
+            'rgba(255, 171, 64, 0.5)', // Marigold
+            'rgba(174, 198, 207, 0.5)', // Steel blue
+            'rgba(209, 196, 233, 0.5)', // Lavender
+            'rgba(248, 187, 208, 0.5)', // Baby pink
+            'rgba(178, 235, 242, 0.5)', // Light cyan
+            'rgba(220, 237, 200, 0.5)', // Tea green
+            'rgba(255, 204, 188, 0.5)', // Peach
+            'rgba(187, 222, 251, 0.5)', // Baby blue
+            'rgba(255, 236, 179, 0.5)', // Vanilla
+            'rgba(212, 225, 227, 0.5)', // Pearl
+            'rgba(206, 212, 218, 0.5)', // Light slate
+            'rgba(209, 233, 234, 0.5)' // Powder blue
+        ];
 
-        // Array to store file information
-        let selectedFiles = [];
+        // Function to get next batch color
+        function getBatchColor(batchIndex) {
+            return batchColors[batchIndex % batchColors.length];
+        }
+
+        // Function to update total images count
+        function updateTotalImages() {
+            const totalFiles = batches.reduce((sum, batch) => sum + batch.files.length, 0);
+            totalImagesInput.value = totalFiles;
+            totalFilesCount.textContent = totalFiles;
+            // Update hidden input with all file data
+            const allFiles = batches.reduce((files, batch) => {
+                return files.concat(batch.files.map(file => ({
+                    name: file.name,
+                    type: file.type,
+                    size: file.size,
+                    batch: batch.id
+                })));
+            }, []);
+            fileNamesInput.value = JSON.stringify(allFiles);
+        }
 
         // Handle file selection
-        fileInput.addEventListener('change', function (e) {
-            const files = this.files;
-
-            // Store file information
-            selectedFiles = Array.from(files).map(file => ({
+        fileInput.addEventListener('change', function(e) {
+            const files = Array.from(this.files).map(file => ({
                 name: file.name,
                 type: file.type,
                 size: file.size
             }));
 
-            // Update UI
-            updateFileList();
-
-            // Update hidden inputs
-            updateHiddenInputs();
-        });
-
-        // Click to browse
-        dropzone.addEventListener('click', function (e) {
-            if (e.target !== fileInput) {
-                e.preventDefault();
-                fileInput.click();
+            if (files.length > 0) {
+                batches.push({
+                    id: Date.now(),
+                    files: files,
+                    color: getBatchColor(batches.length)
+                });
+                updateFileList();
+                updateTotalImages();
             }
+
+            // Reset file input to allow selecting the same files again
+            this.value = '';
         });
+
+        // Update file list display
+        function updateFileList() {
+            if (batches.length) {
+                fileList.innerHTML = batches.map((batch, batchIndex) => `
+                    <div class="batch-group mb-2">
+                        <div class="batch-header d-flex justify-content-between align-items-center p-2 bg-light">
+                            <span><strong>Batch ${batchIndex + 1}</strong> (${batch.files.length} files)</span>
+                            <button type="button" class="btn btn-sm btn-outline-danger delete-batch" data-batch-id="${batch.id}">
+                                <i class="fas fa-trash"></i> Remove Batch
+                            </button>
+                        </div>
+                        ${batch.files.map(file => `
+                            <div class="list-group-item d-flex justify-content-between align-items-center" style="background-color: ${batch.color}">
+                                <div>
+                                    <i class="fas fa-file-image text-primary mr-2"></i>
+                                    <span>${file.name}</span>
+                                </div>
+                                <small class="text-muted">${formatFileSize(file.size)}</small>
+                            </div>
+                        `).join('')}
+                    </div>
+                `).join('');
+
+                // Add event listeners for batch deletion
+                document.querySelectorAll('.delete-batch').forEach(button => {
+                    button.addEventListener('click', function() {
+                        const batchId = parseInt(this.getAttribute('data-batch-id'));
+                        batches = batches.filter(batch => batch.id !== batchId);
+                        updateFileList();
+                        updateTotalImages();
+                    });
+                });
+            } else {
+                fileList.innerHTML = '<div class="list-group-item text-muted">No files selected</div>';
+            }
+        }
+
+        // Reset handler
+        $('#projectForm').on('reset', function() {
+            batches = [];
+            updateFileList();
+            updateTotalImages();
+        });
+
+        // Format file size
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
 
         // Handle drag and drop
         ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
@@ -468,111 +583,35 @@ unset($_SESSION['form_data']);
 
         function handleDrop(e) {
             const dt = e.dataTransfer;
-            const files = dt.files;
-
-            // Store file information
-            selectedFiles = Array.from(files).map(file => ({
+            const files = Array.from(dt.files).map(file => ({
                 name: file.name,
                 type: file.type,
                 size: file.size
             }));
 
-            // Update UI
-            updateFileList();
-
-            // Update hidden inputs
-            updateHiddenInputs();
-        }
-
-        // Update the file list display
-        function updateFileList() {
-            fileList.innerHTML = '';
-
-            if (selectedFiles.length === 0) {
-                fileList.innerHTML = '<div class="list-group-item text-muted">No files selected</div>';
-                return;
-            }
-
-            selectedFiles.forEach((file, index) => {
-                const fileItem = document.createElement('div');
-                fileItem.className = 'list-group-item file-item';
-
-                let fileIconClass = 'fa-file';
-                if (file.type.startsWith('image/')) {
-                    fileIconClass = 'fa-file-image';
-                } else if (file.type.includes('pdf')) {
-                    fileIconClass = 'fa-file-pdf';
-                } else if (file.type.includes('word')) {
-                    fileIconClass = 'fa-file-word';
-                } else if (file.type.includes('excel') || file.type.includes('sheet')) {
-                    fileIconClass = 'fa-file-excel';
-                } else if (file.type.includes('zip') || file.type.includes('compressed')) {
-                    fileIconClass = 'fa-file-archive';
-                }
-
-                const fileSize = formatFileSize(file.size);
-
-                fileItem.innerHTML = `
-                    <div class="file-icon"><i class="fas ${fileIconClass}"></i></div>
-                    <div class="file-info">
-                        <div class="file-name">${file.name}</div>
-                        <div class="file-details">
-                            <span class="file-size">
-                                <i class="fas fa-hdd"></i> ${fileSize}
-                            </span>
-                            <span class="file-type">
-                                <i class="fas fa-file-alt"></i> ${file.type || 'Unknown type'}
-                            </span>
-                        </div>
-                    </div>
-                    <button type="button" class="remove-file" data-index="${index}">
-                        <i class="fas fa-times"></i>
-                    </button>
-                `;
-
-                fileList.appendChild(fileItem);
-            });
-
-            // Add event listeners to remove buttons
-            document.querySelectorAll('.remove-file').forEach(button => {
-                button.addEventListener('click', function () {
-                    const index = parseInt(this.getAttribute('data-index'));
-                    removeFile(index);
+            if (files.length > 0) {
+                batches.push({
+                    id: Date.now(),
+                    files: files,
+                    color: getBatchColor(batches.length)
                 });
-            });
-        }
-
-        // Update hidden inputs with file information
-        function updateHiddenInputs() {
-            // Update total images count
-            if (totalImagesInput) {
-                totalImagesInput.value = selectedFiles.length;
-            }
-
-            // Update file names (convert to JSON string)
-            if (fileNamesInput) {
-                fileNamesInput.value = JSON.stringify(selectedFiles);
+                updateFileList();
+                updateTotalImages();
             }
         }
 
-        // Remove a file
-        function removeFile(index) {
-            // Remove file from array
-            selectedFiles.splice(index, 1);
-
-            // Update UI
-            updateFileList();
-
-            // Update hidden inputs
-            updateHiddenInputs();
-        }
+        // Initialize Select2 for company dropdown
+        $('#companyName').select2({
+            theme: 'bootstrap4',
+            placeholder: 'Select a company',
+            allowClear: true,
+            width: '100%',
+            dropdownParent: $('#companyName').parent(),
+            minimumInputLength: 0,
+            templateResult: function(data) {
+                if (data.loading) return data.text;
+                return $('<span>' + data.text + '</span>');
+            }
+        });
     });
-
-    function formatFileSize(bytes) {
-        if (bytes === 0) return '0 Bytes';
-        const k = 1024;
-        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-        const i = Math.floor(Math.log(bytes) / Math.log(k));
-        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-    }
 </script>

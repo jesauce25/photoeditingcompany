@@ -37,7 +37,6 @@ try {
   $tasks = $result->fetch_all(MYSQLI_ASSOC);
 
   error_log("History.php - Found " . count($tasks) . " hidden tasks for user ID: $user_id");
-
 } catch (Exception $e) {
   error_log("Error in artist/history.php: " . $e->getMessage());
   $error_message = "There was an error loading your task history. Please contact support.";
@@ -105,7 +104,6 @@ try {
     }
   }
 </style>
-
 <div class="main-container">
   <?php include("includes/nav.php"); ?>
 
@@ -140,9 +138,9 @@ try {
           </div>
           <div class="card-body">
             <!-- Table controls -->
-            <div class="row mb-4">
+            <div class="row mb-2">
               <!-- Left Group: Export buttons -->
-              <div class="col-md-4">
+              <div class="col-md-4" style="opacity: 0;">
                 <div class="btn-group">
                   <button type="button" class="btn btn-primary btn-sm export-excel" title="Export to Excel">
                     <i class="fas fa-file-excel mr-1"></i> Excel
@@ -160,7 +158,7 @@ try {
               <div class="col-md-4">
                 <div class="filter-container" style="width: 100%;">
                   <div class="d-flex justify-content-center align-items-center flex-wrap" style="width: 100%;">
-                    <select id="monthFilter" class="form-control form-control-sm mr-2 mb-2" style="width: 150px;">
+                    <select id="monthFilter" class="form-control form-control-sm mr-2 mb-1" style="width: 150px; height: 30px; padding: 2px 5px;">
                       <option value="">All Months</option>
                       <option value="January">January</option>
                       <option value="February">February</option>
@@ -175,7 +173,7 @@ try {
                       <option value="November">November</option>
                       <option value="December">December</option>
                     </select>
-                    <select id="yearFilter" class="form-control form-control-sm mr-2 mb-2" style="width: 100px;">
+                    <select id="yearFilter" class="form-control form-control-sm mr-2 mb-1" style="width: 100px; height: 30px; padding: 2px 5px;">
                       <option value="">All Years</option>
                       <?php
                       $currentYear = date('Y');
@@ -184,12 +182,12 @@ try {
                       }
                       ?>
                     </select>
-                    <select id="statusFilter" class="form-control form-control-sm mr-2 mb-2" style="width: 120px;">
+                    <select id="statusFilter" class="form-control form-control-sm mr-2 mb-1" style="width: 120px; height: 30px; padding: 2px 5px;">
                       <option value="">All Status</option>
                       <option value="ontime">On Time</option>
                       <option value="delayed">Delayed</option>
                     </select>
-                    <button id="applyFilter" class="btn btn-primary btn-sm">
+                    <button id="applyFilter" class="btn btn-primary btn-sm" style="height: 30px; padding: 2px 8px;">
                       <i class="fas fa-filter mr-1"></i> Filter
                     </button>
                   </div>
@@ -199,9 +197,9 @@ try {
               <!-- Right Group: Search -->
               <div class="col-md-4">
                 <div class="search-box float-right">
-                  <input type="text" id="searchInput" class="form-control form-control-sm"
+                  <input type="text" id="searchInput" class="form-control form-control-sm" style="height: 30px; padding: 2px 8px;"
                     placeholder="Search history...">
-                  <button class="btn">
+                  <button class="btn" style="height: 30px; padding: 2px 8px;">
                     <i class="fas fa-search"></i>
                   </button>
                 </div>
@@ -215,77 +213,74 @@ try {
                 <div class="loading-spinner"></div>
               </div>
 
-              <table class="table table-bordered table-hover" id="historyTable">
+              <table class="table table-bordered table-hover" id="historyTable" style="margin-bottom: 0;">
                 <thead>
-                  <tr>
-                    <th>Project</th>
-                    <th>Due Date</th>
-                    <th>Completion Date</th>
-                    <th>Status</th>
-                    <th>Details</th>
+                  <tr style="line-height: 1;">
+                    <th style="padding: 4px 8px;">Project</th>
+                    <th style="padding: 4px 8px;">Due Date</th>
+                    <th style="padding: 4px 8px;">Completion Date</th>
+                    <th style="padding: 4px 8px;">Status</th>
+                    <th style="padding: 4px 8px;">Details</th>
                   </tr>
                 </thead>
                 <tbody>
                   <?php if (empty($tasks)): ?>
                     <tr>
-                      <td colspan="5" class="text-center">No hidden tasks found</td>
+                      <td colspan="5" class="text-center" style="padding: 4px 8px;">No hidden tasks found</td>
                     </tr>
                   <?php else: ?>
                     <?php foreach ($tasks as $task):
                       // Check if the task was completed on time
                       $was_overdue = strtotime($task['last_updated']) > strtotime($task['deadline']);
                       $status_class = $was_overdue ? 'table-danger' : 'table-success';
-                      ?>
-                      <tr class="<?php echo $status_class; ?>">
-                        <td>
-                          <div class="d-flex align-items-center">
-                            <div class="ml-2">
-                              <div class="project-title"><?php echo htmlspecialchars($task['project_title']); ?></div>
-                              <div class="project-company"><?php echo htmlspecialchars($task['company_name'] ?? 'N/A'); ?>
-                              </div>
-                            </div>
+                    ?>
+                      <tr class="<?php echo $status_class; ?>" style="line-height: 1.1;">
+                        <td style="padding: 4px 8px;">
+                          <div style="margin: 0;">
+                            <div class="project-title" style="margin: 0;"><?php echo htmlspecialchars($task['project_title']); ?></div>
+                            <div class="project-company" style="margin: 0; font-size: 0.85rem;"><?php echo htmlspecialchars($task['company_name'] ?? 'N/A'); ?></div>
                           </div>
                         </td>
-                        <td>
-                          <span class="deadline-text">
+                        <td style="padding: 4px 8px;">
+                          <span class="deadline-text" style="margin: 0; font-size: 0.9rem;">
                             <i class="far fa-calendar-alt mr-1"></i>
                             <?php echo date('F d, Y', strtotime($task['deadline'])); ?>
                           </span>
                         </td>
-                        <td>
-                          <span class="completion-date">
-                            <i class="fas fa-check-circle mr-1"></i>
-                            <?php echo date('F d, Y', strtotime($task['last_updated'])); ?>
+                        <td style="padding: 4px 8px;">
+                          <div style="margin: 0; line-height: 1.1; display: flex; align-items: center;">
+                            <span style="font-size: 0.9rem;"><i class="fas fa-check-circle mr-1"></i><?php echo date('F d, Y', strtotime($task['last_updated'])); ?></span>
                             <?php if ($was_overdue): ?>
-                              <small class="d-block text-muted text-danger">
+                              <span class="text-muted text-danger" style="margin-left: 5px; font-size: 0.8rem;">
                                 <i class="fas fa-exclamation-circle mr-1"></i>
                                 <?php
                                 $days_late = floor((strtotime($task['last_updated']) - strtotime($task['deadline'])) / (60 * 60 * 24));
                                 echo $days_late . ' day' . ($days_late > 1 ? 's' : '') . ' overdue';
                                 ?>
-                              </small>
+                              </span>
                             <?php else: ?>
-                              <small class="d-block text-muted">
-                                <i class="far fa-clock mr-1"></i> Completed on time
-                              </small>
+                              <span class="text-muted" style="margin-left: 5px; font-size: 0.8rem;">
+                                <i class="far fa-clock mr-1"></i> On time
+                              </span>
                             <?php endif; ?>
-                          </span>
+                          </div>
                         </td>
-                        <td>
-                          <span class="project-status status-completed">Completed</span>
-                          <small class="d-block text-muted <?php echo $was_overdue ? 'text-danger' : ''; ?>">
-                            <i
-                              class="<?php echo $was_overdue ? 'fas fa-exclamation-circle' : 'far fa-check-circle'; ?> mr-1"></i>
-                            <?php echo $was_overdue ? 'Delayed' : 'On Time'; ?>
-                          </small>
+                        <td style="padding: 4px 8px;">
+                          <div style="margin: 0; line-height: 1.1; display: flex; align-items: center;">
+                            <span class="project-status status-completed" style="font-size: 0.9rem;">Completed</span>
+                            <span class="text-muted <?php echo $was_overdue ? 'text-danger' : ''; ?>" style="margin-left: 5px; font-size: 0.8rem;">
+                              <i class="<?php echo $was_overdue ? 'fas fa-exclamation-circle' : 'far fa-check-circle'; ?> mr-1"></i>
+                              <?php echo $was_overdue ? 'Delayed' : 'On Time'; ?>
+                            </span>
+                          </div>
                         </td>
-                        <td>
-                          <div class="action-buttons text-center">
-                            <a href="view-task.php?id=<?php echo $task['assignment_id']; ?>" class="btn btn-info btn-sm"
+                        <td style="padding: 4px 8px;">
+                          <div class="action-buttons text-center" style="margin: 0; display: flex; justify-content: center; gap: 4px;">
+                            <a href="view-task.php?id=<?php echo $task['assignment_id']; ?>" class="btn btn-info btn-sm" style="padding: 2px 5px; font-size: 0.8rem;"
                               title="View Task">
                               <i class="fas fa-eye"></i> View
                             </a>
-                            <button type="button" class="btn btn-warning btn-sm unhide-task-btn mt-1"
+                            <button type="button" class="btn btn-warning btn-sm unhide-task-btn" style="padding: 2px 5px; font-size: 0.8rem;"
                               data-id="<?php echo $task['assignment_id']; ?>">
                               <i class="fas fa-eye mr-1"></i> Unhide
                             </button>
@@ -297,31 +292,69 @@ try {
                 </tbody>
               </table>
             </div>
-
-
           </div>
         </div>
       </div>
     </section>
   </div>
 
+  <!-- Add this CSS to your stylesheet -->
+  <style>
+    /* Compressed table styles */
+    #historyTable {
+      font-size: 0.9rem;
+    }
+
+    #historyTable th,
+    #historyTable td {
+      vertical-align: middle;
+    }
+
+    /* Remove extra spacing from Bootstrap components */
+    #historyTable .btn {
+      line-height: 1.2;
+    }
+
+    /* Ensure icons don't add extra height */
+    #historyTable .fas,
+    #historyTable .far {
+      font-size: 0.85rem;
+    }
+
+    /* Reduce spacing in filter controls */
+    .filter-container select,
+    .filter-container button {
+      margin-bottom: 0.25rem !important;
+    }
+
+    /* Reduce card body padding */
+    .card-body {
+      padding: 0.75rem;
+    }
+
+    /* Reduce spacing between elements */
+    .mb-4 {
+      margin-bottom: 0.5rem !important;
+    }
+  </style>
+
 
   <?php include("includes/footer.php"); ?>
   <script>
-    $(document).ready(function () {
+    $(document).ready(function() {
       // Initialize tooltips
       $('[data-toggle="tooltip"]').tooltip();
 
       // Search functionality
-      $('#searchInput').on('keyup', function () {
+      $('#searchInput').on('keyup', function() {
         var value = $(this).val().toLowerCase();
-        $('#historyTable tbody tr').filter(function () {
+        $('#historyTable tbody tr').filter(function() {
           $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1);
         });
       });
 
       // Unhide task button
-      $(document).on('click', '.unhide-task-btn', function () {
+      $(document).on('click', '.unhide-task-btn', function() {
         var taskId = $(this).data('id');
         var button = $(this);
         var row = button.closest('tr');
@@ -335,10 +368,10 @@ try {
               assignment_id: taskId
             },
             dataType: 'json',
-            success: function (response) {
+            success: function(response) {
               if (response.status === 'success') {
                 // Remove the row from the table
-                row.fadeOut(300, function () {
+                row.fadeOut(300, function() {
                   $(this).remove();
                 });
 
@@ -348,7 +381,7 @@ try {
                 toastr.error('Error: ' + response.message);
               }
             },
-            error: function (xhr, status, error) {
+            error: function(xhr, status, error) {
               console.error('AJAX Error:', error);
               toastr.error('An error occurred while unhiding the task');
             }
@@ -357,7 +390,7 @@ try {
       });
 
       // Filter functionality
-      $('#applyFilter').click(function () {
+      $('#applyFilter').click(function() {
         var month = $('#monthFilter').val();
         var year = $('#yearFilter').val();
         var status = $('#statusFilter').val();
@@ -365,11 +398,11 @@ try {
         showLoading();
 
         // Simulate filtering delay
-        setTimeout(function () {
+        setTimeout(function() {
           $('#historyTable tbody tr').show(); // Reset visibility
 
           // Apply selected filters
-          $('#historyTable tbody tr').each(function () {
+          $('#historyTable tbody tr').each(function() {
             var rowVisible = true;
             var rowText = $(this).text();
 
@@ -403,7 +436,7 @@ try {
       });
 
       // Reset filter button
-      $('#resetFilter').click(function () {
+      $('#resetFilter').click(function() {
         $('#monthFilter').val('');
         $('#yearFilter').val('');
         $('#statusFilter').val('');

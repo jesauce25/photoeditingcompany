@@ -49,16 +49,52 @@ if (session_status() === PHP_SESSION_NONE) {
     <link rel="stylesheet" href="assets/css/user-management.css">
     <link rel="stylesheet" href="assets/css/custom.css">
 
+    <!-- Select2 -->
+    <link rel="stylesheet" href="../plugins/select2/css/select2.min.css">
+    <link rel="stylesheet" href="../plugins/select2-bootstrap4-theme/select2-bootstrap4.min.css">
+
     <!-- Optional: Create placeholder CSS files to prevent 404 errors -->
     <style>
         /* Inline CSS to replace missing files */
         /* This helps prevent 404 errors */
+
+        /* Select2 custom styles */
+        .select2-container--bootstrap4 {
+            width: 100% !important;
+        }
+
+        .select2-container--bootstrap4 .select2-selection {
+            height: calc(2.25rem + 2px) !important;
+        }
+
+        .select2-container--bootstrap4 .select2-selection--single {
+            padding: .375rem .75rem;
+        }
+
+        .select2-container--bootstrap4 .select2-results__option {
+            padding: .375rem .75rem;
+        }
+
+        .select2-container--bootstrap4 .select2-search--dropdown .select2-search__field {
+            padding: .375rem .75rem;
+            border: 1px solid #ced4da;
+            border-radius: .25rem;
+        }
+
+        .select2-container--bootstrap4 .select2-results__options {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .select2-container--bootstrap4 .select2-selection--single .select2-selection__rendered {
+            line-height: 1.5;
+        }
     </style>
 
     <script data-cfasync="false" nonce="a28e568f-c174-4d59-9b55-df26fed5f8b7">
         try {
-            (function (w, d) {
-                ! function (j, k, l, m) {
+            (function(w, d) {
+                ! function(j, k, l, m) {
                     if (j.zaraz) console.error("zaraz is loaded twice");
                     else {
                         j[l] = j[l] || {};
@@ -70,8 +106,8 @@ if (session_status() === PHP_SESSION_NONE) {
                         j.zaraz._v = "5850";
                         j.zaraz._n = "a28e568f-c174-4d59-9b55-df26fed5f8b7";
                         j.zaraz.q = [];
-                        j.zaraz._f = function (n) {
-                            return async function () {
+                        j.zaraz._f = function(n) {
+                            return async function() {
                                 var o = Array.prototype.slice.call(arguments);
                                 j.zaraz.q.push({
                                     m: n,
@@ -97,9 +133,9 @@ if (session_status() === PHP_SESSION_NONE) {
                             j[l].o = (new Date).getTimezoneOffset();
                             if (j.dataLayer)
                                 for (const t of Object.entries(Object.entries(dataLayer).reduce(((u, v) => ({
-                                    ...u[1],
-                                    ...v[1]
-                                })), {}))) zaraz.set(t[0], t[1], {
+                                        ...u[1],
+                                        ...v[1]
+                                    })), {}))) zaraz.set(t[0], t[1], {
                                     scope: "page"
                                 });
                             j[l].q = [];

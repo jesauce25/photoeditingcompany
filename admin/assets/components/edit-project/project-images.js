@@ -492,22 +492,22 @@ $(document).ready(function () {
     });
   }
 
-  // Image status timeline click functionality(handles admin status updates)
-  // $(document).on("click", ".status-step", function () {
-  //   const imageId = $(this).data("image-id");
-  //   const newStatus = $(this).data("status");
+  // Image status timeline click functionality
+  $(document).on("click", ".status-step", function () {
+    const imageId = $(this).data("image-id");
+    const newStatus = $(this).data("status");
 
-  //   // Check if this is in the Project Images table or View Assigned Images modal
-  //   const isInProjectImagesTable =
-  //     $(this).closest("table").attr("id") === "imagesTable";
+    // Check if this is in the Project Images table or View Assigned Images modal
+    const isInProjectImagesTable =
+      $(this).closest("table").attr("id") === "imagesTable";
 
-  //   if (isInProjectImagesTable) {
-  //     // In the main Project Images table, allow status changes
-  //     updateImageStatus(imageId, newStatus);
-  //   } else {
-  //     // In the assigned images view or other places, show the message about only artists can update
-  //   }
-  // });
+    if (isInProjectImagesTable) {
+      // In the main Project Images table, allow status changes
+      updateImageStatus(imageId, newStatus);
+    } else {
+      // In the assigned images view or other places, show the message about only artists can update
+    }
+  });
 
   // Approve image button click - this is always allowed for admins
   $(document).on("click", ".approve-image-btn", function () {
@@ -515,52 +515,125 @@ $(document).ready(function () {
     updateImageStatus(imageId, "completed");
   });
 
-  // Function to update image status
-  function updateImageStatus(imageId, newStatus) {
-    $.ajax({
-      url: "controllers/edit_project_ajax.php",
-      type: "POST",
-      data: {
-        action: "update_image_status",
-        image_id: imageId,
-        status: newStatus,
-      },
-      success: function (response) {
-        try {
-          const data = JSON.parse(response);
-          if (data.status === "success") {
-            showToast("success", "Image status updated to " + newStatus);
+  // Function to update image status(can manipulate status from admin )--------------------------------------------------------------------------------------------------------
+  // function updateImageStatus(imageId, newStatus) {
+  //     $.ajax({
+  //         url: 'controllers/edit_project_ajax.php',
+  //         type: 'POST',
+  //         data: {
+  //             action: 'update_image_status',
+  //             image_id: imageId,
+  //             status: newStatus
+  //         },
+  //         success: function(response) {
+  //             try {
+  //                 const data = JSON.parse(response);
+  //                 if (data.status === 'success') {
+  //                     showToast('success', 'Image status updated to ' + newStatus);
 
-            // Update the UI
-            const row = $('tr[data-image-id="' + imageId + '"]');
+  //                     // Update the UI
+  //                     const row = $('tr[data-image-id="' + imageId + '"]');
 
-            // Update status badge
-            row
-              .find("td:eq(3) .badge")
-              .removeClass("badge-info")
-              .addClass("badge-success")
-              .html(
-                '<i class="fas fa-check-circle mr-1"></i> ' +
-                  newStatus.charAt(0).toUpperCase() +
-                  newStatus.slice(1)
-              );
+  //                     // Update timeline visualization
+  //                     const timelineSteps = ['available', 'assigned', 'in_progress', 'finish', 'completed'];
+  //                     const newStatusIndex = timelineSteps.indexOf(newStatus);
 
-            // Remove approve button if status is completed
-            if (newStatus === "completed") {
-              row.find(".approve-image-btn").remove();
-            }
-          } else {
-            showToast("error", data.message || "Error updating status");
-          }
-        } catch (e) {
-          showToast("error", "Error processing server response");
-        }
-      },
-      error: function () {
-        showToast("error", "Server error while updating status");
-      },
-    });
-  }
+  //                     row.find('.status-step').each(function(index) {
+  //                         if (index <= newStatusIndex) {
+  //                             $(this).addClass('active');
+  //                             if (index > 0) {
+  //                                 $(this).prev('.status-connector').addClass('active');
+  //                             }
+  //                         } else {
+  //                             $(this).removeClass('active current');
+  //                             if (index > 0) {
+  //                                 $(this).prev('.status-connector').removeClass('active');
+  //                             }
+  //                         }
+
+  //                         // Mark current step
+  //                         if (index === newStatusIndex) {
+  //                             $(this).addClass('current');
+  //                         } else {
+  //                             $(this).removeClass('current');
+  //                         }
+  //                     });
+
+  //                     // Show/hide approve button
+  //                     if (newStatus === 'finish') {
+  //                         if (row.find('.approve-image-btn').length === 0) {
+  //                             row.find('.status-timeline').after('<button type="button" class="btn btn-sm btn-success mt-2 approve-image-btn" data-image-id="' + imageId + '"><i class="fas fa-check-circle"></i> Approve</button>');
+  //                         }
+  //                     } else {
+  //                         row.find('.approve-image-btn').remove();
+  //                     }
+
+  //                     // Check if all images with the same assignment are completed
+  //                     // and update assignment status if needed
+  //                     if (newStatus === 'completed') {
+  //                         checkAssignmentCompletion(row.data('assignment-id'));
+  //                     }
+  //                 } else {
+  //                     showToast('error', data.message);
+  //                 }
+  //             } catch (e) {
+  //                 showToast('error', 'Error processing server response');
+  //             }
+  //         },
+  //         error: function() {
+  //             showToast('error', 'Server error while updating image status');
+  //         }
+  //     });
+  // }
+
+  // Function to check if all images are completed for an assignment
+  // function checkAssignmentCompletion(assignmentId) {
+  //     if (!assignmentId) return;
+
+  //     $.ajax({
+  //         url: 'controllers/edit_project_ajax.php',
+  //         type: 'POST',
+  //         data: {
+  //             action: 'check_assignment_completion',
+  //             assignment_id: assignmentId
+  //         },
+  //         success: function(response) {
+  //             try {
+  //                 const data = JSON.parse(response);
+  //                 if (data.status === 'success' && data.all_completed) {
+  //                     // If all images are completed, update the assignment's status in the UI
+  //                     const assignmentRow = $('tr[data-assignment-id="' + assignmentId + '"]');
+  //                     const timelineSteps = ['pending', 'in_progress', 'finish', 'qa', 'approved', 'completed'];
+
+  //                     assignmentRow.find('.status-step').each(function(index) {
+  //                         if (index <= timelineSteps.indexOf('completed')) {
+  //                             $(this).addClass('active');
+  //                             if (index > 0) {
+  //                                 $(this).prev('.status-connector').addClass('active');
+  //                             }
+  //                         }
+
+  //                         // Mark current step
+  //                         if ($(this).data('status') === 'completed') {
+  //                             $(this).addClass('current');
+  //                         } else {
+  //                             $(this).removeClass('current');
+  //                         }
+  //                     });
+
+  //                     assignmentRow.find('.current-status').val('completed');
+
+  //                     // Refresh project stats
+  //                     if (typeof refreshProjectStats === 'function') {
+  //                         refreshProjectStats();
+  //                     }
+  //                 }
+  //             } catch (e) {
+  //                 console.error('Error checking assignment completion', e);
+  //             }
+  //         }
+  //     });
+  // }
 
   // Helper function to show toast notifications
   function showToast(type, message) {
@@ -699,4 +772,44 @@ $(document).ready(function () {
       $("#batchActions").hide();
     }
   });
+
+  // Initialize search functionality
+  $(document).ready(function () {
+    // Add search functionality
+    $("#imageTableSearch").on("keyup", function () {
+      const searchText = $(this).val().toLowerCase().trim();
+
+      $("#imagesTable tbody tr").each(function () {
+        const $row = $(this);
+        const fileName = $row
+          .find("td:nth-child(2)")
+          .text()
+          .toLowerCase()
+          .trim();
+
+        // Show the row if the filename contains the search text
+        // If search text is empty, show all rows
+        const isMatch = searchText === "" || fileName.includes(searchText);
+
+        $row.toggle(isMatch);
+      });
+
+      // Update select all checkbox state after filtering
+      updateSelectAllCheckbox();
+    });
+  });
+
+  // Function to update select all checkbox state
+  function updateSelectAllCheckbox() {
+    const visibleCheckboxes = $("#imagesTable tbody tr:visible .image-select");
+    const checkedVisibleCheckboxes = $(
+      "#imagesTable tbody tr:visible .image-select:checked"
+    );
+
+    $("#selectAllImages").prop(
+      "checked",
+      visibleCheckboxes.length > 0 &&
+        visibleCheckboxes.length === checkedVisibleCheckboxes.length
+    );
+  }
 });

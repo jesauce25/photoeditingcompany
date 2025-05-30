@@ -7,7 +7,7 @@
     // Check if local jQuery validation is available, otherwise use CDN
     var jQueryValidationScript = document.createElement('script');
     jQueryValidationScript.src = "../plugins/jquery-validation/jquery.validate.min.js";
-    jQueryValidationScript.onerror = function () {
+    jQueryValidationScript.onerror = function() {
         console.log("Local jQuery validation not found, using CDN");
         var cdnScript = document.createElement('script');
         cdnScript.src = "https://cdn.jsdelivr.net/npm/jquery-validation@1.19.5/dist/jquery.validate.min.js";
@@ -23,7 +23,7 @@
     // Try loading additional methods
     var additionalMethodsScript = document.createElement('script');
     additionalMethodsScript.src = "../plugins/jquery-validation/additional-methods.min.js";
-    additionalMethodsScript.onerror = function () {
+    additionalMethodsScript.onerror = function() {
         console.log("Local jQuery validation additional methods not found, using CDN if needed");
     };
     document.head.appendChild(additionalMethodsScript);
@@ -62,6 +62,9 @@
 <!-- SweetAlert2 -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
+<!-- Select2 -->
+<script src="../plugins/select2/js/select2.full.min.js"></script>
+
 <!-- Add DataTables & Export Plugins -->
 <script src="../plugins/datatables/jquery.dataTables.min.js"></script>
 <script src="../plugins/datatables-bs4/js/dataTables.bootstrap4.min.js"></script>
@@ -78,9 +81,9 @@
 
 <!-- Notification System JavaScript -->
 <script>
-    $(document).ready(function () {
+    $(document).ready(function() {
         // Handle notification click - mark as read
-        $('.dropdown-menu a[data-notification-id]').on('click', function (e) {
+        $('.dropdown-menu a[data-notification-id]').on('click', function(e) {
             e.preventDefault();
             const notificationId = $(this).data('notification-id');
             const notificationLink = $(this).attr('href');
@@ -94,7 +97,7 @@
                     action: 'mark_read',
                     notification_id: notificationId
                 },
-                success: function (response) {
+                success: function(response) {
                     try {
                         const data = JSON.parse(response);
                         if (data.status === 'success') {
@@ -125,7 +128,7 @@
                         }
                     }
                 },
-                error: function (xhr, status, error) {
+                error: function(xhr, status, error) {
                     console.error('AJAX request failed:', status, error);
                     // Navigate even if the AJAX request fails
                     if (isValidLink) {
@@ -136,7 +139,7 @@
         });
 
         // Handle clear all notifications
-        $('#clear-notifications').on('click', function (e) {
+        $('#clear-notifications').on('click', function(e) {
             e.preventDefault();
 
             // Confirm before clearing
@@ -148,7 +151,7 @@
                     data: {
                         action: 'clear_all'
                     },
-                    success: function (response) {
+                    success: function(response) {
                         try {
                             const data = JSON.parse(response);
                             if (data.status === 'success') {
@@ -163,7 +166,7 @@
                             console.error('Error parsing AJAX response:', error);
                         }
                     },
-                    error: function (xhr, status, error) {
+                    error: function(xhr, status, error) {
                         console.error('AJAX request failed:', status, error);
                     }
                 });
@@ -174,7 +177,7 @@
 
 <!-- Custom JavaScript for dynamic filters -->
 <script>
-    $(document).ready(function () {
+    $(document).ready(function() {
         // Initialize DataTable
         var table = $('#companyTable').DataTable({
             "responsive": true,
@@ -184,29 +187,29 @@
             "searching": false, // This disables the search feature
             "dom": 'Brtip', // Changed from 'Bfrtip' to 'Brtip' to remove one pagination
             "buttons": [{
-                extend: 'excel',
-                text: 'Excel',
-                exportOptions: {
-                    columns: [0, 1, 2, 3, 4, 5]
+                    extend: 'excel',
+                    text: 'Excel',
+                    exportOptions: {
+                        columns: [0, 1, 2, 3, 4, 5]
+                    },
+                    className: 'hidden-button'
                 },
-                className: 'hidden-button'
-            },
-            {
-                extend: 'pdf',
-                text: 'PDF',
-                exportOptions: {
-                    columns: [0, 1, 2, 3, 4, 5]
+                {
+                    extend: 'pdf',
+                    text: 'PDF',
+                    exportOptions: {
+                        columns: [0, 1, 2, 3, 4, 5]
+                    },
+                    className: 'hidden-button'
                 },
-                className: 'hidden-button'
-            },
-            {
-                extend: 'print',
-                text: 'Print',
-                exportOptions: {
-                    columns: [0, 1, 2, 3, 4, 5]
-                },
-                className: 'hidden-button'
-            }
+                {
+                    extend: 'print',
+                    text: 'Print',
+                    exportOptions: {
+                        columns: [0, 1, 2, 3, 4, 5]
+                    },
+                    className: 'hidden-button'
+                }
             ],
 
         });
@@ -215,15 +218,15 @@
         $('.hidden-button').hide();
 
         // Custom export buttons
-        $('.export-excel').on('click', function () {
+        $('.export-excel').on('click', function() {
             table.button('.buttons-excel').trigger();
         });
 
-        $('.export-pdf').on('click', function () {
+        $('.export-pdf').on('click', function() {
             table.button('.buttons-pdf').trigger();
         });
 
-        $('.export-print').on('click', function () {
+        $('.export-print').on('click', function() {
             table.button('.buttons-print').trigger();
         });
 
@@ -231,17 +234,17 @@
         initializeFilters();
 
         // Filter type change handler
-        $('#filterType').change(function () {
+        $('#filterType').change(function() {
             updateFilterVisibility();
         });
 
         // Date filter type change handler
-        $('#dateFilterType').change(function () {
+        $('#dateFilterType').change(function() {
             updateDateFilterVisibility();
         });
 
         // Apply filter button click handler
-        $('#applyFilter').click(function () {
+        $('#applyFilter').click(function() {
             applyCurrentFilter();
         });
 
@@ -332,7 +335,7 @@
         }
 
         // Delete button click handler
-        $(document).on('click', '.delete-btn', function () {
+        $(document).on('click', '.delete-btn', function() {
             var companyId = $(this).data('id');
             var companyName = $(this).data('name');
 
@@ -342,7 +345,7 @@
         });
 
         // Confirm delete button click handler
-        $('#confirmDelete').click(function () {
+        $('#confirmDelete').click(function() {
             var companyId = $(this).data('id');
 
             // Here you would make an AJAX call to delete the company
@@ -361,7 +364,7 @@
         });
 
         // Email button click handler
-        $(document).on('click', '.email-btn', function () {
+        $(document).on('click', '.email-btn', function() {
             var email = $(this).data('email');
             $('#emailTo').val(email);
             $('#emailSubject').val('');
@@ -370,7 +373,7 @@
         });
 
         // Send email button click handler
-        $('#sendEmail').click(function () {
+        $('#sendEmail').click(function() {
             var emailTo = $('#emailTo').val();
             var subject = $('#emailSubject').val();
             var body = $('#emailBody').val();

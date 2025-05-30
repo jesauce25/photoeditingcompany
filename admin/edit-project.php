@@ -81,7 +81,287 @@ $projectProgress = getProjectProgressStats($project_id);
 ?>
 
 
+<!-- Custom CSS for image selection -->
+<style>
+    .image-container {
+        cursor: pointer;
+        position: relative;
+        transition: all 0.2s ease;
+    }
 
+    .image-container.selected .card {
+        border: 2px solid #007bff;
+        box-shadow: 0 0 10px rgba(0, 123, 255, 0.5);
+    }
+
+    /* Status Timeline Styles */
+    .status-timeline {
+        display: flex;
+        align-items: center;
+        position: relative;
+    }
+
+    .status-step {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background-color: #e9ecef;
+        color: #6c757d;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        cursor: pointer;
+        position: relative;
+        z-index: 2;
+        transition: all 0.3s ease;
+    }
+
+    .status-step.active {
+        background-color: #28a745;
+        color: white;
+    }
+
+    .status-step.current {
+        border: 2px solid #007bff;
+    }
+
+    .status-connector {
+        height: 3px;
+        flex-grow: 1;
+        background-color: #e9ecef;
+        margin: 0 2px;
+        position: relative;
+        z-index: 1;
+    }
+
+    .status-connector.active {
+        background-color: #28a745;
+    }
+
+    .image-selection-indicator {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background-color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transition: opacity 0.2s ease;
+        z-index: 2;
+    }
+
+    .image-selection-indicator i {
+        color: #28a745;
+        font-size: 16px;
+    }
+
+    .image-container.selected .image-selection-indicator {
+        opacity: 1;
+    }
+
+    .image-container .delete-image {
+        opacity: 0.7;
+        transition: opacity 0.2s ease;
+    }
+
+    .image-container:hover .delete-image,
+    .image-container.selected .delete-image {
+        opacity: 1;
+    }
+
+    /* New styles for improved image cards */
+    .image-card-body {
+        display: flex;
+        flex-direction: column;
+        padding: 6px;
+    }
+
+    .image-file-name {
+        word-break: break-word;
+        font-size: 0.75rem;
+        line-height: 1.2;
+        margin-bottom: 4px;
+        flex-grow: 1;
+        overflow-wrap: break-word;
+    }
+
+    .image-actions {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: auto;
+    }
+
+    .image-status {
+        width: 100%;
+        text-align: center;
+        padding: 2px;
+        font-size: 0.7rem;
+    }
+
+    .image-container .badge-primary {
+        position: relative;
+    }
+
+    .image-container .badge-primary:after {
+        content: '\f023';
+        /* Lock icon */
+        font-family: 'Font Awesome 5 Free';
+        font-weight: 900;
+        font-size: 0.7em;
+        position: absolute;
+        top: -3px;
+        right: -3px;
+        background-color: #fff;
+        border-radius: 50%;
+        width: 14px;
+        height: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #007bff;
+        border: 1px solid #007bff;
+    }
+
+    .image-container.already-assigned {
+        position: relative;
+        overflow: hidden;
+    }
+
+    .image-container.already-assigned:before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(0, 123, 255, 0.05);
+        z-index: 1;
+        pointer-events: none;
+    }
+
+    .image-container.already-assigned:hover {
+        cursor: not-allowed;
+    }
+</style>
+
+<!-- Custom styles for the image cards -->
+<style>
+    /* Image Container Styles */
+    .image-container {
+        position: relative;
+        transition: all 0.2s ease;
+        cursor: pointer;
+        border: 2px solid transparent;
+    }
+
+    .image-container:hover {
+        box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.15) !important;
+    }
+
+    .image-container.selected {
+        border-color: #007bff;
+        background-color: rgba(0, 123, 255, 0.05);
+    }
+
+    /* Styling for already assigned images */
+    .image-container.already-assigned {
+        opacity: 0.7;
+        position: relative;
+        cursor: not-allowed;
+        border: 2px dashed #d9534f;
+        background-color: rgba(217, 83, 79, 0.05);
+    }
+
+    .image-container.already-assigned:hover {
+        box-shadow: none !important;
+        border: 2px dashed #d9534f;
+    }
+
+    .image-container.already-assigned::after {
+        content: "Already Assigned";
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background-color: rgba(217, 83, 79, 0.8);
+        color: white;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: bold;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.2s ease;
+    }
+
+    .image-container.already-assigned:hover::after {
+        opacity: 1;
+    }
+
+    /* Selection Indicator */
+    .image-selection-indicator {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 20px;
+        height: 20px;
+        background-color: #007bff;
+        border-radius: 50%;
+        color: white;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 2;
+        transform: translate(-30%, -30%);
+    }
+
+    .image-container.selected .image-selection-indicator {
+        display: flex;
+    }
+
+    /* Badge styling */
+    .badge {
+        font-size: 85%;
+        font-weight: 500;
+    }
+</style>
+
+<!-- Add custom styling for redo items -->
+<style>
+    /* Specific styling for rows with redo status */
+    tr.table-danger {
+        background-color: #ffe6e6 !important;
+        /* Light red background */
+    }
+
+    tr.table-danger:hover {
+        background-color: #ffcccc !important;
+        /* Slightly darker on hover */
+    }
+
+    tr.table-danger td {
+        border-color: #ffb3b3 !important;
+        /* Slightly darker border */
+    }
+
+    .redo-badge {
+        background-color: #dc3545;
+        color: white;
+        padding: 2px 6px;
+        border-radius: 3px;
+        font-size: 0.7rem;
+        font-weight: bold;
+        display: inline-block;
+        margin-left: 5px;
+        vertical-align: middle;
+    }
+</style>
 
 <div class="wrapper">
     <?php include("includes/nav.php"); ?>
@@ -160,10 +440,11 @@ $projectProgress = getProjectProgressStats($project_id);
                                             <div class="info-box-content">
                                                 <span class="info-box-text">Completed</span>
                                                 <span
-                                                    class="info-box-number"><?php echo $projectProgress['completed']; ?></span>
+                                                    class="info-box-number"><?php echo $projectProgress['completed']; ?>/<?php echo $projectProgress['total']; ?></span>
                                             </div>
                                         </div>
                                     </div>
+
                                     <div class="col-md-3 col-sm-6 col-12">
                                         <div class="info-box bg-warning">
                                             <span class="info-box-icon"><i class="fas fa-user-check"></i></span>
@@ -238,10 +519,13 @@ $projectProgress = getProjectProgressStats($project_id);
                                 <div class="card-body">
                                     <div class="form-group">
                                         <label for="status_project">Project Status</label>
-                                        <input type="text" class="form-control" id="status_project"
-                                            name="status_project"
-                                            value="<?php echo htmlspecialchars($project['status_project']); ?>"
-                                            readonly>
+                                        <select class="form-control" id="status_project" name="status_project" required
+                                            onchange="updateProjectField('status_project', this.value)">
+                                            <option value="pending" <?php echo ($project['status_project'] == 'pending') ? 'selected' : ''; ?>>Pending</option>
+                                            <option value="in_progress" <?php echo ($project['status_project'] == 'in_progress') ? 'selected' : ''; ?>>In Progress</option>
+                                            <option value="review" <?php echo ($project['status_project'] == 'review') ? 'selected' : ''; ?>>Review</option>
+                                            <option value="completed" <?php echo ($project['status_project'] == 'completed') ? 'selected' : ''; ?>>Completed</option>
+                                        </select>
                                     </div>
                                     <div class="form-group">
                                         <label for="priority">Priority</label>
@@ -357,11 +641,12 @@ $projectProgress = getProjectProgressStats($project_id);
                                                                     value="<?php echo $image['image_id']; ?>">
                                                             </td>
                                                             <td>
-                                                                <a href="../uploads/projects/<?php echo $project_id; ?>/<?php echo $image['image_path']; ?>"
+                                                                <!-- <a href="../uploads/projects/<?php echo $project_id; ?>/<?php echo $image['image_path']; ?>"
                                                                     target="_blank" class="image-preview-link"
                                                                     title="View Image">
                                                                     <?php echo $fileName; ?>
-                                                                </a>
+                                                                </a> -->
+                                                                <?php echo $fileName; ?>
                                                             </td>
                                                             <td>
                                                                 <?php

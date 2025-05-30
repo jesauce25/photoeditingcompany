@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Process Add Project
  * Handles the form submission for adding a new project
@@ -65,22 +66,33 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
         header("Location: add-project.php");
         exit();
-    }
-
-    // Handle file names from the hidden input
+    }    // Handle file data from the hidden input
     $file_data = [];
     $file_names_json = $_POST['fileNames'] ?? '';
 
     if (!empty($file_names_json)) {
         try {
-            $file_data = json_decode($file_names_json, true);
+            $files_array = json_decode($file_names_json, true);
 
-            // If file data is not an array, initialize it as empty array
-            if (!is_array($file_data)) {
-                $file_data = [];
+            if (is_array($files_array)) {
+                foreach ($files_array as $file) {
+                    if (isset($file['name'])) {
+                        $file_data[] = [
+                            'name' => $file['name'],
+                            'type' => $file['type'] ?? '',
+                            'size' => $file['size'] ?? 0,
+                            'batch' => $file['batch'] ?? 0
+                        ];
+                    }
+                }
+            }
+
+            // Update total_images based on actual file count if not explicitly set
+            if (empty($total_images)) {
+                $total_images = count($file_data);
             }
         } catch (Exception $e) {
-            // If JSON decode fails, just use empty array
+            error_log("Error processing file data: " . $e->getMessage());
             $file_data = [];
         }
     }
@@ -123,4 +135,3 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     header("Location: add-project.php");
     exit();
 }
-?>
