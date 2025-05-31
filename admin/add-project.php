@@ -414,144 +414,104 @@ unset($_SESSION['form_data']);
 
 <!-- Custom JavaScript -->
 <script>
+    // Updated Image Upload JavaScript with Batch Tracking, Removal Features, and Unique IDs
     $(document).ready(function() {
         const dropzone = document.getElementById('dropzone');
         const fileInput = document.getElementById('projectImages');
         const fileList = document.getElementById('selectedFilesList');
         const totalImagesInput = document.getElementById('total_images');
         const fileNamesInput = document.getElementById('fileNames');
-        const totalFilesCount = document.getElementById('totalFilesCount'); // Array to store batches of files
-        let batches = [];
-        // Array of colors for different batches
+        const totalFilesCount = document.getElementById('totalFilesCount');
+
+        // Global array to store all files across batches
+        let allFiles = [];
+
+        // Batch counter to track batch IDs (1-based indexing)
+        let batchCounter = 0;
+
+        // Counter for generating unique IDs
+        let fileIdCounter = 0;
+
+        // Predefined colors for batch backgrounds (1-based indexing in comments)
         const batchColors = [
-            'rgba(200, 230, 201, 0.5)', // Light green
-            'rgba(179, 229, 252, 0.5)', // Light blue
-            'rgba(255, 224, 178, 0.5)', // Light orange
-            'rgba(225, 190, 231, 0.5)', // Light purple
-            'rgba(255, 205, 210, 0.5)', // Light pink
-            'rgba(255, 245, 157, 0.5)', // Light yellow
-            'rgba(207, 216, 220, 0.5)', // Light gray
-            'rgba(174, 213, 129, 0.5)', // Soft lime
-            'rgba(255, 171, 145, 0.5)', // Soft coral
-            'rgba(176, 190, 255, 0.5)', // Soft blue
-            'rgba(255, 188, 217, 0.5)', // Soft pink 2
-            'rgba(179, 157, 219, 0.5)', // Soft purple
-            'rgba(197, 225, 165, 0.5)', // Pale green
-            'rgba(255, 204, 128, 0.5)', // Pale orange
-            'rgba(158, 235, 207, 0.5)', // Mint
-            'rgba(244, 143, 177, 0.5)', // Rose
-            'rgba(206, 147, 216, 0.5)', // Orchid
-            'rgba(129, 212, 250, 0.5)', // Sky blue
-            'rgba(255, 171, 64, 0.5)', // Marigold
-            'rgba(174, 198, 207, 0.5)', // Steel blue
-            'rgba(209, 196, 233, 0.5)', // Lavender
-            'rgba(248, 187, 208, 0.5)', // Baby pink
-            'rgba(178, 235, 242, 0.5)', // Light cyan
-            'rgba(220, 237, 200, 0.5)', // Tea green
-            'rgba(255, 204, 188, 0.5)', // Peach
-            'rgba(187, 222, 251, 0.5)', // Baby blue
-            'rgba(255, 236, 179, 0.5)', // Vanilla
-            'rgba(212, 225, 227, 0.5)', // Pearl
-            'rgba(206, 212, 218, 0.5)', // Light slate
-            'rgba(209, 233, 234, 0.5)' // Powder blue
+            '#e6f7ff', // Light blue (batch = 1)
+            '#f6ffed', // Light green (batch = 2)
+            '#fff7e6', // Light orange (batch = 3)
+            '#f9f0ff', // Light purple (batch = 4)
+            '#fff1f0', // Light red (batch = 5)
+            '#e6fffb', // Light cyan (batch = 6)
+            '#fffbe6' // Light yellow (batch = 7)
         ];
 
-        // Function to get next batch color
-        function getBatchColor(batchIndex) {
-            return batchColors[batchIndex % batchColors.length];
+        // Function to generate a unique ID for each file
+        function generateUniqueId() {
+            fileIdCounter++;
+            return `file_${new Date().getTime()}_${fileIdCounter}`;
+        }
+
+        // Function to get color for current batch
+        function getBatchColor(batchId) {
+            // Convert to 0-based index for array access
+            const colorIndex = (batchId - 1) % batchColors.length;
+            return batchColors[colorIndex];
         }
 
         // Function to update total images count
         function updateTotalImages() {
-            const totalFiles = batches.reduce((sum, batch) => sum + batch.files.length, 0);
-            totalImagesInput.value = totalFiles;
-            totalFilesCount.textContent = totalFiles;
-            // Update hidden input with all file data
-            const allFiles = batches.reduce((files, batch) => {
-                return files.concat(batch.files.map(file => ({
-                    name: file.name,
-                    type: file.type,
-                    size: file.size,
-                    batch: batch.id
-                })));
-            }, []);
+            const count = allFiles.length;
+            if (totalImagesInput) totalImagesInput.value = count;
+            totalFilesCount.textContent = count;
+
+            // Update hidden input with JSON data including batch information
             fileNamesInput.value = JSON.stringify(allFiles);
+
+            // Debug logging
+            console.log('Total files:', count);
+            console.log('Files by batch:', allFiles.reduce((acc, file) => {
+                if (!acc[file.batch]) acc[file.batch] = [];
+                acc[file.batch].push(file.name);
+                return acc;
+            }, {}));
         }
 
         // Handle file selection
         fileInput.addEventListener('change', function(e) {
-            const files = Array.from(this.files).map(file => ({
+            const files = this.files;
+            if (files.length === 0) return;
+
+            // Increment batch counter for new batch (1-based indexing)
+            batchCounter++;
+            const currentBatchColor = getBatchColor(batchCounter);
+
+            console.log('New batch created:', batchCounter);
+
+            // Process new files and add them to allFiles array
+            const newFiles = Array.from(files).map(file => ({
+                id: generateUniqueId(),
                 name: file.name,
                 type: file.type,
-                size: file.size
+                size: file.size,
+                batch: batchCounter, // 1-based indexing
+                batchColor: currentBatchColor,
+                uploadTime: new Date().getTime()
             }));
 
-            if (files.length > 0) {
-                batches.push({
-                    id: Date.now(),
-                    files: files,
-                    color: getBatchColor(batches.length)
-                });
-                updateFileList();
-                updateTotalImages();
-            }
+            console.log('Files in this batch:', newFiles.map(f => f.name));
 
-            // Reset file input to allow selecting the same files again
-            this.value = '';
-        });
+            // Append new files to the global array
+            allFiles = [...allFiles, ...newFiles];
 
-        // Update file list display
-        function updateFileList() {
-            if (batches.length) {
-                fileList.innerHTML = batches.map((batch, batchIndex) => `
-                    <div class="batch-group mb-2">
-                        <div class="batch-header d-flex justify-content-between align-items-center p-2 bg-light">
-                            <span><strong>Batch ${batchIndex + 1}</strong> (${batch.files.length} files)</span>
-                            <button type="button" class="btn btn-sm btn-outline-danger delete-batch" data-batch-id="${batch.id}">
-                                <i class="fas fa-trash"></i> Remove Batch
-                            </button>
-                        </div>
-                        ${batch.files.map(file => `
-                            <div class="list-group-item d-flex justify-content-between align-items-center" style="background-color: ${batch.color}">
-                                <div>
-                                    <i class="fas fa-file-image text-primary mr-2"></i>
-                                    <span>${file.name}</span>
-                                </div>
-                                <small class="text-muted">${formatFileSize(file.size)}</small>
-                            </div>
-                        `).join('')}
-                    </div>
-                `).join('');
-
-                // Add event listeners for batch deletion
-                document.querySelectorAll('.delete-batch').forEach(button => {
-                    button.addEventListener('click', function() {
-                        const batchId = parseInt(this.getAttribute('data-batch-id'));
-                        batches = batches.filter(batch => batch.id !== batchId);
-                        updateFileList();
-                        updateTotalImages();
-                    });
-                });
-            } else {
-                fileList.innerHTML = '<div class="list-group-item text-muted">No files selected</div>';
-            }
-        }
-
-        // Reset handler
-        $('#projectForm').on('reset', function() {
-            batches = [];
             updateFileList();
             updateTotalImages();
         });
 
-        // Format file size
-        function formatFileSize(bytes) {
-            if (bytes === 0) return '0 Bytes';
-            const k = 1024;
-            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-            const i = Math.floor(Math.log(bytes) / Math.log(k));
-            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-        }
+        // Click to browse
+        dropzone.addEventListener('click', function(e) {
+            if (e.target !== fileInput) {
+                e.preventDefault();
+                fileInput.click();
+            }
+        });
 
         // Handle drag and drop
         ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
@@ -583,35 +543,184 @@ unset($_SESSION['form_data']);
 
         function handleDrop(e) {
             const dt = e.dataTransfer;
-            const files = Array.from(dt.files).map(file => ({
+            const files = dt.files;
+
+            if (files.length === 0) return;
+
+            // Increment batch counter for new batch (1-based indexing)
+            batchCounter++;
+            const currentBatchColor = getBatchColor(batchCounter);
+
+            console.log('New batch created (drop):', batchCounter);
+
+            // Process new files and add them to allFiles array
+            const newFiles = Array.from(files).map(file => ({
+                id: generateUniqueId(),
                 name: file.name,
                 type: file.type,
-                size: file.size
+                size: file.size,
+                batch: batchCounter, // 1-based indexing
+                batchColor: currentBatchColor,
+                uploadTime: new Date().getTime()
             }));
 
-            if (files.length > 0) {
-                batches.push({
-                    id: Date.now(),
-                    files: files,
-                    color: getBatchColor(batches.length)
+            console.log('Files in this batch (drop):', newFiles.map(f => f.name));
+
+            // Append new files to the global array
+            allFiles = [...allFiles, ...newFiles];
+
+            updateFileList();
+            updateTotalImages();
+        }
+
+        // Function to remove an entire batch
+        function removeBatch(batchId) {
+            console.log('Removing batch:', batchId);
+
+            // Filter out all files with the specified batch ID
+            allFiles = allFiles.filter(file => file.batch !== batchId);
+
+            // Update UI and hidden input
+            updateFileList();
+            updateTotalImages();
+        }
+
+        // Function to remove an individual file
+        function removeFile(fileId) {
+            console.log('Removing file with ID:', fileId);
+
+            // Find the index of the file to remove by ID
+            const fileIndex = allFiles.findIndex(file => file.id === fileId);
+
+            // Remove the file if found
+            if (fileIndex !== -1) {
+                console.log('Found file to remove:', allFiles[fileIndex].name, 'from batch', allFiles[fileIndex].batch);
+                allFiles.splice(fileIndex, 1);
+            } else {
+                console.log('File not found with ID:', fileId);
+            }
+
+            // Update UI and hidden input
+            updateFileList();
+            updateTotalImages();
+        }
+
+        // Update file list display with batch grouping and removal buttons
+        function updateFileList() {
+            if (allFiles.length) {
+                // Group files by batch
+                const batchGroups = allFiles.reduce((groups, file) => {
+                    const batch = file.batch;
+                    if (!groups[batch]) {
+                        groups[batch] = {
+                            files: [],
+                            color: file.batchColor,
+                            batchId: batch
+                        };
+                    }
+                    groups[batch].files.push(file);
+                    return groups;
+                }, {});
+
+                // Generate HTML for each batch group
+                let html = '';
+                Object.keys(batchGroups).forEach(batchId => {
+                    const group = batchGroups[batchId];
+                    const batchColor = group.color;
+
+                    // Add batch header with remove batch button
+                    html += `
+                    <div class="list-group-item d-flex justify-content-between align-items-center" 
+                         style="background-color: ${batchColor}; border-bottom: none; border-radius: 4px 4px 0 0; margin-top: 10px;">
+                        <strong>Batch #${batchId}</strong>
+                        <div>
+                            <span class="badge badge-primary mr-2">${group.files.length} files</span>
+                            <button type="button" class="btn btn-sm btn-danger remove-batch" 
+                                    data-batch-id="${batchId}" title="Remove Batch">
+                                <i class="fas fa-trash-alt"></i> Remove Batch
+                            </button>
+                        </div>
+                    </div>
+                `;
+
+                    // Add files in this batch with individual remove buttons
+                    group.files.forEach((file, index) => {
+                        const isLast = index === group.files.length - 1;
+                        const borderRadius = isLast ? "border-radius: 0 0 4px 4px;" : "border-radius: 0;";
+
+                        html += `
+                        <div class="list-group-item d-flex justify-content-between align-items-center"
+                             style="background-color: ${batchColor}; border-top: none; ${borderRadius}">
+                            <div>
+                                <i class="fas fa-file-image text-primary mr-2"></i>
+                                <span>${file.name}</span>
+                            </div>
+                            <div>
+                                <small class="text-muted mr-3">${formatFileSize(file.size)}</small>
+                                <button type="button" class="btn btn-sm btn-outline-danger remove-file" 
+                                        data-file-id="${file.id}" title="Remove File">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    });
                 });
-                updateFileList();
-                updateTotalImages();
+
+                fileList.innerHTML = html;
+
+                // Add event listeners for remove batch buttons
+                document.querySelectorAll('.remove-batch').forEach(button => {
+                    button.addEventListener('click', function() {
+                        const batchId = parseInt(this.getAttribute('data-batch-id'));
+                        removeBatch(batchId);
+                    });
+                });
+
+                // Add event listeners for remove file buttons
+                document.querySelectorAll('.remove-file').forEach(button => {
+                    button.addEventListener('click', function() {
+                        const fileId = this.getAttribute('data-file-id');
+                        removeFile(fileId);
+                    });
+                });
+            } else {
+                fileList.innerHTML = '<div class="list-group-item text-muted">No files selected</div>';
             }
         }
 
-        // Initialize Select2 for company dropdown
-        $('#companyName').select2({
-            theme: 'bootstrap4',
-            placeholder: 'Select a company',
-            allowClear: true,
-            width: '100%',
-            dropdownParent: $('#companyName').parent(),
-            minimumInputLength: 0,
-            templateResult: function(data) {
-                if (data.loading) return data.text;
-                return $('<span>' + data.text + '</span>');
-            }
+        // Reset handler
+        $('#projectForm').on('reset', function() {
+            allFiles = [];
+            batchCounter = 0;
+            fileIdCounter = 0;
+            updateFileList();
+            updateTotalImages();
         });
+
+        // Format file size
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        // Initialize Select2 for company dropdown if it exists
+        if ($('#companyName').length) {
+            $('#companyName').select2({
+                theme: 'bootstrap4',
+                placeholder: 'Select a company',
+                allowClear: true,
+                width: '100%',
+                dropdownParent: $('#companyName').parent(),
+                minimumInputLength: 0,
+                templateResult: function(data) {
+                    if (data.loading) return data.text;
+                    return $('<span>' + data.text + '</span>');
+                }
+            });
+        }
     });
 </script>

@@ -66,7 +66,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
         header("Location: add-project.php");
         exit();
-    }    // Handle file data from the hidden input
+    }
+
+    // Handle file data from the hidden input
     $file_data = [];
     $file_names_json = $_POST['fileNames'] ?? '';
 
@@ -81,7 +83,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                             'name' => $file['name'],
                             'type' => $file['type'] ?? '',
                             'size' => $file['size'] ?? 0,
-                            'batch' => $file['batch'] ?? 0
+                            'batch' => $file['batch'] ?? 0  // This will now store the 1-based batch number
                         ];
                     }
                 }

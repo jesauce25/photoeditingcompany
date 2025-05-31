@@ -634,8 +634,9 @@ $projectProgress = getProjectProgressStats($project_id);
                                                             $rowClass = 'table-light';
                                                         }
                                                         ?>
-                                                        <tr data-image-id="<?php echo $image['image_id']; ?>"
-                                                            class="<?php echo $rowClass; ?>">
+                                                        <tr data-image-id="<?php echo $image['image_id']; ?>" 
+                                                            class="<?php echo $rowClass; ?>"
+                                                            style="background-color: <?php echo (isset($image['batch'])) ? 'var(--batch-' . $image['batch'] . '-color)' : 'transparent'; ?>">
                                                             <td class="text-center">
                                                                 <input type="checkbox" class="image-select"
                                                                     value="<?php echo $image['image_id']; ?>">
@@ -806,7 +807,6 @@ $projectProgress = getProjectProgressStats($project_id);
                         #imagesTable th {
                             padding: 1px !important;
                             vertical-align: middle !important;
-                            height: auto !important;
                             line-height: 1 !important;
                         }
 

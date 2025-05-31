@@ -93,7 +93,9 @@ function addProject($project_title, $company_id, $description, $date_arrived, $d
             return ['status' => 'error', 'message' => 'Error adding project: ' . $stmt->error];
         }
 
-        $project_id = $conn->insert_id;        // Save file information if any
+        $project_id = $conn->insert_id;
+
+        // Save file information if any
         $uploaded_files = [];
 
         if (!empty($file_data) && is_array($file_data)) {
@@ -103,13 +105,11 @@ function addProject($project_title, $company_id, $description, $date_arrived, $d
                     $file_name = $file['name'];
                     $file_type = $file['type'] ?? 'application/octet-stream';
                     $file_size = $file['size'] ?? 0;
-                    $user_id = $created_by; // Use the same user who created the project
 
                     // Store file information in database
-                    $sql = "INSERT INTO tbl_project_images (project_id, user_id, image_path, file_name, file_type, file_size, status_image) 
-                            VALUES (?, ?, ?, ?, ?, ?, 'available')";
+                    $sql = "INSERT INTO tbl_project_images (project_id, image_path, file_type, file_size) VALUES (?, ?, ?, ?)";
                     $stmt = $conn->prepare($sql);
-                    $stmt->bind_param("iisssi", $project_id, $user_id, $file_name, $file_name, $file_type, $file_size);
+                    $stmt->bind_param("issi", $project_id, $file_name, $file_type, $file_size);
 
                     if (!$stmt->execute()) {
                         $conn->rollback();
@@ -418,6 +418,21 @@ function getGraphicArtists()
     }
 
     return $artists;
+}
+
+/**
+ * Get all available roles for task assignment
+ * @return array Array of roles
+ */
+function getAvailableRoles()
+{
+    return [
+        'Retouch' => 'Basic Retouching',
+        'Color' => 'Color Correction',
+        'Extraction' => 'Background Extraction',
+        'Final' => 'Final Review',
+        'Other' => 'Other Tasks'
+    ];
 }
 
 /**
