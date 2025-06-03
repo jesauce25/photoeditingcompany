@@ -51,28 +51,31 @@ if (!isset($conn) || !$conn) {
 }
 
 /**
- * Add a new project with associated images
+ * Enhanced addProject function with improved file metadata handling
  * 
- * @param string $project_title The title of the project
- * @param int $company_id The company ID associated with the project
- * @param string $description The project description
- * @param string $date_arrived The date the project arrived
- * @param string $deadline The project deadline
- * @param string $priority The project priority (low, medium, high, urgent)
- * @param string $status The project status (pending, in_progress, review, completed, delayed)
- * @param int $total_images The total number of images
- * @param int $created_by The user ID who created the project
- * @param array $file_data Array of file information (name, type, size)
- * @param bool $store_only_names If true, only store the original filenames without uploading files
- * @return array Status of the operation and the inserted project ID
+ * @param string $project_title Project title
+ * @param int $company_id Company ID
+ * @param string $description Project description
+ * @param string $date_arrived Date arrived
+ * @param string $deadline Project deadline
+ * @param string $priority Project priority
+ * @param string $status Project status
+ * @param int $total_images Total number of images
+ * @param int $created_by User ID who created the project
+ * @param array $file_data Array of file metadata
+ * @return array Result status and message
  */
-function addProject($project_title, $company_id, $description, $date_arrived, $deadline, $priority, $status, $total_images, $created_by, $file_data, $store_only_names = false)
+function addProject($project_title, $company_id, $description, $date_arrived, $deadline, $priority, $status, $total_images, $created_by, $file_data)
 {
     global $conn;
 
     try {
         // Start transaction
         $conn->begin_transaction();
+
+        // Debug log
+        error_log("addProject function called with " . count($file_data) . " files");
+        error_log("Project data: title=$project_title, company_id=$company_id, total_images=$total_images");
 
         // Insert project data
         $sql = "INSERT INTO tbl_projects (project_title, company_id, description, date_arrived, deadline, priority, status_project, total_images, created_by) 
@@ -90,51 +93,80 @@ function addProject($project_title, $company_id, $description, $date_arrived, $d
 
         if (!$stmt->execute()) {
             $conn->rollback();
+            error_log("Error executing project insert: " . $stmt->error);
             return ['status' => 'error', 'message' => 'Error adding project: ' . $stmt->error];
         }
 
         $project_id = $conn->insert_id;
+        error_log("Project inserted with ID: " . $project_id);
 
-        // Save file information if any
+        // Save file metadata if any
         $uploaded_files = [];
 
         if (!empty($file_data) && is_array($file_data)) {
-            // If we're using the JSON array from the hidden field
-            foreach ($file_data as $file) {
+            error_log("Processing " . count($file_data) . " files for project ID: " . $project_id);
+
+            // Process file metadata
+            foreach ($file_data as $index => $file) {
                 if (isset($file['name']) && !empty($file['name'])) {
                     $file_name = $file['name'];
                     $file_type = $file['type'] ?? 'application/octet-stream';
                     $file_size = $file['size'] ?? 0;
+                    $batch_id = (string)(isset($file['batch']) ? $file['batch'] : '1');
+                    $status_image = 'available';
 
-                    // Store file information in database
-                    $sql = "INSERT INTO tbl_project_images (project_id, image_path, file_type, file_size) VALUES (?, ?, ?, ?)";
+                    error_log("Processing file $index: $file_name, type=$file_type, size=$file_size, batch=$batch_id");
+
+                    // Store file metadata in database with status_image
+                    $sql = "INSERT INTO tbl_project_images (project_id, image_path, file_type, file_size, status_image, batch_id) VALUES (?, ?, ?, ?, ?, ?)";
                     $stmt = $conn->prepare($sql);
-                    $stmt->bind_param("issi", $project_id, $file_name, $file_type, $file_size);
+
+                    if (!$stmt) {
+                        error_log("SQL Prepare Error for file insert: " . $conn->error);
+                        $conn->rollback();
+                        return ['status' => 'error', 'message' => 'Error preparing file statement: ' . $conn->error];
+                    }
+
+                    $stmt->bind_param("ississ", $project_id, $file_name, $file_type, $file_size, $status_image, $batch_id);
 
                     if (!$stmt->execute()) {
+                        error_log("Error executing file insert: " . $stmt->error);
                         $conn->rollback();
                         return ['status' => 'error', 'message' => 'Error saving file information: ' . $stmt->error];
                     }
 
+                    error_log("File metadata saved successfully: " . $file_name);
                     $uploaded_files[] = $file_name;
+                } else {
+                    error_log("Skipping file $index - missing or empty name");
                 }
             }
+        } else {
+            error_log("No file data to process");
         }
 
         // Commit transaction
         $conn->commit();
+        error_log("Transaction committed successfully");
 
         return [
             'status' => 'success',
-            'message' => 'Project added successfully',
+            'message' => 'Project added successfully with ' . count($uploaded_files) . ' files',
             'project_id' => $project_id,
             'uploaded_files' => $uploaded_files
         ];
     } catch (Exception $e) {
         $conn->rollback();
+        error_log("Exception in addProject: " . $e->getMessage());
         return ['status' => 'error', 'message' => 'Exception: ' . $e->getMessage()];
     }
 }
+
+
+
+
+
+
 
 /**
  * Get all projects with status other than 'delayed'

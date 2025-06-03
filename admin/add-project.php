@@ -414,7 +414,6 @@ unset($_SESSION['form_data']);
 
 <!-- Custom JavaScript -->
 <script>
-    // Updated Image Upload JavaScript with Batch Tracking, Removal Features, and Unique IDs
     $(document).ready(function() {
         const dropzone = document.getElementById('dropzone');
         const fileInput = document.getElementById('projectImages');
@@ -431,6 +430,35 @@ unset($_SESSION['form_data']);
 
         // Counter for generating unique IDs
         let fileIdCounter = 0;
+
+        // Function to generate a unique file identifier
+        function generateUniqueIdentifier(fileName) {
+            const timestamp = new Date().getTime();
+            const random = Math.floor(Math.random() * 1000);
+            return `${timestamp}_${random}`;
+        }
+
+        // Function to process a file and create a unique storage name if needed
+        function processFile(file, batchId, batchColor) {
+            const fileId = generateUniqueId();
+            const fileExtension = file.name.split('.').pop();
+            const fileNameWithoutExt = file.name.slice(0, -(fileExtension.length + 1));
+
+            // Create a unique storage name for the file
+            const uniqueIdentifier = generateUniqueIdentifier();
+            const storageFileName = `${fileNameWithoutExt}_${uniqueIdentifier}.${fileExtension}`;
+
+            return {
+                id: fileId,
+                originalName: file.name, // Keep original name for display
+                storageName: storageFileName, // Unique name for storage
+                type: file.type,
+                size: file.size,
+                batch: batchId,
+                batchColor: batchColor,
+                uploadTime: new Date().getTime()
+            };
+        }
 
         // Predefined colors for batch backgrounds (1-based indexing in comments)
         const batchColors = [
@@ -463,7 +491,14 @@ unset($_SESSION['form_data']);
             totalFilesCount.textContent = count;
 
             // Update hidden input with JSON data including batch information
-            fileNamesInput.value = JSON.stringify(allFiles);
+            const fileDataForSubmission = allFiles.map(file => ({
+                name: file.name,
+                displayName: file.displayName || file.name,
+                type: file.type,
+                size: file.size,
+                batch: file.batch.toString() // Ensure batch is a string
+            }));
+            fileNamesInput.value = JSON.stringify(fileDataForSubmission);
 
             // Debug logging
             console.log('Total files:', count);
@@ -489,20 +524,23 @@ unset($_SESSION['form_data']);
             const newFiles = Array.from(files).map(file => ({
                 id: generateUniqueId(),
                 name: file.name,
+                displayName: file.name,
                 type: file.type,
                 size: file.size,
-                batch: batchCounter, // 1-based indexing
-                batchColor: currentBatchColor,
-                uploadTime: new Date().getTime()
+                batch: batchCounter.toString(), // Ensure batch is a string
+                batchColor: currentBatchColor
             }));
 
             console.log('Files in this batch:', newFiles.map(f => f.name));
 
-            // Append new files to the global array
+            // Always append new files to the global array
             allFiles = [...allFiles, ...newFiles];
 
             updateFileList();
             updateTotalImages();
+
+            // Clear the file input to allow selecting the same files again
+            fileInput.value = '';
         });
 
         // Click to browse
@@ -557,16 +595,19 @@ unset($_SESSION['form_data']);
             const newFiles = Array.from(files).map(file => ({
                 id: generateUniqueId(),
                 name: file.name,
+                displayName: file.name, // Original name for display
                 type: file.type,
                 size: file.size,
-                batch: batchCounter, // 1-based indexing
+                batch: batchCounter,
                 batchColor: currentBatchColor,
-                uploadTime: new Date().getTime()
+                uploadTime: new Date().getTime(),
+                // Add unique batch identifier to make each file unique
+                uniqueBatchId: `${batchCounter}_${generateUniqueIdentifier()}`
             }));
 
             console.log('Files in this batch (drop):', newFiles.map(f => f.name));
 
-            // Append new files to the global array
+            // Always append new files to the global array
             allFiles = [...allFiles, ...newFiles];
 
             updateFileList();
@@ -653,7 +694,7 @@ unset($_SESSION['form_data']);
                              style="background-color: ${batchColor}; border-top: none; ${borderRadius}">
                             <div>
                                 <i class="fas fa-file-image text-primary mr-2"></i>
-                                <span>${file.name}</span>
+                                <span>${file.displayName}</span>
                             </div>
                             <div>
                                 <small class="text-muted mr-3">${formatFileSize(file.size)}</small>
@@ -722,5 +763,116 @@ unset($_SESSION['form_data']);
                 }
             });
         }
+    });
+</script>
+
+<script>
+    $(document).ready(function() {
+        // Create a global variable to store file data outside the original script scope
+        window.globalFileData = [];
+
+        // Function to update the global file data
+        function updateGlobalFileData() {
+            if (typeof allFiles !== 'undefined' && Array.isArray(allFiles)) {
+                window.globalFileData = allFiles.map(file => ({
+                    name: file.name,
+                    displayName: file.displayName || file.name,
+                    type: file.type,
+                    size: file.size,
+                    batch: file.batch
+                }));
+                console.log('Global file data updated with', window.globalFileData.length, 'files');
+            } else {
+                console.log('allFiles not available for global update');
+            }
+        }
+
+        // Monitor for changes to the file list
+        const observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+                if (mutation.type === 'childList' && mutation.target.id === 'selectedFilesList') {
+                    console.log('File list changed, updating global data');
+                    updateGlobalFileData();
+                }
+            });
+        });
+
+        // Start observing the file list for changes
+        const fileList = document.getElementById('selectedFilesList');
+        if (fileList) {
+            observer.observe(fileList, {
+                childList: true,
+                subtree: true
+            });
+            console.log('File list observer started');
+        }
+
+        // Override the form submission
+        $('#projectForm').on('submit', function(e) {
+            // Prevent the default submission
+            e.preventDefault();
+
+            console.log('Form submission intercepted');
+
+            // Get the current form data
+            const formData = new FormData(this);
+
+            // Check if we have files in the global array
+            if (window.globalFileData && window.globalFileData.length > 0) {
+                console.log('Adding', window.globalFileData.length, 'files to submission');
+
+                // Add the file data as JSON
+                formData.set('fileNames', JSON.stringify(window.globalFileData));
+
+                // Update the total images count
+                formData.set('total_images', window.globalFileData.length.toString());
+
+                console.log('File data added to form submission');
+            } else {
+                console.log('No files to add to submission');
+            }
+
+            // Submit the form via AJAX
+            $.ajax({
+                url: $(this).attr('action'),
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(response) {
+                    console.log('Form submitted successfully');
+
+                    // Check if save and add another
+                    if ($('#saveAndAddAnother').is(':focus')) {
+                        window.location.href = 'add-project.php';
+                    } else {
+                        window.location.href = 'project-list.php';
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error submitting form:', error);
+                    alert('There was an error saving the project. Please try again.');
+                }
+            });
+        });
+
+        // Update global data when files are added
+        if (typeof updateFileList === 'function') {
+            const originalUpdateFileList = updateFileList;
+            updateFileList = function() {
+                originalUpdateFileList.apply(this, arguments);
+                updateGlobalFileData();
+            };
+            console.log('File list update function hooked');
+        }
+
+        // Also hook into the file input change event
+        $('#projectImages').on('change', function() {
+            console.log('File input changed, scheduling global data update');
+            // Schedule update after the original handler has processed the files
+            setTimeout(updateGlobalFileData, 100);
+        });
+
+        console.log('Direct file submission handler installed');
     });
 </script>

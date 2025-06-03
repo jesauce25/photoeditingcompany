@@ -565,10 +565,19 @@ $projectProgress = getProjectProgressStats($project_id);
                                         data-target="#addImagesModal">
                                         <i class="fas fa-plus"></i> Add Images
                                     </button>
+                                    <!-- Search Bar -->
+                                    <div class="mb-3">
+                                        <div class="input-group">
+                                            <div class="input-group-prepend">
+                                                <span class="input-group-text"><i class="fas fa-search"></i></span>
+                                            </div>
+                                            <input type="text" class="form-control" id="imageTableSearch" placeholder="Search images...">
+                                        </div>
+                                    </div>
                                 </div>
                                 <div class="card-body">
                                     <!-- Batch Actions (initially hidden) -->
-                                    <div class="row mb-3" id="batchActions" style="display: none;">
+                                    <div class="row mb-3" id="batchActions">
                                         <div class="col-12">
                                             <button type="button" class="btn btn-primary" id="assignSelected"
                                                 data-toggle="modal" data-target="#addAssignmentModal">
@@ -634,7 +643,7 @@ $projectProgress = getProjectProgressStats($project_id);
                                                             $rowClass = 'table-light';
                                                         }
                                                         ?>
-                                                        <tr data-image-id="<?php echo $image['image_id']; ?>" 
+                                                        <tr data-image-id="<?php echo $image['image_id']; ?>"
                                                             class="<?php echo $rowClass; ?>"
                                                             style="background-color: <?php echo (isset($image['batch'])) ? 'var(--batch-' . $image['batch'] . '-color)' : 'transparent'; ?>">
                                                             <td class="text-center">
