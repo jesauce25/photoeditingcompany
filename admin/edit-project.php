@@ -83,6 +83,82 @@ $projectProgress = getProjectProgressStats($project_id);
 
 <!-- Custom CSS for image selection -->
 <style>
+    /* Define batch colors with better visibility */
+    :root {
+        --batch-1-color: rgba(0, 174, 255, 0.2);
+        --batch-2-color: rgba(144, 238, 144, 0.2);
+        --batch-3-color: rgba(255, 166, 0, 0.2);
+        --batch-4-color: rgba(238, 130, 238, 0.2);
+        --batch-5-color: rgba(255, 99, 71, 0.2);
+        --batch-6-color: rgba(0, 255, 255, 0.2);
+        --batch-7-color: rgba(255, 255, 0, 0.2);
+    }
+
+    /* Dynamic batch coloring with higher specificity */
+    #imagesTable tr {
+        transition: background-color 0.2s ease;
+    }
+
+    /* Batch color classes with !important to ensure they take precedence over everything */
+    #imagesTable tr.batch-color-1 {
+        background-color: var(--batch-1-color) !important;
+    }
+
+    #imagesTable tr.batch-color-2 {
+        background-color: var(--batch-2-color) !important;
+    }
+
+    #imagesTable tr.batch-color-3 {
+        background-color: var(--batch-3-color) !important;
+    }
+
+    #imagesTable tr.batch-color-4 {
+        background-color: var(--batch-4-color) !important;
+    }
+
+    #imagesTable tr.batch-color-5 {
+        background-color: var(--batch-5-color) !important;
+    }
+
+    #imagesTable tr.batch-color-6 {
+        background-color: var(--batch-6-color) !important;
+    }
+
+    #imagesTable tr.batch-color-7 {
+        background-color: var(--batch-7-color) !important;
+    }
+
+    /* Make sure table-light doesn't override batch colors */
+    #imagesTable tr.table-light.batch-color-1,
+    #imagesTable tr.table-light.batch-color-2,
+    #imagesTable tr.table-light.batch-color-3,
+    #imagesTable tr.table-light.batch-color-4,
+    #imagesTable tr.table-light.batch-color-5,
+    #imagesTable tr.table-light.batch-color-6,
+    #imagesTable tr.table-light.batch-color-7 {
+        background-color: var(--batch-1-color) !important;
+    }
+
+    /* Only apply table-light if no batch color is present */
+    #imagesTable tr.table-light:not([class*="batch-color-"]) {
+        background-color: rgba(255, 255, 255, 0.1);
+    }
+
+    /* Override hover effects */
+    #imagesTable tr[data-batch-id]:hover,
+    #imagesTable tr.batch-color-1:hover,
+    #imagesTable tr.batch-color-2:hover,
+    #imagesTable tr.batch-color-3:hover,
+    #imagesTable tr.batch-color-4:hover,
+    #imagesTable tr.batch-color-5:hover,
+    #imagesTable tr.batch-color-6:hover,
+    #imagesTable tr.batch-color-7:hover {
+        opacity: 0.9;
+    }
+
+    /* Batch color row styling */
+
+
     .image-container {
         cursor: pointer;
         position: relative;
@@ -633,19 +709,40 @@ $projectProgress = getProjectProgressStats($project_id);
                                                         // Determine image status
                                                         $imageStatus = isset($image['status_image']) ? $image['status_image'] : 'available';
 
-                                                        // Determine row class based on redo status and assignment
-                                                        $rowClass = '';
-                                                        if (isset($image['redo']) && $image['redo'] == '1') {
-                                                            $rowClass = 'table-danger';
-                                                            // Add a debug comment to verify redo status
-                                                            // echo "<!-- Redo status found: " . $image['redo'] . " -->";
-                                                        } elseif (isset($image['assignment_id']) && $image['assignment_id'] > 0) {
-                                                            $rowClass = 'table-light';
+
+                                                        // Check for batch in multiple possible column names
+                                                        $batchId = null;
+                                                        $batchColorClass = '';
+
+                                                        // Try batch field first
+                                                        if (isset($image['batch']) && !empty($image['batch']) && $image['batch'] !== '0') {
+                                                            $batchId = intval($image['batch']);
                                                         }
+                                                        // Then try batch_id field
+                                                        else if (isset($image['batch_id']) && !empty($image['batch_id']) && $image['batch_id'] !== '0') {
+                                                            $batchId = intval($image['batch_id']);
+                                                        }
+
+                                                        // Default to batch 1 if no valid batch ID found
+                                                        if ($batchId === null || $batchId === 0) {
+                                                            $batchId = 1;
+                                                        }
+
+                                                        // Calculate color class
+                                                        $colorIndex = (($batchId - 1) % 7) + 1;
+                                                        $batchColorClass = 'batch-color-' . $colorIndex;
+                                                        error_log("Using color index: " . $colorIndex . " for batch ID: " . $batchId);
+
+
+
+
+
                                                         ?>
                                                         <tr data-image-id="<?php echo $image['image_id']; ?>"
-                                                            class="<?php echo $rowClass; ?>"
-                                                            style="background-color: <?php echo (isset($image['batch'])) ? 'var(--batch-' . $image['batch'] . '-color)' : 'transparent'; ?>">
+                                                            <?php if (!empty($combinedClass)): ?>class="<?php echo $combinedClass; ?>" <?php endif; ?>
+                                                            <?php if ($batchId !== null): ?>
+                                                            data-batch-id="<?php echo $batchId; ?>"
+                                                            <?php endif; ?>>
                                                             <td class="text-center">
                                                                 <input type="checkbox" class="image-select"
                                                                     value="<?php echo $image['image_id']; ?>">
@@ -1544,3 +1641,96 @@ $projectProgress = getProjectProgressStats($project_id);
         vertical-align: middle;
     }
 </style>
+
+
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Check if the table exists
+        const table = document.getElementById('imagesTable');
+        if (!table) {
+            console.error('Table with ID "imagesTable" not found');
+            return;
+        }
+
+        // Log all rows with batch IDs
+        const rows = table.querySelectorAll('tr[data-batch-id]');
+        console.log('Found ' + rows.length + ' rows with batch IDs');
+
+        // Check if CSS variables are defined
+        const computedStyle = getComputedStyle(document.documentElement);
+        // Default colors if CSS variables are not defined
+        const defaultColors = [
+            'rgba(0, 174, 255, 0.2)', // 1: Light blue
+            'rgba(144, 238, 144, 0.2)', // 2: Light green
+            'rgba(255, 166, 0, 0.2)', // 3: Light orange
+            'rgba(238, 130, 238, 0.2)', // 4: Light purple
+            'rgba(255, 99, 71, 0.2)', // 5: Light red
+            'rgba(0, 255, 255, 0.2)', // 6: Light cyan
+            'rgba(255, 255, 0, 0.2)' // 7: Light yellow
+        ];
+
+        // Log CSS variable state
+        for (let i = 1; i <= 7; i++) {
+            const colorVar = `--batch-${i}-color`;
+            const color = computedStyle.getPropertyValue(colorVar);
+            console.log(`CSS variable ${colorVar} is ${color ? 'defined: ' + color : 'not defined'}`);
+        }
+
+        // Apply batch colors to all rows
+        rows.forEach(row => {
+            const batchId = parseInt(row.getAttribute('data-batch-id'));
+            if (!isNaN(batchId)) {
+                const colorIndex = ((batchId - 1) % 7);
+                const colorVar = `--batch-${colorIndex + 1}-color`;
+                const cssColor = computedStyle.getPropertyValue(colorVar).trim();
+                const color = cssColor || defaultColors[colorIndex];
+
+                // Clear any existing background color
+                row.style.removeProperty('background-color');
+
+                // Add the appropriate batch color class
+                const batchColorClass = `batch-color-${colorIndex + 1}`;
+                row.classList.remove(...Array.from(row.classList).filter(c => c.startsWith('batch-color-')));
+                row.classList.add(batchColorClass);
+
+                console.log(`Row ${row.getAttribute('data-image-id')} (batch ${batchId}): 
+                    Added class ${batchColorClass}, 
+                    Color: ${color},
+                    Final classes: ${row.className}`);
+            }
+        });
+    });
+
+    // Add event listener for assignment changes
+    document.addEventListener('DOMContentLoaded', function() {
+        // Monitor changes to assignee select boxes
+        const assigneeSelects = document.querySelectorAll('.assignee-select');
+        assigneeSelects.forEach(select => {
+            select.addEventListener('change', function() {
+                const row = this.closest('tr');
+                if (row) {
+                    // Get the batch color class
+                    const batchClass = Array.from(row.classList)
+                        .find(cls => cls.startsWith('batch-color-'));
+
+                    // If row becomes assigned (table-light), ensure batch color is maintained
+                    if (this.value) {
+                        if (!row.classList.contains('table-light')) {
+                            row.classList.add('table-light');
+                        }
+                        // Make sure batch color class stays
+                        if (batchClass) {
+                            // Remove and re-add batch color class to ensure it takes precedence
+                            row.classList.remove(batchClass);
+                            row.classList.add(batchClass);
+                        }
+                    } else {
+                        // If unassigning, remove table-light but keep batch color
+                        row.classList.remove('table-light');
+                    }
+                }
+            });
+        });
+    });
+</script>

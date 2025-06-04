@@ -1864,10 +1864,13 @@ if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQ
 
                     // Upload the file
                     if (move_uploaded_file($file_tmp, $upload_path)) {
+                        // Get batch ID from the posted data, default to 1 if not provided
+                        $batch_id = isset($_POST['batch_id']) ? intval($_POST['batch_id']) : 1;
+
                         // Insert into database
-                        $insertStmt = $conn->prepare("INSERT INTO tbl_project_images (project_id, user_id, image_path, file_type, file_size, upload_date, status_image) VALUES (?, ?, ?, ?, ?, NOW(), 'available')");
+                        $insertStmt = $conn->prepare("INSERT INTO tbl_project_images (project_id, user_id, image_path, file_type, file_size, upload_date, status_image, batch_id) VALUES (?, ?, ?, ?, ?, NOW(), 'available', ?)");
                         $user_id = 0; // Default user ID or you can use the current user's ID
-                        $insertStmt->bind_param("iissi", $project_id, $user_id, $new_file_name, $file_type, $file_size);
+                        $insertStmt->bind_param("iissis", $project_id, $user_id, $new_file_name, $file_type, $file_size, $batch_id);
 
                         if ($insertStmt->execute()) {
                             $uploaded_images++;

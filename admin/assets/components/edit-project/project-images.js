@@ -705,6 +705,10 @@ $(document).ready(function () {
     formData.append("action", "upload_images");
     formData.append("project_id", projectId);
 
+    // Generate a batch ID for this upload group (timestamp + random)
+    const batchId = Math.floor(Math.random() * 7) + 1; // Random number between 1-7
+    formData.append("batch_id", batchId);
+
     // Add all selected files
     for (let i = 0; i < files.length; i++) {
       formData.append("images[]", files[i]);
