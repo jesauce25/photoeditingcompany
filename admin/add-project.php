@@ -462,14 +462,58 @@ unset($_SESSION['form_data']);
 
         // Predefined colors for batch backgrounds (1-based indexing in comments)
         const batchColors = [
-            '#e6f7ff', // Light blue (batch = 1)
-            '#f6ffed', // Light green (batch = 2)
-            '#fff7e6', // Light orange (batch = 3)
-            '#f9f0ff', // Light purple (batch = 4)
-            '#fff1f0', // Light red (batch = 5)
-            '#e6fffb', // Light cyan (batch = 6)
-            '#fffbe6' // Light yellow (batch = 7)
+            '#e6f7ff', // Light Blue
+            '#f6ffed', // Light Green
+            '#fff7e6', // Light Orange
+            '#f9f0ff', // Light Purple
+            '#fff1f0', // Light Red
+            '#e6fffb', // Light Cyan
+            '#fffbe6', // Light Yellow
+            '#f0f5ff', // Soft Indigo
+            '#f0fff0', // Mint Green
+            '#ffe6f0', // Baby Pink
+            '#e6e6ff', // Pale Blue
+            '#e0ffe6', // Spring Green
+            '#fff0e6', // Light Coral
+            '#e6f0ff', // Sky Blue
+            '#fef9e7', // Ivory Yellow
+            '#f3e5f5', // Lavender
+            '#e8f5e9', // Fresh Green
+            '#fff3e0', // Light Apricot
+            '#fce4ec', // Soft Rose
+            '#ede7f6', // Amethyst Mist
+            '#e3f2fd', // Ice Blue
+            '#e1f5fe', // Pale Aqua
+            '#f1f8e9', // Pear Green
+            '#fff8e1', // Buttery Yellow
+            '#f9fbe7', // Citrus Mist
+            '#fbe9e7', // Salmon Blush
+            '#edeff2', // Fog Gray
+            '#f3f6fd', // Cloud Blue
+            '#ede7ff', // Hazy Violet
+            '#d7ffd9', // Light Lime
+            '#ffebee', // Blush Pink
+            '#e0f7fa', // Cool Cyan
+            '#fbefff', // Soft Lilac
+            '#f9fbe7', // Dandelion
+            '#f3e5ab', // Soft Sand
+            '#e0f2f1', // Aqua Gray
+            '#f0f4c3', // Light Olive
+            '#e6e6fa', // Lavender Gray
+            '#e3dac9', // Bone White
+            '#e8eaf6', // Misty Blue
+            '#fffde7', // Lemon Chiffon
+            '#e6ffe6', // Pale Mint
+            '#f0f8ff', // Alice Blue
+            '#ffe4e1', // Misty Rose
+            '#f5f5f5', // Light Gray
+            '#fdf5e6', // Old Lace
+            '#f4ecf7', // Orchid Ice
+            '#faf0e6', // Linen
+            '#fefcea', // Vanilla Mist
+            '#e3f9e5' // Soft Meadow
         ];
+
 
         // Function to generate a unique ID for each file
         function generateUniqueId() {

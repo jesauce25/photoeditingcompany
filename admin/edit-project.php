@@ -83,23 +83,67 @@ $projectProgress = getProjectProgressStats($project_id);
 
 <!-- Custom CSS for image selection -->
 <style>
-    /* Define batch colors with better visibility */
     :root {
-        --batch-1-color: rgba(0, 174, 255, 0.2);
-        --batch-2-color: rgba(144, 238, 144, 0.2);
-        --batch-3-color: rgba(255, 166, 0, 0.2);
-        --batch-4-color: rgba(238, 130, 238, 0.2);
-        --batch-5-color: rgba(255, 99, 71, 0.2);
-        --batch-6-color: rgba(0, 255, 255, 0.2);
-        --batch-7-color: rgba(255, 255, 0, 0.2);
+        --batch-1-color: #e6f7ff;
+        --batch-2-color: #f6ffed;
+        --batch-3-color: #fff7e6;
+        --batch-4-color: #f9f0ff;
+        --batch-5-color: #fff1f0;
+        --batch-6-color: #e6fffb;
+        --batch-7-color: #fffbe6;
+        --batch-8-color: #f0f5ff;
+        --batch-9-color: #f0fff0;
+        --batch-10-color: #ffe6f0;
+        --batch-11-color: #e6e6ff;
+        --batch-12-color: #e0ffe6;
+        --batch-13-color: #fff0e6;
+        --batch-14-color: #e6f0ff;
+        --batch-15-color: #fef9e7;
+        --batch-16-color: #f3e5f5;
+        --batch-17-color: #e8f5e9;
+        --batch-18-color: #fff3e0;
+        --batch-19-color: #fce4ec;
+        --batch-20-color: #ede7f6;
+        --batch-21-color: #e3f2fd;
+        --batch-22-color: #e1f5fe;
+        --batch-23-color: #f1f8e9;
+        --batch-24-color: #fff8e1;
+        --batch-25-color: #f9fbe7;
+        --batch-26-color: #fbe9e7;
+        --batch-27-color: #edeff2;
+        --batch-28-color: #f3f6fd;
+        --batch-29-color: #ede7ff;
+        --batch-30-color: #d7ffd9;
+        --batch-31-color: #ffebee;
+        --batch-32-color: #e0f7fa;
+        --batch-33-color: #fbefff;
+        --batch-34-color: #f9fbe7;
+        --batch-35-color: #f3e5ab;
+        --batch-36-color: #e0f2f1;
+        --batch-37-color: #f0f4c3;
+        --batch-38-color: #e6e6fa;
+        --batch-39-color: #e3dac9;
+        --batch-40-color: #e8eaf6;
+        --batch-41-color: #fffde7;
+        --batch-42-color: #e6ffe6;
+        --batch-43-color: #f0f8ff;
+        --batch-44-color: #ffe4e1;
+        --batch-45-color: #f5f5f5;
+        --batch-46-color: #fdf5e6;
+        --batch-47-color: #f4ecf7;
+        --batch-48-color: #faf0e6;
+        --batch-49-color: #fefcea;
+        --batch-50-color: #e3f9e5;
     }
+
+
 
     /* Dynamic batch coloring with higher specificity */
     #imagesTable tr {
         transition: background-color 0.2s ease;
     }
 
-    /* Batch color classes with !important to ensure they take precedence over everything */
+    /* Batch color classes */
     #imagesTable tr.batch-color-1 {
         background-color: var(--batch-1-color) !important;
     }
@@ -128,23 +172,380 @@ $projectProgress = getProjectProgressStats($project_id);
         background-color: var(--batch-7-color) !important;
     }
 
-    /* Make sure table-light doesn't override batch colors */
-    #imagesTable tr.table-light.batch-color-1,
-    #imagesTable tr.table-light.batch-color-2,
-    #imagesTable tr.table-light.batch-color-3,
-    #imagesTable tr.table-light.batch-color-4,
-    #imagesTable tr.table-light.batch-color-5,
-    #imagesTable tr.table-light.batch-color-6,
-    #imagesTable tr.table-light.batch-color-7 {
+    #imagesTable tr.batch-color-8 {
+        background-color: var(--batch-8-color) !important;
+    }
+
+    #imagesTable tr.batch-color-9 {
+        background-color: var(--batch-9-color) !important;
+    }
+
+    #imagesTable tr.batch-color-10 {
+        background-color: var(--batch-10-color) !important;
+    }
+
+    #imagesTable tr.batch-color-11 {
+        background-color: var(--batch-11-color) !important;
+    }
+
+    #imagesTable tr.batch-color-12 {
+        background-color: var(--batch-12-color) !important;
+    }
+
+    #imagesTable tr.batch-color-13 {
+        background-color: var(--batch-13-color) !important;
+    }
+
+    #imagesTable tr.batch-color-14 {
+        background-color: var(--batch-14-color) !important;
+    }
+
+    #imagesTable tr.batch-color-15 {
+        background-color: var(--batch-15-color) !important;
+    }
+
+    #imagesTable tr.batch-color-16 {
+        background-color: var(--batch-16-color) !important;
+    }
+
+    #imagesTable tr.batch-color-17 {
+        background-color: var(--batch-17-color) !important;
+    }
+
+    #imagesTable tr.batch-color-18 {
+        background-color: var(--batch-18-color) !important;
+    }
+
+    #imagesTable tr.batch-color-19 {
+        background-color: var(--batch-19-color) !important;
+    }
+
+    #imagesTable tr.batch-color-20 {
+        background-color: var(--batch-20-color) !important;
+    }
+
+    #imagesTable tr.batch-color-21 {
+        background-color: var(--batch-21-color) !important;
+    }
+
+    #imagesTable tr.batch-color-22 {
+        background-color: var(--batch-22-color) !important;
+    }
+
+    #imagesTable tr.batch-color-23 {
+        background-color: var(--batch-23-color) !important;
+    }
+
+    #imagesTable tr.batch-color-24 {
+        background-color: var(--batch-24-color) !important;
+    }
+
+    #imagesTable tr.batch-color-25 {
+        background-color: var(--batch-25-color) !important;
+    }
+
+    #imagesTable tr.batch-color-26 {
+        background-color: var(--batch-26-color) !important;
+    }
+
+    #imagesTable tr.batch-color-27 {
+        background-color: var(--batch-27-color) !important;
+    }
+
+    #imagesTable tr.batch-color-28 {
+        background-color: var(--batch-28-color) !important;
+    }
+
+    #imagesTable tr.batch-color-29 {
+        background-color: var(--batch-29-color) !important;
+    }
+
+    #imagesTable tr.batch-color-30 {
+        background-color: var(--batch-30-color) !important;
+    }
+
+    #imagesTable tr.batch-color-31 {
+        background-color: var(--batch-31-color) !important;
+    }
+
+    #imagesTable tr.batch-color-32 {
+        background-color: var(--batch-32-color) !important;
+    }
+
+    #imagesTable tr.batch-color-33 {
+        background-color: var(--batch-33-color) !important;
+    }
+
+    #imagesTable tr.batch-color-34 {
+        background-color: var(--batch-34-color) !important;
+    }
+
+    #imagesTable tr.batch-color-35 {
+        background-color: var(--batch-35-color) !important;
+    }
+
+    #imagesTable tr.batch-color-36 {
+        background-color: var(--batch-36-color) !important;
+    }
+
+    #imagesTable tr.batch-color-37 {
+        background-color: var(--batch-37-color) !important;
+    }
+
+    #imagesTable tr.batch-color-38 {
+        background-color: var(--batch-38-color) !important;
+    }
+
+    #imagesTable tr.batch-color-39 {
+        background-color: var(--batch-39-color) !important;
+    }
+
+    #imagesTable tr.batch-color-40 {
+        background-color: var(--batch-40-color) !important;
+    }
+
+    #imagesTable tr.batch-color-41 {
+        background-color: var(--batch-41-color) !important;
+    }
+
+    #imagesTable tr.batch-color-42 {
+        background-color: var(--batch-42-color) !important;
+    }
+
+    #imagesTable tr.batch-color-43 {
+        background-color: var(--batch-43-color) !important;
+    }
+
+    #imagesTable tr.batch-color-44 {
+        background-color: var(--batch-44-color) !important;
+    }
+
+    #imagesTable tr.batch-color-45 {
+        background-color: var(--batch-45-color) !important;
+    }
+
+    #imagesTable tr.batch-color-46 {
+        background-color: var(--batch-46-color) !important;
+    }
+
+    #imagesTable tr.batch-color-47 {
+        background-color: var(--batch-47-color) !important;
+    }
+
+    #imagesTable tr.batch-color-48 {
+        background-color: var(--batch-48-color) !important;
+    }
+
+    #imagesTable tr.batch-color-49 {
+        background-color: var(--batch-49-color) !important;
+    }
+
+    #imagesTable tr.batch-color-50 {
+        background-color: var(--batch-50-color) !important;
+    }
+
+    /* Table-light override for batch colors */
+    #imagesTable tr.table-light.batch-color-1 {
         background-color: var(--batch-1-color) !important;
     }
 
-    /* Only apply table-light if no batch color is present */
-    #imagesTable tr.table-light:not([class*="batch-color-"]) {
-        background-color: rgba(255, 255, 255, 0.1);
+    #imagesTable tr.table-light.batch-color-2 {
+        background-color: var(--batch-2-color) !important;
     }
 
-    /* Override hover effects */
+    #imagesTable tr.table-light.batch-color-3 {
+        background-color: var(--batch-3-color) !important;
+    }
+
+    #imagesTable tr.table-light.batch-color-4 {
+        background-color: var(--batch-4-color) !important;
+    }
+
+    #imagesTable tr.table-light.batch-color-5 {
+        background-color: var(--batch-5-color) !important;
+    }
+
+    #imagesTable tr.table-light.batch-color-6 {
+        background-color: var(--batch-6-color) !important;
+    }
+
+    #imagesTable tr.table-light.batch-color-7 {
+        background-color: var(--batch-7-color) !important;
+    }
+
+    #imagesTable tr.table-light.batch-color-8 {
+        background-color: var(--batch-8-color) !important;
+    }
+
+    #imagesTable tr.table-light.batch-color-9 {
+        background-color: var(--batch-9-color) !important;
+    }
+
+    #imagesTable tr.table-light.batch-color-10 {
+        background-color: var(--batch-10-color) !important;
+    }
+
+    #imagesTable tr.table-light.batch-color-11 {
+        background-color: var(--batch-11-color) !important;
+    }
+
+    #imagesTable tr.table-light.batch-color-12 {
+        background-color: var(--batch-12-color) !important;
+    }
+
+    #imagesTable tr.table-light.batch-color-13 {
+        background-color: var(--batch-13-color) !important;
+    }
+
+    #imagesTable tr.table-light.batch-color-14 {
+        background-color: var(--batch-14-color) !important;
+    }
+
+    #imagesTable tr.table-light.batch-color-15 {
+        background-color: var(--batch-15-color) !important;
+    }
+
+    #imagesTable tr.table-light.batch-color-16 {
+        background-color: var(--batch-16-color) !important;
+    }
+
+    #imagesTable tr.table-light.batch-color-17 {
+        background-color: var(--batch-17-color) !important;
+    }
+
+    #imagesTable tr.table-light.batch-color-18 {
+        background-color: var(--batch-18-color) !important;
+    }
+
+    #imagesTable tr.table-light.batch-color-19 {
+        background-color: var(--batch-19-color) !important;
+    }
+
+    #imagesTable tr.table-light.batch-color-20 {
+        background-color: var(--batch-20-color) !important;
+    }
+
+    #imagesTable tr.table-light.batch-color-21 {
+        background-color: var(--batch-21-color) !important;
+    }
+
+    #imagesTable tr.table-light.batch-color-22 {
+        background-color: var(--batch-22-color) !important;
+    }
+
+    #imagesTable tr.table-light.batch-color-23 {
+        background-color: var(--batch-23-color) !important;
+    }
+
+    #imagesTable tr.table-light.batch-color-24 {
+        background-color: var(--batch-24-color) !important;
+    }
+
+    #imagesTable tr.table-light.batch-color-25 {
+        background-color: var(--batch-25-color) !important;
+    }
+
+    #imagesTable tr.table-light.batch-color-26 {
+        background-color: var(--batch-26-color) !important;
+    }
+
+    #imagesTable tr.table-light.batch-color-27 {
+        background-color: var(--batch-27-color) !important;
+    }
+
+    #imagesTable tr.table-light.batch-color-28 {
+        background-color: var(--batch-28-color) !important;
+    }
+
+    #imagesTable tr.table-light.batch-color-29 {
+        background-color: var(--batch-29-color) !important;
+    }
+
+    #imagesTable tr.table-light.batch-color-30 {
+        background-color: var(--batch-30-color) !important;
+    }
+
+    #imagesTable tr.table-light.batch-color-31 {
+        background-color: var(--batch-31-color) !important;
+    }
+
+    #imagesTable tr.table-light.batch-color-32 {
+        background-color: var(--batch-32-color) !important;
+    }
+
+    #imagesTable tr.table-light.batch-color-33 {
+        background-color: var(--batch-33-color) !important;
+    }
+
+    #imagesTable tr.table-light.batch-color-34 {
+        background-color: var(--batch-34-color) !important;
+    }
+
+    #imagesTable tr.table-light.batch-color-35 {
+        background-color: var(--batch-35-color) !important;
+    }
+
+    #imagesTable tr.table-light.batch-color-36 {
+        background-color: var(--batch-36-color) !important;
+    }
+
+    #imagesTable tr.table-light.batch-color-37 {
+        background-color: var(--batch-37-color) !important;
+    }
+
+    #imagesTable tr.table-light.batch-color-38 {
+        background-color: var(--batch-38-color) !important;
+    }
+
+    #imagesTable tr.table-light.batch-color-39 {
+        background-color: var(--batch-39-color) !important;
+    }
+
+    #imagesTable tr.table-light.batch-color-40 {
+        background-color: var(--batch-40-color) !important;
+    }
+
+    #imagesTable tr.table-light.batch-color-41 {
+        background-color: var(--batch-41-color) !important;
+    }
+
+    #imagesTable tr.table-light.batch-color-42 {
+        background-color: var(--batch-42-color) !important;
+    }
+
+    #imagesTable tr.table-light.batch-color-43 {
+        background-color: var(--batch-43-color) !important;
+    }
+
+    #imagesTable tr.table-light.batch-color-44 {
+        background-color: var(--batch-44-color) !important;
+    }
+
+    #imagesTable tr.table-light.batch-color-45 {
+        background-color: var(--batch-45-color) !important;
+    }
+
+    #imagesTable tr.table-light.batch-color-46 {
+        background-color: var(--batch-46-color) !important;
+    }
+
+    #imagesTable tr.table-light.batch-color-47 {
+        background-color: var(--batch-47-color) !important;
+    }
+
+    #imagesTable tr.table-light.batch-color-48 {
+        background-color: var(--batch-48-color) !important;
+    }
+
+    #imagesTable tr.table-light.batch-color-49 {
+        background-color: var(--batch-49-color) !important;
+    }
+
+    #imagesTable tr.table-light.batch-color-50 {
+        background-color: var(--batch-50-color) !important;
+    }
+
+    /* Hover effect for all batches */
     #imagesTable tr[data-batch-id]:hover,
     #imagesTable tr.batch-color-1:hover,
     #imagesTable tr.batch-color-2:hover,
@@ -152,7 +553,50 @@ $projectProgress = getProjectProgressStats($project_id);
     #imagesTable tr.batch-color-4:hover,
     #imagesTable tr.batch-color-5:hover,
     #imagesTable tr.batch-color-6:hover,
-    #imagesTable tr.batch-color-7:hover {
+    #imagesTable tr.batch-color-7:hover,
+    #imagesTable tr.batch-color-8:hover,
+    #imagesTable tr.batch-color-9:hover,
+    #imagesTable tr.batch-color-10:hover,
+    #imagesTable tr.batch-color-11:hover,
+    #imagesTable tr.batch-color-12:hover,
+    #imagesTable tr.batch-color-13:hover,
+    #imagesTable tr.batch-color-14:hover,
+    #imagesTable tr.batch-color-15:hover,
+    #imagesTable tr.batch-color-16:hover,
+    #imagesTable tr.batch-color-17:hover,
+    #imagesTable tr.batch-color-18:hover,
+    #imagesTable tr.batch-color-19:hover,
+    #imagesTable tr.batch-color-20:hover,
+    #imagesTable tr.batch-color-21:hover,
+    #imagesTable tr.batch-color-22:hover,
+    #imagesTable tr.batch-color-23:hover,
+    #imagesTable tr.batch-color-24:hover,
+    #imagesTable tr.batch-color-25:hover,
+    #imagesTable tr.batch-color-26:hover,
+    #imagesTable tr.batch-color-27:hover,
+    #imagesTable tr.batch-color-28:hover,
+    #imagesTable tr.batch-color-29:hover,
+    #imagesTable tr.batch-color-30:hover,
+    #imagesTable tr.batch-color-31:hover,
+    #imagesTable tr.batch-color-32:hover,
+    #imagesTable tr.batch-color-33:hover,
+    #imagesTable tr.batch-color-34:hover,
+    #imagesTable tr.batch-color-35:hover,
+    #imagesTable tr.batch-color-36:hover,
+    #imagesTable tr.batch-color-37:hover,
+    #imagesTable tr.batch-color-38:hover,
+    #imagesTable tr.batch-color-39:hover,
+    #imagesTable tr.batch-color-40:hover,
+    #imagesTable tr.batch-color-41:hover,
+    #imagesTable tr.batch-color-42:hover,
+    #imagesTable tr.batch-color-43:hover,
+    #imagesTable tr.batch-color-44:hover,
+    #imagesTable tr.batch-color-45:hover,
+    #imagesTable tr.batch-color-46:hover,
+    #imagesTable tr.batch-color-47:hover,
+    #imagesTable tr.batch-color-48:hover,
+    #imagesTable tr.batch-color-49:hover,
+    #imagesTable tr.batch-color-50:hover {
         opacity: 0.9;
     }
 
@@ -728,12 +1172,11 @@ $projectProgress = getProjectProgressStats($project_id);
                                                             $batchId = 1;
                                                         }
 
-                                                        // Calculate color class
-                                                        $colorIndex = (($batchId - 1) % 7) + 1;
+                                                        // Calculate color class (now supports up to 50 batches)
+                                                        $colorIndex = (($batchId - 1) % 50) + 1;
                                                         $batchColorClass = 'batch-color-' . $colorIndex;
+
                                                         error_log("Using color index: " . $colorIndex . " for batch ID: " . $batchId);
-
-
 
 
 
@@ -1642,8 +2085,6 @@ $projectProgress = getProjectProgressStats($project_id);
     }
 </style>
 
-
-
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         // Check if the table exists
@@ -1659,19 +2100,9 @@ $projectProgress = getProjectProgressStats($project_id);
 
         // Check if CSS variables are defined
         const computedStyle = getComputedStyle(document.documentElement);
-        // Default colors if CSS variables are not defined
-        const defaultColors = [
-            'rgba(0, 174, 255, 0.2)', // 1: Light blue
-            'rgba(144, 238, 144, 0.2)', // 2: Light green
-            'rgba(255, 166, 0, 0.2)', // 3: Light orange
-            'rgba(238, 130, 238, 0.2)', // 4: Light purple
-            'rgba(255, 99, 71, 0.2)', // 5: Light red
-            'rgba(0, 255, 255, 0.2)', // 6: Light cyan
-            'rgba(255, 255, 0, 0.2)' // 7: Light yellow
-        ];
 
-        // Log CSS variable state
-        for (let i = 1; i <= 7; i++) {
+        // Log CSS variable state for batches 1 to 50
+        for (let i = 1; i <= 50; i++) {
             const colorVar = `--batch-${i}-color`;
             const color = computedStyle.getPropertyValue(colorVar);
             console.log(`CSS variable ${colorVar} is ${color ? 'defined: ' + color : 'not defined'}`);
@@ -1681,10 +2112,10 @@ $projectProgress = getProjectProgressStats($project_id);
         rows.forEach(row => {
             const batchId = parseInt(row.getAttribute('data-batch-id'));
             if (!isNaN(batchId)) {
-                const colorIndex = ((batchId - 1) % 7);
+                const colorIndex = ((batchId - 1) % 50);
                 const colorVar = `--batch-${colorIndex + 1}-color`;
                 const cssColor = computedStyle.getPropertyValue(colorVar).trim();
-                const color = cssColor || defaultColors[colorIndex];
+                const color = cssColor || defaultColors[colorIndex]; // make sure defaultColors array has at least 50 entries
 
                 // Clear any existing background color
                 row.style.removeProperty('background-color');
